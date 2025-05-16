@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Button, TouchableOpacity, StyleSheet, Alert, FlatList, Modal, TextInput } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../../api'; // Adjust the import based on your project structure
+import api from '../../../api'; // هذا اللي لازم تستعمليه
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import moment from 'moment';
 
@@ -70,44 +70,50 @@ const Certifications = () => {
       };
       
     const addCertification = async () => {
-        try {
-            const token = await AsyncStorage.getItem('accessToken');
-            const { certification_name, issued_by, issue_date, expiry_date, document_url } = newCertification;
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    const { certification_name, issued_by, issue_date, expiry_date, document_url } = newCertification;
     
-            // Prepare the data to be sent in the request
-            const requestData = {
-                workshop_id: workshopId,
-                name: certification_name,  // Use "name" instead of "certification_name"
-                issuing_authority: issued_by,  // Use "issuing_authority" instead of "issued_by"
-                issue_date: issue_date,
-                valid_until: expiry_date,  // Use "valid_until" instead of "expiry_date"
-                document_url
-            };
-    
-            // Log the request data to the console
-            console.log("Request Data:", requestData);
-    
-            // Make the POST request
-            const response = await axios.post('/certification/certifications', requestData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-    
-            if (response.status === 201) {
-                setCertifications(prevCertifications => [...prevCertifications, response.data]);
-                setShowAddCertificationModal(false);
-                setNewCertification({
-                    certification_name: '',
-                    issued_by: '',
-                    issue_date: '',
-                    expiry_date: '',
-                    document_url: '',
-                });
-            }
-        } catch (error) {
-            console.error("Error adding certification:", error);
-            Alert.alert('Error', 'Failed to add certification.');
-        }
+    const requestData = {
+      workshop_id: workshopId,
+      name: certification_name,
+      issuing_authority: issued_by,
+      issue_date: issue_date,
+      valid_until: expiry_date,
+      document_url
     };
+
+    const response = await api.post('/certification/certifications', requestData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (response.status === 201) {
+      setCertifications(prevCertifications => [...prevCertifications, response.data]);
+      setShowAddCertificationModal(false);
+      setNewCertification({
+        certification_name: '',
+        issued_by: '',
+        issue_date: '',
+        expiry_date: '',
+        document_url: '',
+      });
+    }
+  } catch (error) {
+    if (error.response) {
+      // Server responded with a status other than 2xx
+      console.error("Error response:", error.response.data);
+      Alert.alert('Error', `Failed to add certification: ${error.response.data.error}`);
+    } else if (error.request) {
+      // No response from server
+      console.error("Error request:", error.request);
+      Alert.alert('Error', 'Network error, please try again later.');
+    } else {
+      // Other errors
+      console.error("Error message:", error.message);
+      Alert.alert('Error', `Something went wrong: ${error.message}`);
+    }
+  }
+};
 
     const confirmCancel = () => {
         Alert.alert(
@@ -119,7 +125,11 @@ const Certifications = () => {
             ]
         );
     };
-  
+  const showDatePicker = () => {
+  console.log("Date Picker should be visible now");
+  setDatePickerVisibility(true);
+};
+
     
 
     return (
@@ -132,10 +142,10 @@ const Certifications = () => {
               keyExtractor={(item) => item.certification_id.toString()}
               renderItem={({ item }) => (
                 <View style={styles.certificationCard}>
-                  <Text style={styles.certificationText}>{item.certification_name}</Text>
-                  <Text style={styles.certificationText}>{item.issued_by}</Text>
-                  <Text style={styles.certificationText}>Issue Date: {item.issue_date}</Text>
-                  <Text style={styles.certificationText}>Expiry Date: {item.expiry_date}</Text>
+                 <Text style={styles.certificationText}>{item.name}</Text>
+<Text style={styles.certificationText}>{item.issuing_authority}</Text>
+<Text style={styles.certificationText}>Issue Date: {item.issue_date}</Text>
+<Text style={styles.certificationText}>Expiry Date: {item.valid_until}</Text>
                   <TouchableOpacity style={styles.deleteButton}>
                     <Text style={styles.buttonText}>Delete</Text>
                   </TouchableOpacity>

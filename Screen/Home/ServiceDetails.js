@@ -23,19 +23,7 @@ const ServiceDetails = ({ route, navigation }) => {
     service_description,
     price,
   } = serviceData;
-  /*
-  serviceData attributes:
-  capacity
-  current_occupancy
-  mobile_assistance
-  price
-  rank
-  rate
-  service_description
-  service_id
-  service_name
-  workshop_name
-  */
+  const { workshop_id } = serviceData; // Extract workshop_id from serviceData
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Main content area with scroll */}
@@ -46,7 +34,7 @@ const ServiceDetails = ({ route, navigation }) => {
         {/* Workshop Info - Now Clickable */}
         <TouchableOpacity 
           style={styles.innercard}
-          onPress={() => navigation.navigate('WorkshopDetails')}
+          onPress={() => navigation.navigate('WorkshopDetails', { workshopId: serviceData.workshop_id })}
         >
           <View style={styles.workshopContainer}>
             <View>

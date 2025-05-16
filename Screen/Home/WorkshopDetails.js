@@ -1,5 +1,4 @@
-// the workshop id must be passed from the service details to the workshop details so we can git the workshop data from the api
-
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,150 +6,86 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
 import Colors from "../../Components/Colors/Colors";
-import Ionicons from 'react-native-vector-icons/Ionicons';
-
+import Ionicons from "react-native-vector-icons/Ionicons";
+import axios from "axios";
 
 const WorkshopDetails = ({ route }) => {
-  const { serviceData } = route.params; // Get the workshop ID from route params
+const { workshopData } = route.params;
+const workshopId = workshopData.workshop_id;
 
-  const { workshop_name, rate } = serviceData; // Destructure the serviceData object
+const [detailedWorkshop, setDetailedWorkshop] = useState(null);
+const [reviews, setReviews] = useState([]);
+const [loading, setLoading] = useState(true);
+const [showAllReviews, setShowAllReviews] = useState(false);
 
-  // States to control expanded views
-  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [services, setServices] = useState([]);
   const [showAllServices, setShowAllServices] = useState(false);
 
-  // Dummy data
-  const workshopData = {
-    address: "123 Main Street, Ramallah",
-    phone: "+972 50-123-4567",
-    rating: 4.7,
-    reviews: [
-      {
-        id: 1,
-        user: "David Cohen",
-        rating: 5,
-        date: "15 Oct 2023",
-        comment: "Great service, very professional and quick!",
-      },
-      {
-        id: 2,
-        user: "Sarah Levy",
-        rating: 4,
-        date: "2 Oct 2023",
-        comment: "Good experience overall. Fixed my car on time.",
-      },
-      {
-        id: 3,
-        user: "Moshe Abramov",
-        rating: 5,
-        date: "28 Sep 2023",
-        comment:
-          "Excellent workshop! They fixed issues other mechanics couldn't solve.",
-      },
-      {
-        id: 4,
-        user: "Rachel Goldstein",
-        rating: 4,
-        date: "15 Sep 2023",
-        comment: "Good service at a fair price. Will come back.",
-      },
-      {
-        id: 5,
-        user: "Daniel Ben-David",
-        rating: 5,
-        date: "10 Sep 2023",
-        comment: "Friendly staff and efficient service. Highly recommend!",
-      },
-      {
-        id: 6,
-        user: "Noa Klein",
-        rating: 3,
-        date: "5 Sep 2023",
-        comment: "Service was okay but took longer than promised.",
-      },
-      {
-        id: 7,
-        user: "Yossi Mizrahi",
-        rating: 5,
-        date: "1 Sep 2023",
-        comment: "Best workshop in town! Fair prices and excellent work.",
-      },
-      {
-        id: 8,
-        user: "Tali Shapiro",
-        rating: 4,
-        date: "25 Aug 2023",
-        comment: "I'm a return customer and they never disappoint.",
-      },
-    ],
-    services: [
-      {
-        id: 1,
-        name: "Oil Change",
-        price: 199,
-        description: "Full synthetic oil change service",
-      },
-      {
-        id: 2,
-        name: "Brake Replacement",
-        price: 450,
-        description: "Front and rear brake pads replacement",
-      },
-      {
-        id: 3,
-        name: "Engine Diagnostics",
-        price: 350,
-        description: "Complete engine diagnostic scan",
-      },
-      {
-        id: 4,
-        name: "Tire Rotation",
-        price: 150,
-        description: "Rotate and balance all four tires",
-      },
-      {
-        id: 5,
-        name: "Air Conditioning Service",
-        price: 300,
-        description: "AC system check and refrigerant refill",
-      },
-      {
-        id: 6,
-        name: "Battery Replacement",
-        price: 250,
-        description: "Remove old battery and install new one",
-      },
-      {
-        id: 7,
-        name: "Headlight Replacement",
-        price: 200,
-        description: "Replace burnt out headlights",
-      },
-      {
-        id: 8,
-        name: "Wheel Alignment",
-        price: 280,
-        description: "Four-wheel alignment service",
-      },
-    ],
-    image: null,
+
+useEffect(() => {
+  const fetchWorkshopDetails = async () => {
+    try {
+      const workshopResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}`);
+      const workshopJson = await workshopResponse.json();
+      console.log("Workshop JSON:", workshopJson);
+
+      const reviewsResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}/reviews`);
+      const reviewsJson = await reviewsResponse.json();
+      console.log("Reviews JSON:", reviewsJson);
+
+      setDetailedWorkshop(workshopJson);
+      setReviews(Array.isArray(reviewsJson) ? reviewsJson : []);
+         // Fetch services (استخدم axios أو fetch حسب تفضيلك)
+        const servicesResponse = await axios.get(`http://176.119.254.225:80/service/workshops/${workshopId}/services`);
+      setServices(Array.isArray(servicesResponse.data) ? servicesResponse.data : []);
+      console.log("Services JSON:", servicesResponse.data);
+    } catch (error) {
+      console.error("Failed to fetch workshop details or reviews:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Determine how many reviews/services to show
-  const reviewsToShow = showAllReviews
-    ? workshopData.reviews
-    : workshopData.reviews.slice(0, 5);
-  const servicesToShow = showAllServices
-    ? workshopData.services
-    : workshopData.services.slice(0, 5);
+  if (workshopId) {
+    fetchWorkshopDetails();
+    
+  } else {
+    console.warn("No workshopId received in params");
+    setLoading(false);
+  }
+}, [workshopId]);
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={Colors.blue} />
+      </View>
+    );
+  }
 
+  if (!workshopData) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ textAlign: "center", marginTop: 20, color: Colors.darkGray }}>
+          Workshop data not available.
+        </Text>
+      </View>
+    );
+  }
+
+  const servicesToShow = showAllServices
+    ? services || []
+    : (services || []).slice(0, 5);
+    
+  const reviewsToShow = showAllReviews ? reviews : reviews.slice(0, 5);
+
+  // Fetch services for this workshop
+ 
   return (
     <View style={styles.container}>
       <ScrollView>
-        {/* Workshop Image */}
         <Image
           source={{
             uri:
@@ -161,238 +96,285 @@ const WorkshopDetails = ({ route }) => {
           resizeMode="cover"
         />
 
-        {/* Workshop Content */}
         <View style={styles.contentContainer}>
-          {/* Workshop Name and Rating */}
           <View style={styles.headerContainer}>
-            <Text style={styles.workshopName}>{serviceData.workshop_name}</Text>
+            <Text style={styles.workshopName}>{workshopData.workshop_name}</Text>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={18} color="#FFD700" />
               <Text style={styles.ratingText}>
-                {serviceData.rate} ({workshopData.reviews.length} reviews)
+                {workshopData.rate?.toFixed(1) || "N/A"} ({reviews.length} reviews)
               </Text>
             </View>
           </View>
 
-          {/* Workshop Address */}
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Ionicons
-                name="location-outline"
-                size={22}
-                color={Colors.darkGray}
-              />
-              <Text style={styles.infoText}>{workshopData.address}</Text>
+              <Ionicons name="location-outline" size={22} color={Colors.darkGray} />
+              <Text style={styles.infoText}>{workshopData.address_id || "Address not available"}</Text>
             </View>
           </View>
+ <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Services</Text>
 
-          {/* Services Section */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Services</Text>
-
-            {servicesToShow.map((service) => (
-              <View key={service.id} style={styles.serviceItem}>
-                <View style={styles.serviceLeft}>
-                  <Text style={styles.serviceName}>{service.name}</Text>
-                  <Text style={styles.serviceDescription}>
-                    {service.description}
-                  </Text>
-                </View>
-                <Text style={styles.servicePrice}>{service.price}₪</Text>
+        {servicesToShow.length === 0 ? (
+          <Text>No services available.</Text>
+        ) : (
+          servicesToShow.map((service) => (
+            <View key={service.service_id} style={styles.serviceItem}>
+              <View style={styles.serviceLeft}>
+                <Text style={styles.serviceName}>{service.service_name}</Text>
+                <Text style={styles.serviceDescription}>{service.service_description}</Text>
               </View>
-            ))}
+              <Text style={styles.servicePrice}>{service.price}₪</Text>
+            </View>
+          ))
+        )}
 
-            {workshopData.services.length > 5 && (
-              <TouchableOpacity
-                style={styles.showMoreButton}
-                onPress={() => setShowAllServices(!showAllServices)}
-              >
-                <Text style={styles.showMoreText}>
-                  {showAllServices ? "Show Less" : "Show More"}
-                </Text>
-                <Ionicons
-                  name={showAllServices ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={Colors.blue}
-                />
-              </TouchableOpacity>
-            )}
+        {services.length > 5 && (
+          <TouchableOpacity
+            style={styles.showMoreButton}
+            onPress={() => setShowAllServices(!showAllServices)}
+          >
+            <Text style={styles.showMoreText}>
+              {showAllServices ? "Show Less" : "Show More"}
+            </Text>
+            <Ionicons
+              name={showAllServices ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={Colors.blue}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+<View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>Reviews</Text>
+
+      {reviewsToShow.length === 0 ? (
+        <Text>No reviews available.</Text>
+      ) : (
+        reviewsToShow.map((review) => (
+          <View key={review.review_id} style={styles.reviewItem}>
+            <View style={styles.reviewHeader}>
+              <Text style={styles.reviewUser}>Anonymous</Text>
+              <View style={styles.reviewRating}>
+                <Ionicons name="star" size={14} color="#FFD700" />
+                <Text style={styles.reviewRatingText}>{review.rating}</Text>
+              </View>
+            </View>
+            <Text style={styles.reviewDate}>
+              {new Date(review.review_date).toLocaleDateString() || "Date unknown"}
+            </Text>
+            <Text style={styles.reviewComment}>{review.comment}</Text>
           </View>
+        ))
+      )}
 
-          {/* Reviews Section */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
-
-            {reviewsToShow.map((review) => (
-              <View key={review.id} style={styles.reviewItem}>
-                <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewUser}>{review.user}</Text>
-                  <View style={styles.reviewRating}>
-                    <Ionicons name="star" size={14} color="#FFD700" />
-                    <Text style={styles.reviewRatingText}>{review.rating}</Text>
-                  </View>
-                </View>
-                <Text style={styles.reviewDate}>{review.date}</Text>
-                <Text style={styles.reviewComment}>{review.comment}</Text>
-              </View>
-            ))}
-
-            {workshopData.reviews.length > 5 && (
-              <TouchableOpacity
-                style={styles.showMoreButton}
-                onPress={() => setShowAllReviews(!showAllReviews)}
-              >
-                <Text style={styles.showMoreText}>
-                  {showAllReviews ? "Show Less" : "Show More"}
-                </Text>
-                <Ionicons
-                  name={showAllReviews ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={Colors.blue}
-                />
-              </TouchableOpacity>
-            )}
+      {reviews.length > 5 && (
+        <TouchableOpacity
+          accessible={true}
+          accessibilityRole="button"
+          style={styles.showMoreButton}
+          onPress={() => setShowAllReviews(!showAllReviews)}
+        >
+          <Text style={styles.showMoreText}>
+            {showAllReviews ? "Show Less" : "Show More"}
+          </Text>
+          <Ionicons
+            name={showAllReviews ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={Colors.blue}
+          />
+        </TouchableOpacity>
+      )}
           </View>
         </View>
       </ScrollView>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
   },
+
   workshopImage: {
     width: "100%",
-    height: 220,
+    height: 260,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
 
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 100,
   },
+
   headerContainer: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
+
   workshopName: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontWeight: "700",
     color: Colors.black,
-    marginBottom: 6,
+    letterSpacing: 0.4,
+    marginBottom: 8,
   },
+
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
+
   ratingText: {
-    fontSize: 16,
-    color: Colors.darkGray,
-    marginLeft: 4,
+    fontSize: 15,
+    color: "#6B7280",
+    marginLeft: 6,
   },
+
   infoCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: "#FAFAFA",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
+
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 10,
   },
+
   infoText: {
-    fontSize: 16,
-    color: Colors.darkGray,
-    marginLeft: 10,
+    fontSize: 15,
+    color: "#4B5563",
+    marginLeft: 14,
+    flex: 1,
+    flexWrap: "wrap",
+    lineHeight: 20,
   },
+
   sectionCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: "#FAFAFA",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+  },
+
+  sectionTitle: {
+    fontSize: 21,
+    fontWeight: "600",
+    color: Colors.black,
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: Colors.black,
-    marginBottom: 12,
-  },
+
   // Service Styles
   serviceItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    alignItems: "flex-start",
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderBottomColor: "#E5E7EB",
   },
+
   serviceLeft: {
     flex: 1,
-    paddingRight: 10,
+    paddingRight: 14,
   },
+
   serviceName: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
     color: Colors.black,
     marginBottom: 4,
   },
+
   serviceDescription: {
     fontSize: 14,
-    color: Colors.darkGray,
+    color: "#6B7280",
+    lineHeight: 20,
   },
+
   servicePrice: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: Colors.black,
+    fontWeight: "700",
+    color: Colors.blue,
   },
+
   // Review Styles
   reviewItem: {
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderBottomColor: "#E5E7EB",
   },
+
   reviewHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
   },
+
   reviewUser: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 15,
+    fontWeight: "600",
     color: Colors.black,
   },
+
   reviewRating: {
     flexDirection: "row",
     alignItems: "center",
   },
+
   reviewRatingText: {
     fontSize: 14,
     marginLeft: 4,
     color: Colors.black,
   },
+
   reviewDate: {
     fontSize: 12,
-    color: Colors.darkGray,
-    marginBottom: 6,
+    color: "#9CA3AF",
+    marginBottom: 4,
   },
+
   reviewComment: {
     fontSize: 14,
     color: Colors.black,
-    lineHeight: 20,
+    lineHeight: 22,
   },
+
   // Show More Button
   showMoreButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
-    padding: 8,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    backgroundColor: "#EEF6FF",
+    borderRadius: 10,
+    alignSelf: "center",
   },
+
   showMoreText: {
-    color: Colors.blue,
     fontSize: 14,
-    marginRight: 4,
+    fontWeight: "600",
+    color: Colors.blue,
+    marginRight: 6,
   },
 });
+
 
 export default WorkshopDetails;

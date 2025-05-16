@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,15 @@ import {
   SafeAreaView,
   Dimensions,
   Alert,
+  Modal,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Colors from '../../Components/Colors/Colors';
 import * as Location from 'expo-location'; // Import Location API
+import moment from 'moment';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { useActionSheet } from '@expo/react-native-action-sheet';
 
 // Get screen dimensions
 const { width, height } = Dimensions.get('window');
@@ -32,22 +37,28 @@ const MOCK_SERVICES = [
 ];
 
 const Book = ({ route, navigation }) => {
-  const { serviceData } = route.params;
-  
-  const { 
-    service_name,
-    workshop_name,
-    price,
-  } = serviceData;
+const { workshopData, date, timeSlots } = route.params;
+const { service_name, workshop_name, price ,schedule,
+ } = workshopData;
 
+  console.log("Workshop Data:", workshopData);
+  console.log("Date:", date);
+  console.log("Time Slots:", timeSlots);
   // Initialize with service from route params
   const [selectedServices, setSelectedServices] = useState([
     { id: 1, name: service_name || 'Service', price: price || 0 }
   ]);
-  
+  const { showActionSheetWithOptions } = useActionSheet();
+
   const [scheduledDate, setScheduledDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  
+  const [selectedCar, setSelectedCar] = useState(null);
+const [allCars, setAllCars] = useState([]);
+ // All services fetched from server for this workshop
+  const [services, setServices] = useState([]);
+const [modalVisible, setModalVisible] = useState(false);
+
+  // User-selected services (initially empty or preselected)
   // Address state
   const [address, setAddress] = useState({
     street: 'Al-Tireh Street',
@@ -60,81 +71,126 @@ const Book = ({ route, navigation }) => {
   const [loadingLocation, setLoadingLocation] = useState(false);
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  useEffect(() => {
+  const fetchDefaultCar = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const userId = await AsyncStorage.getItem('userId');
+
+      const res = await axios.get(`http://176.119.254.225:80/vehicle/vehicles/default/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setSelectedCar(res.data);
+    } catch (err) {
+      console.error('Error fetching default car:', err);
+    }
+  };
+
+  fetchDefaultCar();
+}, []);
+
+const handleOpenCarPicker = async () => {
+  try {
+    const userId = await AsyncStorage.getItem('userId');
+    const res = await axios.get(`http://176.119.254.225:80/vehicle/vehicles/${userId}`);
+    setAllCars(res.data);
+
+    const options = res.data.map(car => `${car.make} ${car.model} (${car.year})`);
+    options.push('Cancel');
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: options.length - 1,
+        title: 'Select a Car',
+      },
+      selectedIndex => {
+        if (selectedIndex !== undefined && selectedIndex !== options.length - 1) {
+          setSelectedCar(res.data[selectedIndex]);
+        }
+      }
+    );
+  } catch (err) {
+    console.error('Error fetching all vehicles:', err);
+  }
+};
+
 
   // Handle get current location functionality
-  const handleGetLocation = async () => {
-    setLoadingLocation(true);
-    
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+ const handleGetLocation = async () => {
+  setLoadingLocation(true);
 
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission not granted.');
-        setLoadingLocation(false);
-        return;
-      }
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
 
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const { latitude, longitude } = location.coords;
-      console.log("Latitude:", latitude, "Longitude:", longitude); 
-
-      let road = "Unknown Street";
-      let city = "Unknown City";
-
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-          {
-            headers: {
-              'User-Agent': 'veeserv-app/1.0',
-            },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          road = data.address?.road || "Unknown Street";
-          city = data.address?.city || data.address?.town || data.address?.village || "Unknown City";
-          
-          console.log("Address data:", data.address);
-        } else {
-          console.warn("🌐 API response not OK, using fallback address.");
-        }
-      } catch (apiError) {
-        console.warn("🌐 API fetch failed, using fallback address:", apiError);
-      }
-
-      if (latitude && longitude) {
-        setAddress({
-          street: road,
-          city: city,
-          latitude: latitude,
-          longitude: longitude,
-        });
-        
-        // Show success message
-       // Alert.alert('Success', 'Location updated successfully!');
-      } else {
-        Alert.alert('Error', 'Could not determine coordinates.');
-      }
-
-    } catch (error) {
-      Alert.alert('Error', `Location error: ${error.message}`);
-    } finally {
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Location permission not granted.');
       setLoadingLocation(false);
+      return;
     }
-  };
 
-  const handleAddService = () => {
-    const available = MOCK_SERVICES.filter(
-      (s) => !selectedServices.some((sel) => sel.id === s.id)
-    );
-    if (available.length > 0) {
-      setSelectedServices([...selectedServices, available[0]]);
-    } else {
-      alert('No more services to add.');
+    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    const { latitude, longitude } = location.coords;
+    console.log("Latitude:", latitude, "Longitude:", longitude);
+
+    let suburb = "Unknown Area";
+    let city = "Unknown City";
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+        {
+          headers: {
+            'User-Agent': 'veeserv-app/1.0',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Use suburb (e.g., Bab al-Amari) instead of road
+        suburb = data.address?.suburb || data.address?.residential || "Unknown Area";
+        city = data.address?.city || data.address?.town || data.address?.village || "Unknown City";
+
+        console.log("Address data:", data.address);
+      } else {
+        console.warn("🌐 API response not OK, using fallback address.");
+      }
+    } catch (apiError) {
+      console.warn("🌐 API fetch failed, using fallback address:", apiError);
     }
-  };
+
+    if (latitude && longitude) {
+      setAddress({
+        street: suburb,  // 👈 here we're using suburb as the 'street'
+        city: city,
+        latitude: latitude,
+        longitude: longitude,
+      });
+
+      console.log("Set address:", {
+        street: suburb,
+        city: city,
+        latitude,
+        longitude,
+      });
+
+    } else {
+      Alert.alert('Error', 'Could not determine coordinates.');
+    }
+
+  } catch (error) {
+    Alert.alert('Error', `Location error: ${error.message}`);
+  } finally {
+    setLoadingLocation(false);
+  }
+};
+
+ 
 
   const handleRemoveService = (id) => {
     setSelectedServices(selectedServices.filter((s) => s.id !== id));
@@ -148,23 +204,73 @@ const Book = ({ route, navigation }) => {
     hideDatePicker();
   };
 
-  const handleConfirmBooking = () => {
-    navigation.navigate('Payment', {
-      workshop_name,
-      scheduledDate: scheduledDate.toISOString(), 
-      location: `${address.street}, ${address.city}`,
-      services: selectedServices,
-      totalPrice,
-      coordinates: {
-        latitude: address.latitude,
-        longitude: address.longitude
-      }
-    });
+  useEffect(() => {
+    if (workshopData?.workshop_id) {
+      fetchServices(workshopData.workshop_id);
+    }
+  }, [workshopData]);
+
+  // Fetch services for this workshop
+  const fetchServices = async (workshopId) => {
+    try {
+      const res = await axios.get(`http://176.119.254.225:80/service/workshops/${workshopId}/services`);
+      setServices(res.data);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
   };
+
+// Replace your current handleAddService:
+const handleAddService = () => {
+  setModalVisible(true);
+};
+
+// New: when user taps one in the list
+const handleSelectService = (service) => {
+  // only add if not already selected
+  if (!selectedServices.some(s => s.service_id === service.service_id)) {
+    setSelectedServices([...selectedServices, {
+      id: service.service_id,
+      name: service.service_name,
+      price: service.price,
+      service_id: service.service_id
+    }]);
+  }
+  setModalVisible(false);
+};
+
+  // To
+ const handleConfirmBooking = () => {
+  navigation.navigate('Payment', {
+    workshop_name: workshop_name,
+    scheduledDate: date,
+    time : timeSlots,
+    location: `${address.street}, ${address.city}`,
+    services: selectedServices,
+    totalPrice,
+    coordinates: {
+      latitude: address.latitude,
+      longitude: address.longitude
+    }
+  });
+};
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
+ <View style={styles.innercard}>
+  <Text style={styles.label}>Car</Text>
+
+  <Text style={styles.value}>
+    {selectedCar ? `${selectedCar.make} ${selectedCar.model} (${selectedCar.year})` : 'No car selected'}
+  </Text>
+
+  <TouchableOpacity style={styles.changeButton} onPress={handleOpenCarPicker}>
+    <Text style={styles.changeText}>Change</Text>
+  </TouchableOpacity>
+</View>
+
         <View style={styles.innercard}>
         <Text style={styles.label}>Workshop</Text>
           <Text style={styles.value}>{workshop_name}</Text>
@@ -183,25 +289,16 @@ const Book = ({ route, navigation }) => {
             </View>
           ))}
 
-          <TouchableOpacity style={styles.addButton} onPress={handleAddService}>
-            <Text style={styles.addButtonText}>+ Add Another Service</Text>
-          </TouchableOpacity>
+         <TouchableOpacity style={styles.addButton} onPress={handleAddService}>
+  <Text style={styles.addButtonText}>+ Add Another Service</Text>
+</TouchableOpacity>
+
         </View>
 
+       
         <View style={styles.innercard}>
-          <Text style={styles.label}>Choose Date</Text>
-          <TouchableOpacity onPress={showDatePicker} style={styles.datePicker}>
-            <Text style={styles.dateText}>{scheduledDate.toLocaleString()}</Text>
-          </TouchableOpacity>
-          
-          <DateTimePickerModal
-            isVisible={isDatePickerVisible}
-            mode="datetime"
-            onConfirm={handleConfirm}
-            onCancel={hideDatePicker}
-            textColor={Platform.OS === 'ios' ? 'black' : undefined} // iOS only
-            minimumDate={new Date()} // Prevent selecting past dates
-          />
+          <Text style={styles.label}>Date & time </Text>
+          <Text style={styles.value}>{date} {timeSlots}</Text>
         </View>
 
         <View style={styles.innercard}>
@@ -238,166 +335,236 @@ const Book = ({ route, navigation }) => {
           <Text style={styles.confirmButtonText}>Confirm Booking</Text>
         </TouchableOpacity>
       </View>
+      <Modal
+  visible={modalVisible}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Select a Service</Text>
+      <ScrollView>
+        {services.map(service => (
+          <TouchableOpacity
+            key={service.service_id}
+            style={styles.modalServiceItem}
+            onPress={() => handleSelectService(service)}
+          >
+            <View>
+              <Text style={styles.serviceName}>{service.service_name}</Text>
+              <Text style={styles.serviceDescription}>{service.service_description}</Text>
+            </View>
+            <Text style={styles.servicePrice}>{service.price}₪</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <TouchableOpacity
+        style={styles.modalCloseButton}
+        onPress={() => setModalVisible(false)}
+      >
+        <Text style={styles.modalCloseText}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
     </SafeAreaView>
   );
 };
 
 
+// Updated styles snippet only (reuse your JSX layout)
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: '#F5F7FA', // Softer background
   },
   container: {
     padding: responsiveHorizontalPadding,
-    backgroundColor: Colors.white,
   },
   innercard: {
-    backgroundColor: Colors.lightGray,
-    padding: responsiveHorizontalPadding,
-    borderRadius: width * 0.03, // responsive border radius
-    marginBottom: responsiveMargin,
-  },
-  line: {
-    height: 1,
-    backgroundColor: Colors.lightGray,
-    marginVertical: responsiveMargin * 0.5,
-  },
-  title: {
-    fontSize: responsiveFontSize * 1.4,
-    fontWeight: 'bold',
-    color: Colors.black,
+    backgroundColor: Colors.white,
+    padding: responsiveHorizontalPadding * 1.1,
+    borderRadius: width * 0.035,
     marginBottom: responsiveMargin * 1.2,
-    textAlign: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
   },
   label: {
-    fontSize: responsiveFontSize * 1.1,
-    color: Colors.darkGray,
-    marginBottom: responsiveMargin * 0.5,
-    fontWeight: 'bold',
+    fontSize: responsiveFontSize * 1.2,
+    color: '#086189',
+    fontWeight: '700',
+    marginBottom: responsiveMargin * 0.6,
   },
   value: {
-    fontSize: responsiveFontSize,
-    fontWeight: '600',
+    fontSize: responsiveFontSize * 1.05,
     color: Colors.black,
+    fontWeight: '600',
   },
   serviceCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: Colors.white,
-    padding: responsiveHorizontalPadding * 0.6,
-    borderRadius: width * 0.025,
+    backgroundColor: '#F0F4F8',
+    padding: responsiveHorizontalPadding * 0.8,
+    borderRadius: width * 0.03,
     marginVertical: responsiveMargin * 0.4,
     alignItems: 'center',
   },
   serviceText: {
-    fontSize: responsiveFontSize * 0.9,
-    color: Colors.black,
+    fontSize: responsiveFontSize,
+    color: '#333',
+    fontWeight: '500',
   },
   removeText: {
-    color: Colors.red,
+    color: '#D32F2F',
+    fontSize: responsiveFontSize * 1.4,
     fontWeight: 'bold',
-    fontSize: responsiveFontSize * 1.2,
   },
   addButton: {
-    marginTop: responsiveMargin * 0.6,
-    backgroundColor: '#ddd',
-    paddingVertical: responsiveVerticalPadding * 0.8,
-    borderRadius: width * 0.025,
+    marginTop: responsiveMargin * 0.8,
+    backgroundColor: '#08618920',
+    paddingVertical: responsiveVerticalPadding,
+    borderRadius: width * 0.03,
     alignItems: 'center',
   },
   addButtonText: {
-    color: Colors.darkGray,
-    fontWeight: 'bold',
-    fontSize: responsiveFontSize * 0.9,
-  },
-  datePicker: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: width * 0.02,
-  },
-  dateText: {
-    fontSize: responsiveFontSize,
-    color: Colors.green,
-  },
-  addressContainer: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: width * 0.02,
+    color: '#086189',
+    fontWeight: '600',
+    fontSize: responsiveFontSize * 0.95,
   },
   addressText: {
     fontSize: responsiveFontSize,
-    color: Colors.green,
-  },
-
-  input: {
-    backgroundColor: Colors.white,
-    padding: responsiveHorizontalPadding * 0.6,
-    borderRadius: width * 0.02,
-    marginTop: responsiveMargin * 0.6,
+    color: '#444',
+    fontWeight: '500',
   },
   secondaryButton: {
     marginTop: responsiveMargin,
-    backgroundColor: '#ddd',
-    paddingVertical: responsiveVerticalPadding * 0.8,
-    borderRadius: width * 0.025,
+    backgroundColor: '#08618910',
+    paddingVertical: responsiveVerticalPadding,
+    borderRadius: width * 0.03,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: Colors.black,
-    fontWeight: 'bold',
-    fontSize: responsiveFontSize * 0.9,
-  },
-  bottomPadding: {
-    height: responsiveBottomPadding,
+    color: '#086189',
+    fontWeight: '600',
+    fontSize: responsiveFontSize,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: Colors.white,
+    backgroundColor: '#fff',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: responsiveHorizontalPadding,
     paddingTop: responsiveVerticalPadding,
-    paddingBottom: responsiveVerticalPadding* 1.5,
+    paddingBottom: responsiveVerticalPadding * 1.5,
     borderTopWidth: 1,
-    borderTopColor: Colors.lightGray,
-    elevation: 8, // for Android shadow
-    shadowColor: '#000', // for iOS shadow
+    borderTopColor: '#E0E0E0',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 8,
   },
   priceContainer: {
-    marginLeft: responsiveMargin,
-    flex: 1,
-    alignItems: 'flex-center',
+    justifyContent: 'center',
   },
   priceLabel: {
     fontSize: responsiveFontSize * 0.9,
-    color: Colors.darkGray,
+    color: '#888',
   },
   priceValue: {
     fontSize: responsiveFontSize * 1.4,
     fontWeight: 'bold',
-    color: Colors.black,
+    color: '#111',
   },
   confirmButton: {
-    backgroundColor: Colors.blue,
+    backgroundColor: '#086189',
     paddingVertical: responsiveVerticalPadding,
-    paddingHorizontal: responsiveHorizontalPadding,
-    borderRadius: width * 0.03,
-    flex: 1.5,
+    paddingHorizontal: responsiveHorizontalPadding * 1.2,
+    borderRadius: width * 0.035,
+    justifyContent: 'center',
     alignItems: 'center',
     marginLeft: responsiveMargin,
-    height: responsiveButtonHeight,
-    justifyContent: 'center',
   },
   confirmButtonText: {
-    color: Colors.white,
+    color: '#fff',
     fontSize: responsiveFontSize,
     fontWeight: 'bold',
   },
-});
+ 
 
+changeText: {
+  color: '#fff',
+  fontWeight: '600',
+},
+changeButton: {
+  marginTop: 8,
+  alignSelf: 'flex-start',
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  backgroundColor: '#086189',
+  borderRadius: 8,
+},
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalContent: {
+  width: '90%',
+  maxHeight: '70%',
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 16,
+},
+modalTitle: {
+  fontSize: responsiveFontSize * 1.1,
+  fontWeight: '700',
+  color: '#086189',
+  marginBottom: 12,
+},
+modalServiceItem: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingVertical: 10,
+  borderBottomWidth: 1,
+  borderColor: '#eee',
+},
+serviceName: {
+  fontSize: responsiveFontSize,
+  fontWeight: '600',
+},
+serviceDescription: {
+  fontSize: responsiveFontSize * 0.85,
+  color: '#666',
+},
+servicePrice: {
+  fontSize: responsiveFontSize,
+  fontWeight: '600',
+  color: '#086189',
+},
+modalCloseButton: {
+  marginTop: 16,
+  backgroundColor: '#086189',
+  paddingVertical: 12,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+modalCloseText: {
+  color: '#fff',
+  fontWeight: '700',
+  fontSize: responsiveFontSize,
+},
+
+
+});
 export default Book;

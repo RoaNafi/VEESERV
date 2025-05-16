@@ -28,6 +28,11 @@ import Language from "./Screen/Profile/Language/Language";
 import WorkingHours from "./Screen/Profile/WorkingHours/WorkingHours";
 import Certifications from "./Screen/Profile/Certifications/Certifications";
 import History from "./Screen/Profile/History/History";
+import ChatBot from "./Screen/Home/chatbot";
+import Cart from "./Screen/Home/cart";
+import DateTimePickerScreen from "./Screen/Book/DateChose";
+import AvailableMechanic from "./Screen/Book/AvailableMechanic";
+import { ActionSheetProvider } from '@expo/react-native-action-sheet';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -133,42 +138,63 @@ function ProfileNavigator() {
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen
-          name="IntroNavigator"
-          component={IntroNavigator}
-          options={{ headerShown: false, title: "WorkShop Details" }}
-        />
-        <Stack.Screen name="RegNavigator" component={RegNavigator} />
-        <Stack.Screen
-          name="MainTabs"
-          component={BottomTabs}
-          options={{ title: "Back" }}
-        />
-        <Stack.Screen
-          name="Book"
-          component={Book}
-          options={{ headerShown: true, title: "Confirm Booking" }}
-        />
-        <Stack.Screen
-          name="Payment"
-          component={Payment}
-          options={{ headerShown: true, title: "Payment" }}
-        />
-        <Stack.Screen
-          name="ServiceDetails"
-          component={ServiceDetails}
-          options={{ headerShown: true, title: "Service Details" }}
-        />
-        <Stack.Screen
-          name="WorkshopDetails"
-          component={WorkshopDetails}
-          options={{ headerShown: true, title: "WorkShop Details" }}
-        />
-        
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ActionSheetProvider>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen
+            name="IntroNavigator"
+            component={IntroNavigator}
+            options={{ headerShown: false, title: "WorkShop Details" }}
+          />
+          <Stack.Screen name="RegNavigator" component={RegNavigator} />
+          <Stack.Screen
+            name="MainTabs"
+            component={BottomTabs}
+            options={{ title: "Back" }}
+          />
+          <Stack.Screen
+            name="Book"
+            component={Book}
+            options={{ headerShown: true, title: "Confirm Booking" }}
+          />
+          <Stack.Screen
+            name="Payment"
+            component={Payment}
+            options={{ headerShown: true, title: "Payment" }}
+          />
+          <Stack.Screen
+            name="ServiceDetails"
+            component={ServiceDetails}
+            options={{ headerShown: true, title: "Service Details" }}
+          />
+          <Stack.Screen
+            name="WorkshopDetails"
+            component={WorkshopDetails}
+            options={{ headerShown: true, title: "WorkShop Details" }}
+          />
+          <Stack.Screen
+            name="ChatBot"
+            component={ChatBot}
+            options={{ headerShown: true, title: "Chat Bot" }}
+          />
+          <Stack.Screen
+            name="Cart"
+            component={Cart}
+            options={{ headerShown: true, title: "Cart" }}
+          />
+          <Stack.Screen
+            name="DateTimePickerScreen"
+            component={DateTimePickerScreen}
+            options={{ headerShown: true, title: "Pick a date" }}
+          />
+          <Stack.Screen
+            name="AvailableMechanic"
+            component={AvailableMechanic}
+            options={{ headerShown: true, title: "Available Mechanics" }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ActionSheetProvider>
   );
 }
 

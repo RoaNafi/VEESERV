@@ -1,4 +1,3 @@
-import React from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import styles from "./WorkshopCardStyle";
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -12,6 +11,7 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
     workshop_name,
     rate,
     price,
+    workshop_id,
   } = data;
 
   return (
@@ -34,8 +34,8 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
           <Text style={{ color: Colors.darkGray, fontSize: 13, marginRight: 4 }}>by</Text>
           <Text style={styles.name} numberOfLines={1} onPress={onShopPress}>
-            {workshop_name} ·
-          </Text>
+            {workshop_name} · 
+          </Text> 
           <Ionicons name="star" size={12} color="#FFD700" />
           <Text style={styles.ratingText}>{rate.toFixed(1)}</Text>
         </View>
@@ -46,6 +46,23 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
 
         <View style={styles.bottomInfo}>
           <Text style={styles.distance}>6 km</Text>
+          <TouchableOpacity
+            onPress={() => console.log("View Location pressed")}
+            style={{
+              backgroundColor: "#e6f1f3",
+              paddingVertical: 10,
+              paddingHorizontal: 16,
+              borderRadius: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              alignSelf: "flex-start",
+            }}
+          >
+                  
+                    <Text style={{ fontSize: 15, color: "#086189", fontWeight: "600" }}>
+                      📍 View Location
+                    </Text>
+                  </TouchableOpacity>
           <TouchableOpacity style={styles.bookButton} onPress={onBookPress}>
             <Text style={styles.bookButtonText}>Book</Text>
           </TouchableOpacity>

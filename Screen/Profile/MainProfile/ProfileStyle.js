@@ -19,13 +19,13 @@ export default StyleSheet.create({
     height: width * 0.35,
     borderRadius: (width * 0.35) / 2,
     marginBottom: 20,
-    backgroundColor: Colors.black, 
+    backgroundColor: Colors.lightblue, 
   },
   
   name: {
     fontSize: 25,
     fontWeight: 'bold',
-    color: Colors.black,
+    color: Colors.blue,
     marginBottom: 6,
   },
   info: {

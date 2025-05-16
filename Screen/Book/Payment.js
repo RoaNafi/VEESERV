@@ -4,9 +4,9 @@ import Colors from "../../Components/Colors/Colors";
 import { CommonActions } from '@react-navigation/native';
 
 const Payment = ({ route, navigation }) => {
-  const { workshopName, scheduledDate, location, services, totalPrice } =
+  const { workshop_name, scheduledDate, location, services, totalPrice ,time } =
     route.params;
-
+console.log("Payment route params:", route.params);
   const handlePay = () => {
     // TODO: send to backend or mark as paid
     alert("Payment Successful 🎉");
@@ -34,16 +34,18 @@ const Payment = ({ route, navigation }) => {
 
       <View style={styles.card}>
         <Text style={styles.label}>
-          Workshop: <Text style={styles.value}>{workshopName}</Text>
+          Workshop: <Text style={styles.value}>{workshop_name}</Text>
         </Text>
 
         {/* the datenow is a string ... convert it to a date object if you need to use it  */}
-        <Text style={styles.label}>
-          Date:{" "}
-          <Text style={styles.value}>
-            {new Date(scheduledDate).toLocaleString()}
-          </Text>
+       <Text style={styles.label}>
+  Date: <Text style={styles.value}>{scheduledDate}</Text>
         </Text>
+
+        <Text style={styles.label}>
+          Time: <Text style={styles.value}>{time}</Text>
+</Text>
+
         <Text style={styles.label}>
           Location: <Text style={styles.value}>{location}</Text>
         </Text>
