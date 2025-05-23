@@ -28,7 +28,6 @@ const Certifications = () => {
     const getWorkshopIdAndFetchServices = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const userId = await AsyncStorage.getItem('userId'); 
 
             if (!token) throw new Error("Token not found");
 

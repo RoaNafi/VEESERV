@@ -23,44 +23,46 @@ const WorkingHours = ({ navigation, route }) => {
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedField, setSelectedField] = useState(null);
-  const [isFocused, setIsFocused] = useState(false); // Track if input is focused
 
-  const handleFocus = () => {
-    setIsFocused(true);  // Set focus to true when the input is clicked
-  };
 
-  const handleBlur = () => {
-    setIsFocused(false);  // Set focus to false when the input is blurred
-  };
-  const handleSaveWorkingHours = async () => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-  
-      if (!token) {
-        Alert.alert('Error', 'No access token found. Please log in again.');
-        return;
-      }
-  
-      // 🧠 Convert the object into a string like "Mon-Fri: 9am - 5pm"
-      const workingHoursSummary = summarizeWorkingHours(workingHours);
-  
-      const response = await axios.put(`${config.apiUrl}/profile/mechanic/working-hours`, {
-        working_day_hours: workingHoursSummary,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      if (response.status === 200) {
-        Alert.alert('Success', 'Working hours updated successfully!');
-    
-      }
-    } catch (error) {
-      console.error('Error updating working hours:', error);
-      Alert.alert('Error', 'Failed to update working hours.');
+const handleSaveWorkingHours = async () => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+
+    if (!token) {
+      Alert.alert('Error', 'No access token found. Please log in again.');
+      return;
     }
-  };
+
+    const workingHoursArray = Object.entries(workingHours)
+      .filter(([_, value]) => value.open)
+      .map(([day, value]) => ({
+        day_of_week: dayToIndex(day),
+        start_time: value.startTime,
+        end_time: value.endTime,
+      }));
+    console.log('Working hours array:', workingHoursArray);
+    const response = await axios.put(`${config.apiUrl}/profile/mechanic/working-hours`, workingHoursArray, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 200) {
+      Alert.alert('Success', 'Working hours updated successfully!');
+    }
+    console.log('Updated working hours:', response.data);   
+  } catch (error) {
+    console.error('Error updating working hours:', error);
+    Alert.alert('Error', 'Failed to update working hours.');
+  }
+};
+
+const dayToIndex = (day) => {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days.indexOf(day);
+};
+
   
   const summarizeWorkingHours = (hoursObj) => {
     const days = Object.keys(hoursObj).filter(day => hoursObj[day].open);

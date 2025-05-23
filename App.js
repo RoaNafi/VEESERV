@@ -33,7 +33,12 @@ import Cart from "./Screen/Home/cart";
 import DateTimePickerScreen from "./Screen/Book/DateChose";
 import AvailableMechanic from "./Screen/Book/AvailableMechanic";
 import { ActionSheetProvider } from '@expo/react-native-action-sheet';
-
+import SplitBookingPage from "./Screen/Book/SplitBookingPage";
+import MyBookingsScreen from "./Screen/MyBookingsScreen";
+import WorkshopSpecializations from "./Screen/Profile/specialization/specialization";
+import MechanicHomeScreen from "./Screen/MechanicHomeScreen";
+import NotificationsScreen from "./Screen/NotificationsScreen";
+import OffersScreen from "./Screen/OffersScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -46,10 +51,11 @@ function IntroNavigator() {
     </Stack.Navigator>
   );
 }
+
 function BottomTabs({ route }) {
   const { role } = route.params || {};
 
-  return (
+ return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
@@ -57,10 +63,24 @@ function BottomTabs({ route }) {
         tabBarInactiveTintColor: "gray",
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          if (route.name === "Home")
-            iconName = focused ? "home" : "home-outline";
-          else if (route.name === "ProfileNavigator")
-            iconName = focused ? "person" : "person-outline";
+
+          switch (route.name) {
+            case 'Home':
+              iconName = focused ? "home" : "home-outline";
+              break;
+            case 'MyBookings':
+              iconName = focused ? "clipboard" : "clipboard-outline";
+              break;
+            case 'ProfileNavigator':
+              iconName = focused ? "person" : "person-outline";
+              break;
+            case 'Mechanic':
+              iconName = focused ? "construct" : "construct-outline";
+              break;
+            default:
+              iconName = "ellipse-outline";
+          }
+
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
@@ -72,12 +92,54 @@ function BottomTabs({ route }) {
         )}
       />
       <Tab.Screen
-        name="ProfileNavigator"
-        component={ProfileNavigator}
-        options={{ title: "Profile" }}
+        name="MyBookings"
+        component={MyBookingsScreen}
+        options={{ title: "My Bookings" }}
       />
-    </Tab.Navigator>
-  );
+      
+      {role === "Mechanic" && (
+        <Tab.Screen
+          name="Mechanic"
+          children={({ navigation }) => (
+            <MechanicHomeScreen navigation={navigation} route={{ params: { role } }} />
+          )}
+        />
+      )}
+<Tab.Screen
+  name="Notifications"
+  component={NotificationsScreen}
+  options={{
+    title: "Notifications",
+    tabBarIcon: ({ focused, color, size }) => (
+      <Ionicons
+        name={focused ? "notifications" : "notifications-outline"}
+        size={size}
+        color={color}
+      />
+    ),
+  }}
+/>
+<Tab.Screen
+  name="Offers"   
+  component={OffersScreen}
+  options={{
+    title: "Offers",
+    tabBarIcon: ({ focused, color, size }) => (
+      <Ionicons
+        name={focused ? "pricetag" : "pricetag-outline"}
+        size={size}
+        color={color}
+      />
+    ),
+  }}
+/>
+<Tab.Screen
+  name="ProfileNavigator"
+  component={ProfileNavigator}
+  options={{ title: "Profile" }}
+/>
+</Tab.Navigator>
+);
 }
 
 // ⬇️ Registration Screens
@@ -132,6 +194,7 @@ function ProfileNavigator() {
       <Stack.Screen name="WorkingHours" component={WorkingHours} options={{ title: "Working Hours" }}/>
       <Stack.Screen name="CertificationScreen" component={Certifications} />
       <Stack.Screen name="HistoryScreen" component={History} />
+      <Stack.Screen name="WorkshopSpecializations" component={WorkshopSpecializations} />
     </Stack.Navigator>
   );
 }
@@ -191,6 +254,11 @@ export default function App() {
             name="AvailableMechanic"
             component={AvailableMechanic}
             options={{ headerShown: true, title: "Available Mechanics" }}
+          />
+          <Stack.Screen
+            name="SplitBookingPage"
+            component={SplitBookingPage}
+            options={{ headerShown: true, title: "Confirm Booking" }}
           />
         </Stack.Navigator>
       </NavigationContainer>

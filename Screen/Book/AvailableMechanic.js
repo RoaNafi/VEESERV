@@ -1,13 +1,14 @@
 
 
 import React, { useEffect, useState } from "react";
-import { View, FlatList, Text, ActivityIndicator, TouchableOpacity ,Image} from "react-native";
+import { View, FlatList, Text, ActivityIndicator, TouchableOpacity ,Image ,ScrollView} from "react-native";
 import WorkshopCard from "../../Components/WorkshopCard/WorkshopCard";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Filter from "../Home/ResultOperation/Filter";
 import Sort from "../Home/ResultOperation/Sort";
+
 // دالة لتحويل الوقت من AM/PM إلى 24 ساعة
 const convertTo24HourFormat = (time) => {
   const [timeStr, modifier] = time.split(' ');  // فصل الوقت عن AM/PM
@@ -27,11 +28,17 @@ const AvailableMechanic = ({ route, navigation }) => {
   console.log("Selected date:", date);
   console.log("Selected time slot(s):", timeSlots);
 
+const [rawWorkshops, setRawWorkshops ] = useState({
+  perfectMatch: [],
+  partialMatch: [],
+  splitMatch: [],
+});
 const [workshops, setWorkshops] = useState({
   perfectMatch: [],
   partialMatch: [],
   splitMatch: [],
 });
+
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -46,7 +53,22 @@ const [workshops, setWorkshops] = useState({
   // إذا كانت timeSlots تحتوي على عدة أوقات، سنحولها إلى سلسلة مفصولة بفواصل
   const formattedTimeSlots = convertedTimeSlots.join(', ');  // جعلها سلسلة نصية مفصولة بفواصل
   console.log("Formatted time slots:", formattedTimeSlots);
-
+const transform = (list) =>
+  list.map((item) => {
+    const service = item.service || item.services?.[0] || {};
+    return {
+      image: item.workshop_image || "",
+      service_name: service.name || "Service",
+      service_description: "",
+      workshop_name: item.workshop_name || "Workshop",
+      rate: item.rate || item.rating || 0,
+      price: service.price || 0,
+      time: item.time || "N/A",
+      service_id: service.id || service.service_id || null,
+      workshop_id: item.workshop_id,
+      services: item.services || [], // عشان الـ splitMatch تحتاج services كمصفوفة
+    };
+  });
   const fetchAvailableWorkshops = async () => {
     setLoading(true);
 
@@ -55,13 +77,13 @@ const [workshops, setWorkshops] = useState({
 
       const response = await axios.post(
         "http://176.119.254.225:80/search/search-available-workshops",
-        {
-          preferred_date: date,
-          preferred_time: formattedTimeSlots,  // إرسال الوقت كمصفوفة نصية
-          minRating: selectedRating,
-          mobileAssistance: mobileServiceOnly,
-          // أضف أي فلتر ثاني حسب الحاجة مثل minPrice, maxPrice, locationId...
-        },
+       {
+  preferred_date: date,
+  preferred_time: formattedTimeSlots,
+  minRating: selectedRating,
+  mobileAssistance: mobileServiceOnly,
+  sortBy: selectedSortOption, // ⬅️ أرسليها للباك
+},
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -77,41 +99,39 @@ const mergedWorkshops = [
   ...splitMatch,
 ];
       console.log("Merged workshops:", mergedWorkshops);
-const transform = (list) =>
-  list.map((item) => {
-    const service = item.service || item.services?.[0] || {};
-    return {
-      image: item.workshop_image || "",
-      service_name: service.name || "Service",
-      service_description: "",
-      workshop_name: item.workshop_name || "Workshop",
-      rate: item.rating || 0,
-      price: service.price || 0,
-      time: item.time || "N/A",
-      service_id: service.id || service.service_id || null,
-      workshop_id: item.workshop_id,
-      services: item.services || [], // عشان الـ splitMatch تحتاج services كمصفوفة
-    };
-  });
+
 console.log("Transformed perfectMatch:", transform(perfectMatch));
 console.log("Transformed partialMatch:", transform(partialMatch));
 console.log("Transformed splitMatch:", transform(splitMatch));
+setRawWorkshops({ perfectMatch, partialMatch, splitMatch });
 setWorkshops({
   perfectMatch: transform(perfectMatch),
   partialMatch: transform(partialMatch),
-  splitMatch: transform(splitMatch),
+  splitMatch: splitMatch.map(group => transform(group)), // ✅
 });
 
 
-
-
-     
-    } catch (error) {
+} catch (error) {
       console.error("❌ Error fetching workshops:", error);
     } finally {
       setLoading(false);
     }
   };
+
+
+const applySort = () => {
+  if (!selectedSortOption) return; // ما تطبقش لو ما فيش اختيار
+  console.log("Applying local sort:", selectedSortOption);
+  const sorted = sortWorkshopsLocally(workshops, selectedSortOption);
+  setWorkshops(sorted);
+  console.log("✅ Sorted workshops (perfectMatch):", sorted.perfectMatch.map(w => w.price));
+};
+
+useEffect(() => {
+  if (selectedSortOption) {
+    applySort();
+  }
+}, [selectedSortOption]);
 
   const applyFilters = () => {
     fetchAvailableWorkshops();
@@ -124,10 +144,7 @@ setWorkshops({
     fetchAvailableWorkshops();
   };
 
-  const applySort = () => {
-    fetchAvailableWorkshops();
-  };
-
+  
   const handleBookPress = (workshopData) => {
     navigation.navigate("Book", {
       workshopData,
@@ -143,23 +160,77 @@ setWorkshops({
   useEffect(() => {
     fetchAvailableWorkshops();
   }, [selectedRating, selectedDistance, mobileServiceOnly, selectedSortOption]);
-  const handleBookMultiple = (items) => {
-  items.forEach(item => {
-    const service = item.service || {};
-    handleBookPress({
-      workshop_id: item.workshop_id,
-      service_id: service.id,
-      service_name: service.name,
-      service_description: "",
-      time: item.time,
-      rate: item.rating,
-      price: service.price,
-      image: item.workshop_image,
-      workshop_name: item.workshop_name,
-    });
+
+
+  const handleBookMultiple = (combo) => {
+  navigation.navigate('SplitBookingPage', {
+    splitMatches: combo, // 🔥 أرسل المجموعة المختارة فقط
+    date,
+    timeSlots,
+    
+    selectedCar: route.params.selectedCar,
   });
 };
 
+
+const useFilterLogicForWorkshops = (
+  originalData,
+  selectedSortOption,
+  setWorkshops,
+  setFilterModalVisible,
+  sortResults
+) => {
+  const [selectedRating, setSelectedRating] = useState(null);
+  const [selectedDistance, setSelectedDistance] = useState(null);
+  const [mobileServiceOnly, setMobileServiceOnly] = useState(false);
+
+  const applyFilters = () => {
+    if (!selectedRating && !selectedDistance && !mobileServiceOnly) {
+      const sorted = sortResults(originalData, selectedSortOption);
+      setWorkshops(sorted);
+      setFilterModalVisible(false);
+      return;
+    }
+
+    const filterFn = (item) => {
+      if (selectedRating && item.rate < selectedRating) return false;
+      if (selectedDistance && item.distance > selectedDistance) return false;
+      if (mobileServiceOnly && !item.mobile_service) return false;
+      return true;
+    };
+
+    const filteredData = {
+      perfectMatch: originalData.perfectMatch.filter(filterFn),
+      partialMatch: originalData.partialMatch?.filter(filterFn) || [],
+      splitMatch: originalData.splitMatch?.filter(filterFn) || [],
+    };
+
+    const sortedFiltered = sortResults(filteredData, selectedSortOption);
+
+    setWorkshops(sortedFiltered);
+    setFilterModalVisible(false);
+  };
+
+  const resetFilters = () => {
+    setSelectedRating(null);
+    setSelectedDistance(null);
+    setMobileServiceOnly(false);
+
+    const sorted = sortResults(originalData, selectedSortOption);
+    setWorkshops(sorted);
+  };
+
+  return {
+    selectedRating,
+    setSelectedRating,
+    selectedDistance,
+    setSelectedDistance,
+    mobileServiceOnly,
+    setMobileServiceOnly,
+    applyFilters,
+    resetFilters,
+  };
+};
 
 return (
   <View style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
@@ -177,12 +248,13 @@ return (
       setMobileServiceOnly={setMobileServiceOnly}
     />
 
-    <Sort
-      visible={sortModalVisible}
-      setVisible={setSortModalVisible}
-      applySort={applySort}
-      setSelectedSortOption={setSelectedSortOption}
-    />
+ <Sort
+  visible={sortModalVisible}
+  setVisible={setSortModalVisible}
+  applySort={applySort}
+  setSelectedSortOption={setSelectedSortOption}
+/>
+
 
    {/* --- FILTER & SORT BUTTONS TOP BAR (Right Aligned) --- */}
 <View style={{
@@ -230,7 +302,7 @@ return (
 
 
    {/* --- WORKSHOP LIST OR SCHEDULED SERVICES --- */}
-<View style={{ paddingHorizontal: 12, paddingBottom: 20 }}>
+<ScrollView style={{ paddingHorizontal: 12, paddingBottom: 20 }}>
   {/* If Perfect Match exists */}
   {workshops.perfectMatch?.length > 0 ? (
     <>
@@ -256,7 +328,7 @@ return (
             service_name: service.name || "Service",
             service_description: "",
             workshop_name: item.workshop_name || "Workshop",
-            rate: item.rating || 0,
+            rate: item.rate || 0,
             price: service.price || 0,
             service_id: service.id || service.service_id || null,
             workshop_id: item.workshop_id,
@@ -286,83 +358,128 @@ return (
   </Text>
 
   <View style={{ gap: 16 }}>
-    {workshops.splitMatch.map((item, index) => (
-      <View
-        key={index}
-        style={{
-          backgroundColor: "#fff",
-          borderRadius: 16,
-          padding: 16,
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-          shadowOffset: { width: 0, height: 3 },
-          shadowRadius: 6,
-          elevation: 4,
-        }}
-      >
-        {/* Header with image and rating */}
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-          <Image
-            source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s" }}
-            style={{ width: 60, height: 60, borderRadius: 12, marginRight: 12 }}
-            resizeMode="cover"
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 18, fontWeight: "700", color: "#333" }}>
-              {item.workshop_name}
-            </Text>
-            <Text style={{ fontSize: 16, color: "#FFD700" }}>⭐ {item.rate || "Not rated yet"}</Text>
-          </View>
-        </View>
+    {rawWorkshops.splitMatch.map((combo, index) => {
+  // 🧠 تجميع حسب الورشة
+  const workshopsMap = combo.reduce((acc, item) => {
+    const key = item.workshop_id;
+    if (!acc[key]) {
+      acc[key] = {
+        workshop_id: item.workshop_id,
+        workshop_name: item.workshop_name,
+        rate: item.rating,
+        time: item.time,
+        services: [],
+      };
+    }
+    const service = item.service || item.services?.[0];
+    if (service) acc[key].services.push(service);
+    return acc;
+  }, {});
+  const groupedWorkshops = Object.values(workshopsMap);
 
-        {/* Details */}
-        <View style={{ gap: 4, marginBottom: 12 }}>
-          <Text style={{ fontSize: 16, color: "#555" }}>Service: <Text style={{ fontWeight: "600" }}>{item.service_name}</Text></Text>
-          <Text style={{ fontSize: 16, color: "#555" }}> Price: <Text style={{ fontWeight: "600" }}>{item.price} NIS</Text></Text>
-          <Text style={{ fontSize: 16, color: "#555" }}> Time: <Text style={{ fontWeight: "600" }}>{item.time || "N/A"}</Text></Text>
-        </View>
+  return (
+    <View
+      key={index}
+      style={{
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 20,
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 3 },
+        shadowRadius: 6,
+        elevation: 4,
+      }}
+    >
+      <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10 }}>
+        🧩 Schedule Option {index + 1}
+      </Text>
 
-        {/* Location Button */}
-        <TouchableOpacity
-          onPress={() => console.log("View Location pressed")} // replace with actual handler
+      {groupedWorkshops.map((item, idx) => (
+        <View
+          key={idx}
           style={{
-            backgroundColor: "#e6f1f3",
-            paddingVertical: 10,
-            paddingHorizontal: 16,
-            borderRadius: 10,
-            flexDirection: "row",
-            alignItems: "center",
-            alignSelf: "flex-start",
+            backgroundColor: "#f9f9f9",
+            borderRadius: 12,
+            padding: 12,
+            marginBottom: 12,
           }}
         >
-          <Text style={{ fontSize: 15, color: "#086189", fontWeight: "600" }}>
-            📍 View Location
-          </Text>
-        </TouchableOpacity>
-      </View>
-    ))}
+          {/* Header with image and rating */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+            <Image
+              source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s" }}
+              style={{ width: 60, height: 60, borderRadius: 12, marginRight: 12 }}
+              resizeMode="cover"
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#333" }}>
+                {item.workshop_name}
+              </Text>
+              <Text style={{ fontSize: 16, color: "#FFD700" }}>
+                ⭐ {item.rate || "Not rated yet"}
+              </Text>
+            </View>
+          </View>
+
+          {/* Details */}
+          <View style={{ gap: 4, marginBottom: 12 }}>
+            <Text style={{ fontSize: 16, color: "#555", fontWeight: "600", marginBottom: 4 }}>
+              Services:
+            </Text>
+            {item.services.map((srv, i) => (
+              <Text key={i} style={{ fontSize: 15, color: "#555" }}>
+                • {srv.name} - {srv.price} NIS
+              </Text>
+            ))}
+            <Text style={{ fontSize: 16, color: "#555", marginTop: 6 }}>
+              Time: <Text style={{ fontWeight: "600" }}>{item.time || "N/A"}</Text>
+            </Text>
+          </View>
+
+          {/* Location Button */}
+          <TouchableOpacity
+            onPress={() => console.log("View Location pressed")}
+            style={{
+              backgroundColor: "#e6f1f3",
+              paddingVertical: 10,
+              paddingHorizontal: 16,
+              borderRadius: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              alignSelf: "flex-start",
+            }}
+          >
+            <Text style={{ fontSize: 15, color: "#086189", fontWeight: "600" }}>
+              📍 View Location
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+
+      {/* Book button for the entire combination */}
+      <TouchableOpacity
+        onPress={() => handleBookMultiple(combo)} // بدلًا من workshops.splitMatch
+        style={{
+          marginTop: 12,
+          backgroundColor: "#086189",
+          paddingVertical: 12,
+          borderRadius: 12,
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ color: "#fff", fontWeight: "700" }}>
+          Book This Schedule
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+})}
+
   </View>
 
-  {/* Book Schedule CTA */}
-  <TouchableOpacity
-    onPress={() => handleBookMultiple(workshops.splitMatch)}
-    style={{
-      marginTop: 24,
-      backgroundColor: "#086189",
-      paddingVertical: 14,
-      borderRadius: 14,
-      alignItems: "center",
-      shadowColor: "#000",
-      shadowOpacity: 0.15,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 6,
-      elevation: 3,
-    }}
-  >
-    <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
-      Book This Schedule
-    </Text>
-  </TouchableOpacity>
+ 
 </View>
 
     </>
@@ -377,7 +494,7 @@ return (
       No workshops or scheduled services available.
     </Text>
   )}
-</View>
+</ScrollView>
 
 
 

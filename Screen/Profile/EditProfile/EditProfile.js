@@ -156,20 +156,19 @@ const EditProfile = ({ navigation }) => {
     }
   };
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-      base64: true,
-    });
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    aspect: [1, 1],
+quality: 0.4, // reduces size
+    base64: true,          // <-- important to get base64 string
+  });
 
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      setImage(asset.uri);
-    }
-  };
-
+  if (!result.canceled) {
+    const asset = result.assets[0];
+    setImage(`data:image/jpeg;base64,${asset.base64}`);  // <-- include data type prefix
+  }
+};
   const handleSave = async () => {
     setLoading(true);
 
@@ -218,15 +217,15 @@ const EditProfile = ({ navigation }) => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.avatar} />
-        ) : (
-          <View style={styles.placeholderImage}>
-            <Ionicons name="camera" size={30} color="#888" />
-            <Text style={styles.imageText}>Choose Image</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+  {image ? (
+    <Image source={{ uri: image }} style={styles.avatar} />
+  ) : (
+    <View style={styles.placeholderImage}>
+      <Ionicons name="camera" size={30} color="#888" />
+      <Text style={styles.imageText}>Choose Image</Text>
+    </View>
+  )}
+</TouchableOpacity>
 
       <TouchableOpacity onPress={pickImage}>
         <Text

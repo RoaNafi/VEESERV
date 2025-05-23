@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -24,6 +25,7 @@ const AddCarScreen = ({ navigation }) => {
   const [transmission, setTransmission] = useState('');
   const [fuelType, setFuelType] = useState('');
   const [isDefault, setIsDefault] = useState(false);
+const [carCount, setCarCount] = useState('1');
 
   // Fetch lists
   useEffect(() => { fetchMakes(); }, []);
@@ -76,14 +78,17 @@ const AddCarScreen = ({ navigation }) => {
       return Alert.alert('Error', 'Please fill in all fields.');
     }
     const token = await AsyncStorage.getItem('accessToken');
-    const carData = {
-      make: carMake,
-      model: carModel,
-      year: carYear,
-      transmission: transmission === 'automatic' ? 'a' : 'm',
-      fuel_type: fuelType,
-      isDefault,
-    };
+  const carData = {
+  make: carMake,
+  model: carModel,
+  year: carYear,
+  transmission: transmission === 'automatic' ? 'a' : 'm',
+  fuel_type: fuelType,
+  isDefault,
+  quantity: Number(carCount),  // مهم تحولها لرقم
+};
+
+
 
     try {
       await axios.post(`${config.apiUrl}/api/vehicles`, carData, {
@@ -163,6 +168,23 @@ const AddCarScreen = ({ navigation }) => {
         value={fuelType}
         onChange={item => setFuelType(item.value)}
       />
+<View style={{marginTop: 20}}>
+  <Text style={{color: 'black'}}>Number of Cars</Text>
+  <TextInput
+    style={{
+      borderWidth: 1,
+      borderColor: 'gray',
+      padding: 8,
+      marginTop: 4,
+      backgroundColor: 'white',
+      color: 'black',
+      borderRadius: 4,
+    }}
+    value={carCount}
+    onChangeText={setCarCount}
+    keyboardType="numeric"
+  />
+</View>
 
       <TouchableOpacity
         style={[styles.defaultButton, isDefault && styles.activeDefault]}
@@ -172,6 +194,10 @@ const AddCarScreen = ({ navigation }) => {
           {isDefault ? '✔ Default Car' : 'Set as Default'}
         </Text>
       </TouchableOpacity>
+     
+    
+
+
 
       <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
         <Text style={styles.submitText}>Add Car</Text>
@@ -232,6 +258,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  input: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  padding: 10,
+  marginBottom: 15,
+}
+
 });
 
 export default AddCarScreen;

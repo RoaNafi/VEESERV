@@ -1,0 +1,33 @@
+INSERT INTO Service (service_name, service_description, category_id, subcategory_id, price, estimated_duration, workshop_id)
+VALUES 
+('Battery Replacement', 'Replace car battery to restore reliable starting.', 2, 154, 420, 60, 42),
+('Alternator Repair', 'Repair or replace alternator for proper charging.', 2, 155, 650, 180, 42),
+('Starter Motor Repair', 'Fix or replace starter motor for smooth engine start.', 2, 156, 550, 160, 42),
+('Sensor Diagnostics', 'Check and diagnose vehicle sensors for faults.', 2, 157, 150, 60, 42),
+('Headlight Wiring Repair', 'Repair wiring to fix headlight issues.', 2, 158, 250, 60, 42),
+('Car Alarm Installation', 'Install car alarm system for added security.', 2, 159, 420, 60, 42),
+('Central Locking Repair', 'Fix central locking system for all doors.', 2, 160, 250, 60, 42),
+('Fuse Box Inspection', 'Inspect and diagnose fuse box issues.', 2, 161, 120, 60, 42),
+('ECU Programming', 'Program the ECU for optimal performance and configurations.', 2, 162, 510, 120, 42),
+('Window Motor Replacement', 'Replace window motor to restore power window function.', 2, 163, 420, 60, 42);
+
+214	"Dent Removal"	8	150.00
+215	"Panel Replacement"	8	400.00
+216	"Frame Straightening"	8	600.00
+217	"Fender Repair"	8	250.00
+218	"Door Alignment"	8	180.00
+219	"Trunk Repair"	8	200.00
+220	"Quarter Panel Repair"	8	300.00
+221	"Welding Services"	8	350.00
+222	"Bumper Repair"	8	280.00
+223	"Side Skirt Repair"	8	220.00
+224	"Full Body Repaint"	9	1500.00
+225	"Panel Repaint"	9	400.00
+226	"Scratch Paint Touch-up"	9	200.00
+227	"Color Matching"	9	300.00
+228	"Clear Coat Application"	9	350.00
+229	"Spot Blending"	9	250.00
+230	"Paint Correction"	9	450.00
+231	"Custom Paint Jobs"	9	1000.00
+232	"Matte Finish Painting"	9	1200.00
+233	"Peelable Paint"	9	800.00

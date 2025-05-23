@@ -32,6 +32,7 @@ const Garage = ({ navigation }) => {
         name: `${car.make} ${car.model}`,
         year: car.year,
         engine: `${car.transmission?.toUpperCase()} | ${car.fuel_type?.toUpperCase()}`,
+        quantity: car.quantity,
         isDefault: false,
       }));
 
@@ -100,6 +101,7 @@ const Garage = ({ navigation }) => {
                         {car.name} <Text style={styles.carYear}>({car.year})</Text>
                       </Text>
                       <Text style={styles.carDetails}>{car.engine}</Text>
+                      <Text style={styles.carDetails}>Quantity: {car.quantity}</Text> 
                     </View>
                   </View>
                   {car.isDefault && (

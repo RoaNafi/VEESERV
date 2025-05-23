@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     header: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: Colors.darkGray,
+      color: Colors.darkblue,
       letterSpacing: 0.5,
     },
     scrollContainer: {

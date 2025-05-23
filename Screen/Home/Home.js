@@ -241,39 +241,35 @@ const handleAddToCart = async (serviceId) => {
   }
 };
 
-const fetchCartCount = async () => {
-  try {
-    const token = await AsyncStorage.getItem('accessToken');
-
-    if (!token) {
-      console.warn('User not logged in');
-      return;
-    }
-
-    const response = await axios.get('http://176.119.254.225:80/cart/count', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  console.log('Cart count response:', response.data);  // Debugging line
-    if (response.status === 200) {
-      setCartCount(response.data.serviceCount);
-    }
-  } catch (error) {
-    console.error('Failed to fetch cart count:', error);
-  }
-};
 useEffect(() => {
-  const runFetch = async () => {
-    const token = await AsyncStorage.getItem('accessToken');
-    if (token) {
-      fetchCartCount();
-    } else {
-      console.log("Token not available yet.");
+  let isMounted = true;
+
+  const fetchCartCount = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) return;
+
+      const res = await axios.get('http://176.119.254.225:80/cart/count', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (isMounted && res.status === 200) {
+        setCartCount(res.data.serviceCount);
+      }
+    } catch (err) {
+      if (isMounted) {
+        console.error('Cart count fetch error:', err.message);
+      }
     }
   };
-  runFetch();
+
+  fetchCartCount();
+
+  return () => {
+    isMounted = false;
+  };
 }, []);
+
 
 
 
@@ -334,7 +330,7 @@ return (
               <View style={{ flex: 1, justifyContent: 'space-between' }}>
                 <View>
                   <Text style={styles.serviceName}>{service.name}</Text>
-                  <Text style={styles.servicePrice}>${service.price}</Text>
+                  <Text style={styles.servicePrice}>₪{service.price}</Text>
                 </View>
                 <TouchableOpacity
                   style={[
@@ -382,7 +378,7 @@ return (
                       color="#086189"
                     />
                     <Text style={styles.subcategoryText}>
-                      {sub.subcategory_name} - ${sub.price}
+                      {sub.subcategory_name} - 	₪{sub.price}
                     </Text>
                   </TouchableOpacity>
                 </View>

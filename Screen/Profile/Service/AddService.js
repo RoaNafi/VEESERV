@@ -7,11 +7,11 @@ import {
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
-  Platform,
-  ScrollView
+  Platform
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';  
 
 import api from '../../../api';
 
@@ -20,150 +20,95 @@ const AddService = () => {
   const route = useRoute();
   const { workshopId } = route.params;
 
-  const [serviceOptions, setServiceOptions] = useState([]);
-  const [categories, setCategories] = useState([]);
+const [categories, setCategories] = useState([]);
+const [categoryOpen, setCategoryOpen] = useState(false);
+const [selectedCategory, setSelectedCategory] = useState(null);
 
-  const [serviceOpen, setServiceOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
+const [serviceOptions, setServiceOptions] = useState([]);
+const [serviceOpen, setServiceOpen] = useState(false);
+const [selectedService, setSelectedService] = useState(null);
 
-  const [selectedService, setSelectedService] = useState(null);
-  const [customServiceName, setCustomServiceName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(null);
+const [description, setDescription] = useState('');
+const [price, setPrice] = useState('');
+const [estimatedDuration, setEstimatedDuration] = useState('');
+const [customServiceName, setCustomServiceName] = useState('');
+
+
   useEffect(() => {
-    fetchServices();
-    fetchCategories();
-  }, []);
-  
-  const fetchServices = async () => {
-    try {
-      const res = await api.get('/ServiceCategories/services');
-      const formatted = res.data.map(item => ({
-        label: item.subcategory_name,
-        value: item.subcategory_name,
-        category_id: item.category_id,  // Make sure backend includes this
-      }));
-      setServiceOptions(formatted);
-    } catch (err) {
-      console.error('Error fetching services:', err);
-    }
-  };
-  
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get('/ServiceCategories/categories');
-      const formatted = res.data.map(cat => ({
-        label: cat.category_name,
-        value: cat.category_id,
-      }));
-      setCategories(formatted);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  };
-  
-  // Automatically set the category when a known service is selected
-  useEffect(() => {
-    if (selectedService) {
-      const match = serviceOptions.find(item => item.value === selectedService);
-      if (match) {
-        setSelectedCategory(match.category_id);
-      }
-    }
-  }, [selectedService]);
-  
-  const handleSubmit = async () => {
-    const name = selectedService || customServiceName;
-  
-    if (!name || !description || !price || !selectedCategory) {
-      return Alert.alert('⚠️ Missing Fields', 'Please fill all fields.');
-    }
-  
-    let subcategoryName = name;
-  
-    // If a custom name is used, attempt to add it to the SubCategories
-    if (!selectedService) {
-      try {
-        const addRes = await api.post('/ServiceCategories/add-service', {
-          subcategory_name: subcategoryName,
-          category_id: selectedCategory,
-        });
-        console.log('New subcategory added:', addRes.data);
-      } catch (error) {
-        console.error('Failed to create new subcategory:', error);
-        return Alert.alert('Error', 'Could not add new service name.');
-      }
-    }
-  
-    // Add the actual service entry to the workshop
-    try {
-      const res = await api.post('/service/services', {
-        service_name: subcategoryName,
-        service_description: description,
-        category_id: selectedCategory,
-        price: parseFloat(price),
-        workshop_id: workshopId,
-      });
-  
-      Alert.alert('✅ Success', res.data.message);
-      navigation.goBack();
-    } catch (err) {
-      console.error('Error submitting service:', err);
-      Alert.alert('Error', 'Could not create service.');
-    }
-  };
-  
+  fetchCategories();
+}, []);
 
-  return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
+const fetchCategories = async () => {
+  try {
+    const res = await api.get('/ServiceCategories/categories');
+    const formatted = res.data.map(cat => ({
+      label: cat.category_name,
+      value: cat.category_id,
+    }));
+    setCategories(formatted);
+  } catch (err) {
+    console.error('Error fetching categories:', err);
+  }
+};
+
+// Fetch subcategories dynamically based on selected category
+useEffect(() => {
+  if (selectedCategory) {
+    fetchSubCategories(selectedCategory);
+  } else {
+    setServiceOptions([]);
+  }
+}, [selectedCategory]);
+
+const fetchSubCategories = async (categoryId) => {
+  try {
+    const res = await api.get(`/ServiceCategories/categories/${categoryId}/subcategories`);
+    const formatted = res.data.map(sub => ({
+      label: sub.subcategory_name,
+      value: sub.subcategory_id,
+    }));
+    setServiceOptions(formatted);
+  } catch (err) {
+    console.error('Error fetching subcategories:', err);
+  }
+};
+
+const handleSubmit = async () => {
+  const name = selectedService || customServiceName;
+
+  if (!name || !description || !price || !subcategory_id || !selectedCategory || !estimatedDuration) {
+    return Alert.alert('⚠️ Missing Fields', 'Please fill all fields.');
+  }
+
+  try {
+    const res = await api.post('/service/services', {
+      service_name: name,
+      service_description: description,
+      category_id: selectedCategory,
+      price: parseFloat(price),
+      workshop_id: workshopId,
+      subcategory_id: selectedService,
+      estimated_duration: parseInt(estimatedDuration, 10),
+    });
+
+    Alert.alert('✅ Success', res.data.message);
+    navigation.goBack();
+  } catch (err) {
+    console.error('Error submitting service:', err);
+    Alert.alert('Error', 'Could not create service.');
+  }
+};
+
+return (
+  <KeyboardAvoidingView
+    style={{ flex: 1 ,backgroundColor: Colors.white}}
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  >
+    {/* استخدمي View عامة للكل مع زبط ترتيب العناصر */}
+    <View style={{ flex: 1 }}>
+      {/* الـ Dropdowns برا الـ ScrollView، ولازم تعطيهم padding ومارجن كويسين */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 20, zIndex: 3000,  backgroundColor: Colors.white }}>
         <Text style={styles.header}>Add New Service</Text>
-
-        <DropDownPicker
-          open={serviceOpen}
-          value={selectedService}
-          items={serviceOptions}
-          setOpen={setServiceOpen}
-          setValue={setSelectedService}
-          setItems={setServiceOptions}
-          placeholder="Choose an Existing Service"
-          style={styles.dropdown}
-          dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={3000}
-        />
-
-        <Text style={styles.or}>or</Text>
-
-        <TextInput
-          placeholder="Write New Service Name"
-          value={customServiceName}
-          onChangeText={setCustomServiceName}
-          style={styles.input}
-          placeholderTextColor={Colors.mediumGray}
-        />
-
-        <TextInput
-          placeholder="Description"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={4}
-          style={[styles.input, styles.textArea]}
-          placeholderTextColor={Colors.mediumGray}
-        />
-
-        <TextInput
-          placeholder="Price (e.g., 49.99)"
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="numeric"
-          style={styles.input}
-          placeholderTextColor={Colors.mediumGray}
-        />
 
         <DropDownPicker
           open={categoryOpen}
@@ -175,15 +120,78 @@ const AddService = () => {
           placeholder="Select a Category"
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={2000}
+          zIndex={3000}
+          zIndexInverse={1000}
         />
+      </View>
 
-        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Add Service</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+      <View style={{ paddingHorizontal: 20, marginTop: 10, zIndex: 2000 }}>
+        <DropDownPicker
+          open={serviceOpen}
+          value={selectedService}
+          items={serviceOptions}
+          setOpen={setServiceOpen}
+          setValue={setSelectedService}
+          setItems={setServiceOptions}
+          placeholder={
+            selectedCategory
+              ? serviceOptions.length > 0
+                ? 'Choose a Service'
+                : 'No services available for this category'
+              : 'Select a Category first'
+          }
+          style={styles.dropdown}
+          dropDownContainerStyle={styles.dropdownContainer}
+          zIndex={2000}
+          zIndexInverse={900}
+        />
+      </View>
+
+      {/* باقي الفورم */}
+      <KeyboardAwareScrollView
+        contentContainerStyle={[styles.container, { paddingTop: 20 }]}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ paddingHorizontal: 20 }}>
+          <TextInput
+            placeholder="Description"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={4}
+            style={[styles.input, styles.textArea]}
+            placeholderTextColor={Colors.mediumGray}
+          />
+
+          <TextInput
+            placeholder="Price (e.g., 49.99)"
+            value={price}
+            onChangeText={setPrice}
+            keyboardType="numeric"
+            style={styles.input}
+            placeholderTextColor={Colors.mediumGray}
+          />
+
+          <TextInput
+            placeholder="Estimated Duration (minutes)"
+            value={estimatedDuration}
+            onChangeText={setEstimatedDuration}
+            keyboardType="numeric"
+            style={styles.input}
+            placeholderTextColor={Colors.mediumGray}
+          />
+
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+            <Text style={styles.submitText}>Add Service</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAwareScrollView>
+    </View>
+  </KeyboardAvoidingView>
+);
+
+
 };
 
 const Colors = {
@@ -211,7 +219,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: Colors.darkGray,
+    color: Colors.darkblue,
     textTransform: 'uppercase',
   },
   or: {
@@ -236,7 +244,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.lightGray,
     borderRadius: 12,
     borderColor: Colors.blue,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 15,
   },
   dropdownContainer: {

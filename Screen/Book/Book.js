@@ -30,11 +30,6 @@ const responsiveButtonHeight = height * 0.06; // 6% of screen height
 const responsiveBottomPadding = height * 0.1; // 10% of screen height
 const responsiveFontSize = width * 0.04; // 4% of screen width
 
-const MOCK_SERVICES = [
-  { id: 2, name: 'Tire Rotation', price: 20 },
-  { id: 3, name: 'Engine Check', price: 40 },
-  { id: 4, name: 'Battery Replacement', price: 35 },
-];
 
 const Book = ({ route, navigation }) => {
 const { workshopData, date, timeSlots } = route.params;
@@ -239,22 +234,84 @@ const handleSelectService = (service) => {
   setModalVisible(false);
 };
 
-  // To
- const handleConfirmBooking = () => {
-  navigation.navigate('Payment', {
-    workshop_name: workshop_name,
-    scheduledDate: date,
-    time : timeSlots,
+const groupServicesByWorkshop = (services) => {
+  return [{
+    workshop_id: workshopData.workshop_id,
+    services,
+    scheduled_date: date,
+    time: timeSlots,
     location: `${address.street}, ${address.city}`,
-    services: selectedServices,
-    totalPrice,
     coordinates: {
       latitude: address.latitude,
       longitude: address.longitude
     }
-  });
+  }];
 };
+  const serviceDisplayData = selectedServices.map(s => ({
+  name: s.service_name || s.name, // تأكد إنك تقدر تجيب الاسم من أي مفتاح موجود
+      price: s.price,
+    }));
+const handleConfirmBooking = async () => {
+  const bookingGroups = groupServicesByWorkshop(selectedServices);
 
+  const payload = bookingGroups.map(group => ({
+    workshop_id: group.workshop_id,
+    vehicle_id: selectedCar?.vehicle_id, // ✅ أضفنا الـ vehicle_id
+
+    services: group.services.map(service => ({
+      service_id: service.id,
+      price: service.price
+    })),
+    scheduled_date: group.scheduled_date,
+    time: group.time,
+    location: group.location,
+    coordinates: group.coordinates
+  }));
+
+  console.log('📦 Booking payload:', JSON.stringify({ bookings: payload }, null, 2));
+
+  const token = await AsyncStorage.getItem('accessToken');
+
+  try {
+    const response = await fetch('http://176.119.254.225:80/booking/multiple', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+    body: JSON.stringify({
+  bookings: payload,
+  address,
+  temporary: true, // or false if you have saved addresses
+  totalPrice
+})
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      console.log('✅ Booking confirmed:', result);
+      Alert.alert('Booking Confirmed', 'Your booking has been confirmed successfully!');
+      
+   
+
+navigation.navigate('Payment', {
+  bookings: payload,
+  totalPrice,
+  workshop_name,
+  address,
+  date: scheduledDate,
+  time: timeSlots,
+  services: serviceDisplayData
+});
+    } else {
+      console.error('❌ Booking failed:', result);
+      Alert.alert('Booking Failed', result.message || 'Something went wrong');
+    }
+  } catch (error) {
+    console.error('🔥 Error confirming booking:', error);
+    Alert.alert('Error', 'Could not confirm booking. Please try again.');
+  }
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>

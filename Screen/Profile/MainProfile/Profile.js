@@ -32,9 +32,8 @@ const Profile = ({ navigation }) => {
 
       if (!res.ok) throw new Error('Failed to fetch profile');
       const data = await res.json();
-      
-       console.log('Fetched profile' );  
-
+      console.log('Profile data:', data);     
+      console.log('Fetched profile');
       setProfile(data);
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -60,17 +59,37 @@ const Profile = ({ navigation }) => {
 
   const { user, workshopDetails } = profile;
   const isMechanic = user.role === 'Mechanic';
+  const isCustomer = user?.role === 'Customer';
+  const isCompany = profile?.customerDetails?.is_company;
 
   const handleLogout = async () => {
     try {
-      // Clear AsyncStorage and navigate to Login screen
       await AsyncStorage.removeItem('accessToken');
       navigation.navigate("RegNavigator", { screen: "Login" });
-
       Alert.alert('Logged out', 'You have been logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
       Alert.alert('Error', 'Something went wrong while logging out');
+    }
+  };
+
+  const handleConvertToCompany = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const response = await fetch(`${config.apiUrl}/convertToCompany`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to convert to company');
+Alert.alert("Success", "Congratulations! Your account is now a company 🏢✨");
+
+      fetchProfile(); // حتى يحدث البيانات ويختفي الزر
+    } catch (error) {
+      console.error("Error converting to company:", error);
+      Alert.alert("Error", "We couldn't convert you to a company. Please try again");
     }
   };
 
@@ -79,25 +98,32 @@ const Profile = ({ navigation }) => {
       type: 'double',
       items: [
         { icon: 'create-outline', label: 'Edit Profile', action: () => navigation.navigate('EditProfile') },
-        {icon: isMechanic ? 'construct' : 'car', label: isMechanic ? 'Service' : 'Garage', action: () => navigation.navigate(isMechanic ? 'Service' : 'Garage') },
+        { icon: isMechanic ? 'construct' : 'car', label: isMechanic ? 'Service' : 'Garage', action: () => navigation.navigate(isMechanic ? 'Service' : 'Garage') },
       ],
     },
-    { icon: 'time', label: 'History', action: () => navigation.navigate('HistoryScreen',{ userId: user?.id }) 
-  },
+    { icon: 'time', label: 'History', action: () => navigation.navigate('HistoryScreen', { userId: user?.id }) },
     { icon: 'globe', label: 'Language', action: () => navigation.navigate('Language') },
-   
-  ...(isMechanic ? [
-    { icon: 'medal', label: 'Certification', action: () => navigation.navigate('CertificationScreen') },
-    { icon: 'star', label: 'Specialization', action: () => navigation.navigate('SpecializationScreen') },
-  ] : []),
-  { icon: 'key', label: 'Change Password', action: () => navigation.navigate('ChangePassword',{ userId: user?.id }) },
-  { icon: 'settings', label: 'Settings & Privacy', action: () => {} },
-  { icon: 'people', label: 'Invite Friends', action: () => {} },
-  { icon: 'log-out', label: 'Log out', action: handleLogout, isLogout: true },
 
-];
+    // 👇 زر التحويل يظهر فقط لو المستخدم زبون مش شركة
+    ...(isCustomer && !isCompany ? [{
+      icon: 'business',
+      label: 'Switch to Company Mode',
+      action: handleConvertToCompany,
+    }] : []),
 
-  
+    ...(isMechanic ? [
+      { icon: 'medal', label: 'Certification', action: () => navigation.navigate('CertificationScreen') },
+      { icon: 'star', label: 'Specialization', action: () => navigation.navigate('WorkshopSpecializations', { userId: user?.id }) },
+    ] : []),
+
+    { icon: 'key', label: 'Change Password', action: () => navigation.navigate('ChangePassword', { userId: user?.id }) },
+    { icon: 'settings', label: 'Settings & Privacy', action: () => {} },
+    { icon: 'people', label: 'Invite Friends', action: () => {} },
+    { icon: 'log-out', label: 'Log out', action: handleLogout, isLogout: true },
+  ];
+
+
+
 return (
   <ScrollView style={styles.container}>
     <View style={styles.centerContent}>
