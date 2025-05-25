@@ -1,14 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import * as Location from 'expo-location';
-import { useActionSheet } from '@expo/react-native-action-sheet';
-import { Ionicons } from '@expo/vector-icons'; // Expo
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import * as Location from "expo-location";
+import { useActionSheet } from "@expo/react-native-action-sheet";
+import { Ionicons } from "@expo/vector-icons"; // Expo
+import Colors from "../../Components/Colors/Colors";
 
 const SplitBookingPage = ({ route, navigation }) => {
-const { splitMatches, date, timeSlots } = route.params;
-console.log('Split Matches:', splitMatches);
+  const { splitMatches, date, timeSlots } = route.params;
+  console.log("Split Matches:", splitMatches);
   const [bookings, setBookings] = useState(splitMatches);
 
   const [selectedCar, setSelectedCar] = useState(null);
@@ -22,16 +31,19 @@ console.log('Split Matches:', splitMatches);
   useEffect(() => {
     const fetchDefaultCar = async () => {
       try {
-        const token = await AsyncStorage.getItem('accessToken');
-        const userId = await AsyncStorage.getItem('userId');
+        const token = await AsyncStorage.getItem("accessToken");
+        const userId = await AsyncStorage.getItem("userId");
 
-        const res = await axios.get(`http://176.119.254.225:80/vehicle/vehicles/default/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `http://176.119.254.225:80/vehicle/vehicles/default/${userId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         setSelectedCar(res.data);
       } catch (err) {
-        console.error('Error fetching default car:', err);
+        console.error("Error fetching default car:", err);
       }
     };
 
@@ -41,28 +53,35 @@ console.log('Split Matches:', splitMatches);
   // دالة عرض اختيار السيارة
   const handleOpenCarPicker = async () => {
     try {
-      const userId = await AsyncStorage.getItem('userId');
-      const res = await axios.get(`http://176.119.254.225:80/vehicle/vehicles/${userId}`);
+      const userId = await AsyncStorage.getItem("userId");
+      const res = await axios.get(
+        `http://176.119.254.225:80/vehicle/vehicles/${userId}`
+      );
 
       setAllCars(res.data);
 
-      const options = res.data.map(car => `${car.make} ${car.model} (${car.year})`);
-      options.push('Cancel');
+      const options = res.data.map(
+        (car) => `${car.make} ${car.model} (${car.year})`
+      );
+      options.push("Cancel");
 
       showActionSheetWithOptions(
         {
           options,
           cancelButtonIndex: options.length - 1,
-          title: 'Select a Car',
+          title: "Select a Car",
         },
-        selectedIndex => {
-          if (selectedIndex !== undefined && selectedIndex !== options.length - 1) {
+        (selectedIndex) => {
+          if (
+            selectedIndex !== undefined &&
+            selectedIndex !== options.length - 1
+          ) {
             setSelectedCar(res.data[selectedIndex]);
           }
         }
       );
     } catch (err) {
-      console.error('Error fetching all vehicles:', err);
+      console.error("Error fetching all vehicles:", err);
     }
   };
 
@@ -73,13 +92,15 @@ console.log('Split Matches:', splitMatches);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission not granted.');
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Location permission not granted.");
         setLoadingLocation(false);
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
       const { latitude, longitude } = location.coords;
 
       let suburb = "Unknown Area";
@@ -89,14 +110,19 @@ console.log('Split Matches:', splitMatches);
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
           {
-            headers: { 'User-Agent': 'veeserv-app/1.0' },
+            headers: { "User-Agent": "veeserv-app/1.0" },
           }
         );
 
         if (response.ok) {
           const data = await response.json();
-          suburb = data.address?.suburb || data.address?.residential || "Unknown Area";
-          city = data.address?.city || data.address?.town || data.address?.village || "Unknown City";
+          suburb =
+            data.address?.suburb || data.address?.residential || "Unknown Area";
+          city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.village ||
+            "Unknown City";
         }
       } catch (apiError) {
         console.warn("API fetch failed, using fallback address:", apiError);
@@ -108,178 +134,194 @@ console.log('Split Matches:', splitMatches);
         latitude: latitude,
         longitude: longitude,
       });
-
     } catch (error) {
-      Alert.alert('Error', `Location error: ${error.message}`);
+      Alert.alert("Error", `Location error: ${error.message}`);
     } finally {
       setLoadingLocation(false);
     }
   };
 
   // حساب السعر الكلي
-  const totalPrice = bookings.reduce((acc, item) => acc + item.service?.price, 0);
+  const totalPrice = bookings.reduce(
+    (acc, item) => acc + item.service?.price,
+    0
+  );
 
- 
-const handleConfirmBooking = async () => {
-  try {
-    const token = await AsyncStorage.getItem('accessToken');
+  const handleConfirmBooking = async () => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
 
-    if (!selectedCar) {
-      Alert.alert('Please select a car first');
-      return;
+      if (!selectedCar) {
+        Alert.alert("Please select a car first");
+        return;
+      }
+
+      if (!address) {
+        Alert.alert("Please provide a location");
+        return;
+      }
+
+      const userId = await AsyncStorage.getItem("userId");
+      const payload = {
+        bookings: bookings.map((item) => ({
+          workshop_id: item.workshop_id,
+          scheduled_date: date,
+          time: item.time || timeSlots[item.workshop_id],
+          vehicle_id: selectedCar?.vehicle_id,
+          services: Array.isArray(item.services)
+            ? item.services.map((service) => ({
+                service_id: service.id || service.service_id,
+                price: service.price,
+              }))
+            : [
+                {
+                  service_id: item.service?.id || item.service?.service_id,
+                  price: item.service?.price,
+                },
+              ],
+        })),
+        totalPrice: totalPrice,
+        address: {
+          address_id: address?.address_id,
+          street: address?.street,
+          city: address?.city,
+        },
+        temporary: true,
+      };
+
+      console.log("📤 Sending payload:", JSON.stringify(payload, null, 2));
+
+      const response = await axios.post(
+        "http://176.119.254.225:80/booking/multiple",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.status === 201) {
+        Alert.alert("Success ✅", "Your bookings have been made!");
+        navigation.navigate("Payment", {
+          bookings,
+          totalPrice,
+          address,
+          selectedCar,
+          date,
+          timeSlots,
+        });
+      }
+    } catch (err) {
+      console.error("❌ Booking failed:", err.response?.data || err.message);
+      Alert.alert(
+        "Booking failed",
+        err.response?.data?.error || "Unknown error"
+      );
     }
-
-    if (!address) {
-      Alert.alert('Please provide a location');
-      return;
-    }
-
-    const userId = await AsyncStorage.getItem('userId');
-const payload = {
-  bookings: bookings.map(item => ({
-    workshop_id: item.workshop_id,
-    scheduled_date: date,
-    time: item.time || timeSlots[item.workshop_id],
-    vehicle_id: selectedCar?.vehicle_id,
-    services: Array.isArray(item.services)
-      ? item.services.map(service => ({
-          service_id: service.id || service.service_id,
-          price: service.price
-        }))
-      : [{
-          service_id: item.service?.id || item.service?.service_id,
-          price: item.service?.price
-        }]
-  })),
-  totalPrice: totalPrice,
-  address: {
-    address_id: address?.address_id,
-    street: address?.street,
-    city: address?.city
-  },
-  temporary: true
-};
-
-
-    console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
-
-    const response = await axios.post('http://176.119.254.225:80/booking/multiple', payload, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (response.status === 201) {
-      Alert.alert('Success ✅', 'Your bookings have been made!');
-      navigation.navigate('Payment', {
-        bookings,
-        totalPrice,
-        address,
-        selectedCar,
-        date,
-        timeSlots,
-      });
-    }
-
-  } catch (err) {
-    console.error('❌ Booking failed:', err.response?.data || err.message);
-    Alert.alert('Booking failed', err.response?.data?.error || 'Unknown error');
-  }
-};
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Confirm Booking for All Services</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* عرض اختيار السيارة */}
+        <View style={styles.selectionBox}>
+          {selectedCar ? (
+            <Text style={styles.selectionText}>
+              {selectedCar.make} {selectedCar.model} ({selectedCar.year})
+            </Text>
+          ) : (
+            <Text style={styles.selectionText}>No car selected</Text>
+          )}
+          <TouchableOpacity onPress={handleOpenCarPicker} style={styles.btn}>
+            <Text style={styles.btnText}>Choose a Car</Text>
+          </TouchableOpacity>
+        </View>
+        {/* قائمة الحجز */}
+        {bookings.map((item, index) => (
+          <View key={index} style={styles.card}>
+            <Text style={styles.workshopName}>{item.workshop_name}</Text>
 
-      {/* عرض اختيار السيارة */}
-      <View style={styles.selectionBox}>
-        {selectedCar ? (
-          <Text style={styles.selectionText}>
-            {selectedCar.make} {selectedCar.model} ({selectedCar.year})
-          </Text>
-        ) : (
-          <Text style={styles.selectionText}>No car selected</Text>
-        )}
-        <TouchableOpacity onPress={handleOpenCarPicker} style={styles.btn}>
-          <Text style={styles.btnText}>Choose a Car</Text>
-        </TouchableOpacity>
+            <Text style={styles.detail}>
+              <Text style={styles.label}>Service:</Text> {item.service?.name}
+            </Text>
+
+            <Text style={styles.detail}>
+              <Text style={styles.label}>Price:</Text> {item.service?.price} ₪
+            </Text>
+
+            <Text style={styles.detail}>
+              <Text style={styles.label}>Date:</Text> {date}
+            </Text>
+
+            <Text style={styles.detail}>
+              <Text style={styles.label}>Time:</Text> {item.time || timeSlots}
+            </Text>
+          </View>
+        ))}
+        {/* عرض الموقع الحالي */}
+        <View style={styles.selectionBox}>
+          <View style={styles.locationHeader}>
+            <Text style={styles.selectionLabel}>Current Location:</Text>
+            <TouchableOpacity onPress={handleGetLocation}>
+              <Ionicons name="location-outline" size={24} color="#086189" />
+            </TouchableOpacity>
+          </View>
+
+          {address ? (
+            <Text style={styles.selectionText}>
+              {address.street}, {address.city}
+            </Text>
+          ) : (
+            <Text style={styles.selectionText}>Location not set</Text>
+          )}
+
+          {loadingLocation && (
+            <ActivityIndicator color="#086189" style={{ marginTop: 10 }} />
+          )}
+        </View>
+        <View style={{ height: 100 }} />{" "}
+        {/* مساحة إضافية أسفل عشان الزر ما يتغطى */}
+      </ScrollView>
+      {/* الزر المثبت بأسفل الشاشة */}
+      <View style={styles.fixedButtonContainer}>
+        <View style={styles.bottomBar}>
+          <View style={styles.priceWrapper}>
+            <Text style={styles.totalText}>Total:</Text>
+            <Text style={styles.totalPrice}>{totalPrice} ₪</Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleConfirmBooking}
+            style={styles.confirmBtn}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.confirmBtnText}>Confirm Booking</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-     
-
-      {/* قائمة الحجز */}
-      {bookings.map((item, index) => (
-  <View key={index} style={styles.card}>
-    <Text style={styles.workshopName}>{item.workshop_name}</Text>
-    
-    <Text style={styles.detail}>
-      <Text style={styles.label}>Service:</Text> {item.service?.name}
-    </Text>
-    
-    <Text style={styles.detail}>
-      <Text style={styles.label}>Price:</Text> {item.service?.price} ₪
-    </Text>
-    
-    <Text style={styles.detail}>
-      <Text style={styles.label}>Date:</Text> {date}
-    </Text>
-    
-    <Text style={styles.detail}>
-      <Text style={styles.label}>Time:</Text> {item.time || timeSlots}
-    </Text>
-  </View>
-))}
-
- {/* عرض الموقع الحالي */}
-     <View style={styles.selectionBox}>
-  <View style={styles.locationHeader}>
-    <Text style={styles.selectionLabel}>Current Location:</Text>
-    <TouchableOpacity onPress={handleGetLocation}>
-      <Ionicons name="location-outline" size={24} color="#086189" />
-    </TouchableOpacity>
-  </View>
-
-  {address ? (
-    <Text style={styles.selectionText}>
-      {address.street}, {address.city}
-    </Text>
-  ) : (
-    <Text style={styles.selectionText}>Location not set</Text>
-  )}
-
-  {loadingLocation && (
-    <ActivityIndicator color="#086189" style={{ marginTop: 10 }} />
-  )}
-</View>
-
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalText}>Total Price:</Text>
-        <Text style={styles.totalPrice}>{totalPrice} ₪</Text>
-      </View>
-
-      <TouchableOpacity onPress={handleConfirmBooking} style={styles.confirmBtn} activeOpacity={0.8}>
-        <Text style={styles.confirmBtnText}>Confirm Booking</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 };
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#f5f9fc',
+    backgroundColor: "#f5f9fc",
   },
   header: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 25,
-    color: '#086189',
-    textAlign: 'center',
+    color: "#086189",
+    textAlign: "center",
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 15,
     marginBottom: 18,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 5 },
     shadowRadius: 10,
@@ -287,59 +329,44 @@ const styles = StyleSheet.create({
   },
   workshopName: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontWeight: "700",
+    color: "#1a1a1a",
     marginBottom: 10,
   },
   detail: {
     fontSize: 16,
-    color: '#555',
+    color: "#555",
     marginBottom: 6,
   },
   label: {
-    fontWeight: '600',
-    color: '#086189',
+    fontWeight: "600",
+    color: "#086189",
   },
   totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 10,
     marginTop: 15,
     marginBottom: 30,
   },
   totalText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
   },
   totalPrice: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#086189',
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.blue,
   },
-  confirmBtn: {
-    backgroundColor: '#086189',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    shadowColor: '#086189',
-    shadowOpacity: 0.6,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  confirmBtnText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
+ 
+
   selectionBox: {
     marginBottom: 25,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
@@ -347,39 +374,80 @@ const styles = StyleSheet.create({
   },
   selectionLabel: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#086189',
+    fontWeight: "700",
+    color: "#086189",
     marginBottom: 8,
   },
   selectionText: {
     fontSize: 18,
-    color: '#555',
+    color: "#555",
     marginBottom: 12,
-    fontWeight: '800',
-    alignContent: 'center',
-    textAlign: 'center',
-
+    fontWeight: "800",
+    alignContent: "center",
+    textAlign: "center",
   },
   btn: {
-    marginTop: 10,
-    backgroundColor: '#086189',
+    
+    backgroundColor: "#086189",
     paddingVertical: 12,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 15,
-    shadowColor: '#086189',
-    shadowOpacity: 0.6, 
+    
   },
   btnText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   locationHeader: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+fixedButtonContainer: {
+  position: "absolute",
+  bottom: 0, // Flush with bottom
+  left: 0,
+  right: 0,
+},
+bottomBar: {
+ flexDirection: "row",
+  backgroundColor: "#fff",
+  paddingBottom: 20,
+  paddingTop: 10,
+  paddingHorizontal: 20,
+  alignItems: "center",
+  justifyContent: "space-between",
+  shadowColor: "#000",
+  shadowOpacity: 0.3,         // Increased from 0.1
+  shadowOffset: { width: 0, height: 10 }, // Deeper shadow
+  shadowRadius: 12,            // Softer blur spread
+  elevation: 12,    
+},
+priceWrapper: {
+  flexDirection: "column",
+  justifyContent: "center",
+},
+
+confirmBtn: {
+  backgroundColor: "#086189",
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  height:"100%",
+  shadowColor: "#086189",
+},
+
+confirmBtnText: {
+  color: "white",
+  fontSize: 16,
+  fontWeight: "800",
+  letterSpacing: 1,
 },
 
 });

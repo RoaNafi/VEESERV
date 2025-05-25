@@ -48,8 +48,7 @@ const Cart = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Cart</Text>
-
+    
       {loading ? (
         <ActivityIndicator size="large" color="#086189" style={{ marginTop: 40 }} />
       ) : services.length === 0 ? (
@@ -70,9 +69,8 @@ const Cart = () => {
           />
 
           {/* Continue to Checkout Button */}
-          <TouchableOpacity style={styles.checkoutButton}       onPress={() => navigation.navigate('DateTimePickerScreen')}
+          <TouchableOpacity style={styles.checkoutButton} onPress={() => navigation.navigate('DateTimePickerScreen')}>
 
->
             <Text style={styles.checkoutButtonText}>Continue to Checkout</Text>
           </TouchableOpacity>
         </>
@@ -87,7 +85,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 20,
   },
   title: {

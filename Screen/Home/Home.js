@@ -18,7 +18,7 @@ import Colors from "../../Components/Colors/Colors";
 import SearchResult from "./SearchResult";
 import Filter from "./ResultOperation/Filter";
 import Sort from "./ResultOperation/Sort";
-import Footer from "../../Components/Footer/Footer ";
+
 import { useFilterLogic } from "./ResultOperation/useFilterLogic";
 import { useSortLogic } from "./ResultOperation/useSortLogic";
 // import { CheckBox } from '@rneui/themed'; // or '@react-native-elements'
@@ -490,7 +490,7 @@ return (
           </>
         )}
 
-        <Footer />
+       
       </ScrollView>
     ) : (
       <SearchResult

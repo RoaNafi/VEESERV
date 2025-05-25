@@ -196,20 +196,26 @@ const Payment = ({ route, navigation }) => {
             Date: <Text style={styles.value}>{date}</Text>
           </Text>
           <Text style={styles.label}>
-            Time: <Text style={styles.value}>{workshop.time.join(', ')}</Text>
+            Time: <Text style={styles.value}>{workshop.time.join(", ")}</Text>
           </Text>
           <Text style={styles.label}>Services:</Text>
           {workshop.services.map((s, idx) => (
-            <Text key={idx}>• {s.name} - {s.price}₪</Text>
+            <Text key={idx}>
+              • {s.name} - {s.price}₪
+            </Text>
           ))}
         </View>
       ))}
 
-      <Text style={styles.total}>Total: {totalPrice}₪</Text>
-
-      <TouchableOpacity style={styles.payButton} onPress={handlePay}>
-        <Text style={styles.payButtonText}>Pay Now</Text>
-      </TouchableOpacity>
+      <View style={styles.bottomBar}>
+        <View style={styles.priceWrapper}>
+          <Text style={styles.totalLabel}>Total:</Text>
+          <Text style={styles.totalAmount}>{totalPrice} ₪</Text>
+        </View>
+        <TouchableOpacity style={styles.payButton} onPress={handlePay}>
+          <Text style={styles.payButtonText}>Pay Now</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -222,7 +228,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  card: { backgroundColor: Colors.lightGray, borderRadius: 12, padding: 16 },
+  card: { backgroundColor: Colors.lightGray, borderRadius: 12, padding: 16 ,marginBottom: 10 },
   label: {
     fontSize: 16,
     fontWeight: "bold",
@@ -237,14 +243,56 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: Colors.green,
   },
-  payButton: {
-    marginTop: 30,
-    backgroundColor: Colors.blue,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  payButtonText: { color: Colors.white, fontWeight: "bold", fontSize: 17 },
+  
+  bottomBar: {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  flexDirection: "row",
+  backgroundColor: "#fff",
+  paddingBottom: 20,
+  paddingTop: 10,
+  paddingHorizontal: 20,
+  justifyContent: "space-between",
+  alignItems: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.25,
+  shadowOffset: { width: 0, height: 8 },
+  shadowRadius: 12,
+  elevation: 12,
+  
+},
+priceWrapper: {
+  flexDirection: "column",
+},
+totalLabel: {
+  fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+},
+totalAmount: {
+  fontSize: 20,
+  fontWeight: "800",
+  color: Colors.blue,
+},
+payButton: {
+   backgroundColor: "#086189",
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  height:"100%",
+  shadowColor: "#086189",
+},
+payButtonText: {
+  color: "white",
+  fontSize: 16,
+  fontWeight: "800",
+  letterSpacing: 1,
+},
+
 });
 
 export default Payment;
