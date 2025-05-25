@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator ,TouchableOpacity,} from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons'; // icons!
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import book from '../assets/booki.png';
+import { useNavigation } from '@react-navigation/native';
 
 const MyBookingsScreen = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -17,6 +19,7 @@ const MyBookingsScreen = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBookings(res.data);
+        console.log(res.data);
       } catch (err) {
         console.error('Error fetching bookings:', err);
       } finally {
@@ -28,45 +31,79 @@ const MyBookingsScreen = () => {
   }, []);
 
 
-  // Group bookings by vehicle_id + scheduled_date + scheduled_time
-  const groupedBookings = bookings.reduce((acc, booking) => {
-    const key = `${booking.vehicle_id}-${booking.scheduled_date}-${booking.scheduled_time}`;
+ const groupedBookings = bookings.reduce((acc, booking) => {
+  const key = `${booking.vehicle_id}-${booking.scheduled_date}-${booking.workshop_name}`;
 
-    if (!acc[key]) {
-      acc[key] = {
-        ...booking,
-        services: [{ service_name: booking.service_name, price: booking.price }],
-      };
-    } else {
-      acc[key].services.push({ service_name: booking.service_name, price: booking.price });
-    }
+  if (!acc[key]) {
+    acc[key] = {
+      ...booking,
+      services: [{
+        service_name: booking.service_name,
+        price: booking.price,
+        scheduled_time: booking.scheduled_time
+      }],
+    };
+  } else {
+    acc[key].services.push({
+      service_name: booking.service_name,
+      price: booking.price,
+      scheduled_time: booking.scheduled_time
+    });
+  }
 
-    return acc;
-  }, {});
+  return acc;
+}, {});
+
+
 
   const bookingsArray = Object.values(groupedBookings);
 
-  const renderBooking = ({ item }) => (
-    <View style={styles.card}>
-     <Image source={book} style={styles.image} />
-      <View style={styles.details}>
-        <Text style={styles.title}>{item.workshop_name}</Text>
-        <Text style={styles.car}>{item.make} {item.model} ({item.year})</Text>
+ const renderBooking = ({ item }) => (
+  <View style={styles.card}>
+    <Image source={book} style={styles.image} />
+    <View style={styles.details}>
+      <Text style={styles.title}>{item.workshop_name}</Text>
+      <Text style={styles.car}>{item.make} {item.model} ({item.year})</Text>
 
-        {item.services.map((service, index) => (
-          <View key={index} style={styles.serviceRow}>
-            <Ionicons name="checkmark-circle-outline" size={14} color="#086189" />
-            <Text style={styles.serviceText}>
-              {service.service_name} - {service.price}₪
-            </Text>
-          </View>
-        ))}
+      {item.services.map((service, index) => (
+        <View key={index} style={styles.serviceRow}>
+          <Ionicons name="checkmark-circle-outline" size={14} color="#086189" />
+          <Text style={styles.serviceText}>
+            {service.service_name} - {service.price}₪ at {service.scheduled_time}
+          </Text>
+        </View>
+      ))}
 
-        <Text style={styles.status}>Status: {item.booking_status}</Text>
-        <Text style={styles.date}>Scheduled: {item.scheduled_date} {item.scheduled_time}</Text>
-      </View>
+      <Text style={styles.status}>Status: {item.booking_status}</Text>
+      <Text style={styles.date}>Scheduled: {item.scheduled_date}</Text>
+
+      {item.booking_status === 'accepted' && (
+        <TouchableOpacity
+          style={styles.payNowButton}
+          onPress={() => {
+            navigation.navigate('Payment', {
+              workshop_name:item.workshop_name,
+              bookings: item.services,
+              totalPrice: item.services.reduce((total, s) => total + s.price, 0),
+              address: item.address,  // Optional: make sure it's available
+              selectedCar: {
+                make: item.make,
+                model: item.model,
+                year: item.year,
+                vehicle_id: item.vehicle_id,
+              },
+              date: item.scheduled_date,
+              timeSlots: item.services.map(s => s.scheduled_time),
+            });
+          }}
+        >
+          <Text style={styles.payNowText}>Pay Now</Text>
+        </TouchableOpacity>
+      )}
     </View>
-  );
+  </View>
+);
+
 
   if (loading) return <ActivityIndicator size="large" color="#086189" style={{ flex: 1 }} />;
 
@@ -77,6 +114,7 @@ const MyBookingsScreen = () => {
         <Text style={styles.emptySubText}>Once you book a service, it’ll show up here.</Text>
       </View>
     );
+
   }
   return (
     <FlatList
@@ -85,7 +123,9 @@ const MyBookingsScreen = () => {
       renderItem={renderBooking}
   contentContainerStyle={{ padding: 16, paddingTop: 75 }}  // <-- extra top padding here
     />
+    
   );
+  
 };
 
 const styles = StyleSheet.create({
@@ -166,6 +206,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
+  payNowButton: {
+  marginTop: 10,
+  backgroundColor: '#086189',
+  paddingVertical: 10,
+  borderRadius: 10,
+  alignItems: 'center',
+},
+
+payNowText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 16,
+},
+
 });
 
 

@@ -6,10 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Static fallback notifications
 const notificationsData = [
-  { id: "1", title: "New Booking Confirmed", description: "Your booking at Workshop X is confirmed!", read: false },
-  { id: "2", title: "Discount Offer!", description: "Get 20% off on your next service.", read: true },
   { id: "3", title: "Mechanic Reply", description: "Your mechanic replied to your message.", read: false },
-  { id: "4", title: "Reminder", description: "Service appointment tomorrow at 10 AM.", read: true },
 ];
 
 export default function NotificationsScreen() {

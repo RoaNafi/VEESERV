@@ -14,6 +14,7 @@ import * as Location from "expo-location";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons"; // Expo
 import Colors from "../../Components/Colors/Colors";
+import { CommonActions } from '@react-navigation/native';
 
 const SplitBookingPage = ({ route, navigation }) => {
   const { splitMatches, date, timeSlots } = route.params;
@@ -200,15 +201,29 @@ const SplitBookingPage = ({ route, navigation }) => {
       );
 
       if (response.status === 201) {
-        Alert.alert("Success ✅", "Your bookings have been made!");
-        navigation.navigate("Payment", {
-          bookings,
-          totalPrice,
-          address,
-          selectedCar,
-          date,
-          timeSlots,
-        });
+Alert.alert("Success ✅", "Booking done! Now sit tight while the mechanic checks and responds 👨‍🔧💬");
+        // navigation.navigate("Payment", {
+        //   bookings,
+        //   totalPrice,
+        //   address,
+        //   selectedCar,
+        //   date,
+        //   timeSlots,
+        // });
+        navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'MainTabs',
+                    state: {
+                      routes: [{ name: 'Home' }],
+                      index: 0,
+                    },
+                  },
+                ],
+              })
+            );
       }
     } catch (err) {
       console.error("❌ Booking failed:", err.response?.data || err.message);

@@ -39,6 +39,8 @@ import WorkshopSpecializations from "./Screen/Profile/specialization/specializat
 import MechanicHomeScreen from "./Screen/MechanicHomeScreen";
 import NotificationsScreen from "./Screen/NotificationsScreen";
 import OffersScreen from "./Screen/OffersScreen";
+import WorkshopBookingsScreen from './Screen/workshopBooking';
+
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -260,6 +262,10 @@ export default function App() {
             component={SplitBookingPage}
             options={{ headerShown: true, title: "Confirm Booking" }}
           />
+                   <Stack.Screen name="workshopBooking" 
+                   component={WorkshopBookingsScreen} 
+                   options={{ title: 'apointment' }} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </ActionSheetProvider>
