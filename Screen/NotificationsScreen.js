@@ -1,7 +1,10 @@
-import React from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Static fallback notifications
 const notificationsData = [
   { id: "1", title: "New Booking Confirmed", description: "Your booking at Workshop X is confirmed!", read: false },
   { id: "2", title: "Discount Offer!", description: "Get 20% off on your next service.", read: true },
@@ -10,6 +13,45 @@ const notificationsData = [
 ];
 
 export default function NotificationsScreen() {
+  const [apiNotifications, setApiNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+ useEffect(() => {
+  const fetchNotifications = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const res = await axios.get('http://176.119.254.225:80/notification/notifications', {
+        headers: {
+             Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      // axios يحط البيانات في res.data مباشرة
+      const data = res.data;
+
+      // عدل على حسب شكل بياناتك الحقيقية
+      const formatted = data.notifications.map(n => ({
+        id: n.notification_id.toString(),
+        title: n.message.length > 30 ? n.message.slice(0, 30) + '...' : n.message,
+        description: n.message,
+        read: n.status === 'read',
+      }));
+
+      setApiNotifications(formatted);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message || 'Error fetching notifications');
+      setLoading(false);
+    }
+  };
+
+  fetchNotifications();
+}, []);
+
+  // دمج بيانات الـ API مع الـ static
+  const combinedNotifications = [...apiNotifications, ...notificationsData];
+
   const renderItem = ({ item }) => (
     <TouchableOpacity style={[styles.notificationCard, item.read ? styles.read : styles.unread]}>
       <View style={styles.iconContainer}>
@@ -27,11 +69,27 @@ export default function NotificationsScreen() {
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#086189" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: 'red', fontSize: 16 }}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>📬 Notifications</Text>
       <FlatList
-        data={notificationsData}
+        data={combinedNotifications}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 20 }}
