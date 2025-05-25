@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Platform,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
@@ -27,7 +26,11 @@ const TimeSlots = [
 const DateTimePickerScreen = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [selectedSlots, setSelectedSlots] = useState([]);
+
+  const [selectedSlot, setSelectedSlot] = useState(null); // can be string like "10:00 AM" or time string from picker
+  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+
+  // Format date as YYYY-MM-DD
   const selectedDateOnly =
     selectedDate.getFullYear() +
     "-" +
@@ -36,9 +39,26 @@ const DateTimePickerScreen = ({ navigation }) => {
     String(selectedDate.getDate()).padStart(2, "0");
 
   const toggleTimeSlot = (slot) => {
-    setSelectedSlots((prev) =>
-      prev.includes(slot) ? prev.filter((s) => s !== slot) : [...prev, slot]
-    );
+    setSelectedSlot((prev) => (prev === slot ? null : slot)); // toggle single slot
+  };
+
+  const showTimePicker = () => {
+    setTimePickerVisibility(true);
+  };
+
+  const hideTimePicker = () => {
+    setTimePickerVisibility(false);
+  };
+
+  // When user picks time from modal, format it nicely and save as selected slot
+  const handleTimeConfirm = (time) => {
+    // Format time to "hh:mm AM/PM"
+    const formattedTime = time.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setSelectedSlot(formattedTime);
+    hideTimePicker();
   };
 
   const handleConfirm = (date) => {
@@ -51,20 +71,17 @@ const DateTimePickerScreen = ({ navigation }) => {
   };
 
   const goToNextStep = () => {
-    navigation.navigate("AvailableMechanic", {
-      date: selectedDateOnly, // مثل "2025-05-13"
-      timeSlots: selectedSlots, // 🔹 الوقت المختار (مثلاً ["02:00 PM"])
-    });
+   navigation.navigate("AvailableMechanic", {
+  date: selectedDateOnly,
+  timeSlots: selectedSlot ? [selectedSlot] : [], // always an array
+});
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Pick a date</Text>
 
-      <TouchableOpacity
-        style={styles.dateBtn}
-        onPress={() => setDatePickerVisibility(true)}
-      >
+      <TouchableOpacity style={styles.dateBtn} onPress={() => setDatePickerVisibility(true)}>
         <Text style={styles.dateText}>{selectedDate.toDateString()}</Text>
       </TouchableOpacity>
 
@@ -78,7 +95,22 @@ const DateTimePickerScreen = ({ navigation }) => {
         themeVariant="light"
       />
 
-      <Text style={styles.heading}>Pick preferred time slots</Text>
+      <Text style={styles.heading}>Pick preferred time</Text>
+
+      <TouchableOpacity style={styles.dateBtn} onPress={showTimePicker}>
+        <Text style={styles.dateText}>{selectedSlot ?? "Select Time"}</Text>
+      </TouchableOpacity>
+
+      <DateTimePickerModal
+        isVisible={isTimePickerVisible}
+        mode="time"
+        onConfirm={handleTimeConfirm}
+        onCancel={hideTimePicker}
+        date={selectedDate}
+        themeVariant="light"
+      />
+
+      <Text style={[styles.heading, { marginTop: 20 }]}>Or pick from quick slots</Text>
 
       <FlatList
         data={TimeSlots}
@@ -87,19 +119,10 @@ const DateTimePickerScreen = ({ navigation }) => {
         columnWrapperStyle={styles.timeRow}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[
-              styles.timeSlot,
-              selectedSlots.includes(item) && styles.selectedSlot,
-            ]}
+            style={[styles.timeSlot, selectedSlot === item && styles.selectedSlot]}
             onPress={() => toggleTimeSlot(item)}
           >
-            <Text
-              style={
-                selectedSlots.includes(item)
-                  ? styles.selectedText
-                  : styles.timeText
-              }
-            >
+            <Text style={selectedSlot === item ? styles.selectedText : styles.timeText}>
               {item}
             </Text>
           </TouchableOpacity>
@@ -107,11 +130,8 @@ const DateTimePickerScreen = ({ navigation }) => {
       />
 
       <TouchableOpacity
-        style={[
-          styles.nextBtn,
-          !(selectedDate && selectedSlots.length) && styles.disabledBtn,
-        ]}
-        disabled={!(selectedDate && selectedSlots.length)}
+        style={[styles.nextBtn, !(selectedDate && selectedSlot) && styles.disabledBtn]}
+        disabled={!(selectedDate && selectedSlot)}
         onPress={goToNextStep}
       >
         <Text style={styles.nextText}>Next Step →</Text>
@@ -142,7 +162,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderColor: "#086189",
     backgroundColor: "#E6F1F4",
-    marginBottom: 20,
+    marginBottom: 10,
   },
   dateText: {
     color: "#086189",
