@@ -17,54 +17,55 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
   return (
     <View style={styles.card}>
       <Image
-        source={{ uri: image || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s" }}
+        source={{
+          uri:
+            image ||
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
+        }}
         style={styles.image}
       />
 
       <View style={styles.info}>
         <View style={styles.topInfo}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={styles.serviceName} numberOfLines={1}>
-              {service_name}
+            <Text style={styles.serviceName} numberOfLines={2}>
+              {workshop_name}
             </Text>
           </View>
-          <Text style={styles.price}>{price}₪</Text>
         </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-          <Text style={{ color: Colors.darkGray, fontSize: 13, marginRight: 4 }}>by</Text>
-          <Text style={styles.name} numberOfLines={1} onPress={onShopPress}>
-            {workshop_name} · 
-          </Text> 
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 4,
+          }}
+        >
           <Ionicons name="star" size={12} color="#FFD700" />
           <Text style={styles.ratingText}>{rate.toFixed(1)}</Text>
         </View>
 
-        <Text style={styles.serviceDescription} numberOfLines={2}>
-          {service_description}
-        </Text>
+        <Text style={styles.price}>{price}₪</Text>
 
         <View style={styles.bottomInfo}>
           <Text style={styles.distance}>6 km</Text>
-          <TouchableOpacity
-            onPress={() => console.log("View Location pressed")}
-            style={{
-              backgroundColor: "#e6f1f3",
-              paddingVertical: 10,
-              paddingHorizontal: 16,
-              borderRadius: 10,
-              flexDirection: "row",
-              alignItems: "center",
-              alignSelf: "flex-start",
-            }}
-          >
-                  
-                    <Text style={{ fontSize: 15, color: "#086189", fontWeight: "600" }}>
-                      📍 View Location
-                    </Text>
-                  </TouchableOpacity>
           <TouchableOpacity style={styles.bookButton} onPress={onBookPress}>
             <Text style={styles.bookButtonText}>Book</Text>
+          </TouchableOpacity>
+          {/* Add to Cart Button with + icon */}
+          <TouchableOpacity style={styles.addToCartButton}>
+            <View style={styles.cartIconContainer}>
+              <Ionicons name="add" size={16} color={Colors.black} />
+              <Ionicons
+                name="cart"
+                size={16}
+                 marginLeft= {-4} // Overlaps slightly with the + icon
+                color= {Colors.black}
+
+                style={styles.cartIcon}
+              />
+            </View>
+          
           </TouchableOpacity>
         </View>
       </View>

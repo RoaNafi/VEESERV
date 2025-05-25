@@ -48,9 +48,9 @@ export default StyleSheet.create({
    
   },
   price: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: Colors.black,
+    color: Colors.blue,
     //marginRight: 15,
     
   },
@@ -64,27 +64,10 @@ export default StyleSheet.create({
     fontSize: 12,
   marginLeft: 2,
   },
-  bottomInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  distance: {
-    fontSize: 14,
-    color: Colors.darkGray,
-  },
-  bookButton: {
-    backgroundColor: Colors.lightblue,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  bookButtonText: {
-    color: Colors.black,
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
+
+
+ 
+ 
   serviceInfo: {
     marginTop: 4,
   },
@@ -101,5 +84,44 @@ export default StyleSheet.create({
     color: Colors.mediumGray,
     
   },
-  
+  bottomInfo: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginTop: 8,
+},
+
+bookButton: {
+    borderWidth: 1,
+    borderColor: Colors.Gray,
+    borderRadius: 15,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    marginRight: 10,
+  },
+bookButtonText: {
+  color: Colors.black,
+  fontWeight: '600',
+  fontSize: 14,
+},
+distance: {
+  fontSize: 12,
+  color: Colors.darkGray,
+  flex: 1, // Takes remaining space
+},
+addToCartButton: {
+      borderWidth: 1,
+    borderColor: Colors.Gray,
+    borderRadius: 15,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+},
+cartIconContainer: {
+  flexDirection: 'row',
+  position: 'relative',
+  marginRight: 4,
+},
+cartIcon: {
+ },
+
 });
