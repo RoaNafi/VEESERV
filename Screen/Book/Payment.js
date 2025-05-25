@@ -3,58 +3,58 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import Colors from "../../Components/Colors/Colors";
 import { CommonActions } from '@react-navigation/native';
-const Payment = ({ route, navigation }) => {
-    const { bookings = [], workshop_name, totalPrice, date, address, selectedCar, timeSlots } = route.params;
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // لو بتخزني التوكن هناك
+import { Alert } from 'react-native';
 
-  // توليد payload للإرسال لاحقًا
-  const payload = {
-    bookings: bookings.map(item => ({
-      workshop_id: item.workshop_id,
-      scheduled_date: date,
-      time: item.time,
-      vehicle_id: selectedCar?.vehicle_id,
-      services: item.services
-        ? item.services.map(s => ({
-            service_id: s.id || s.service_id,
-            price: s.price,
-          }))
-        : [{
-            service_id: item.service?.id || item.service?.service_id,
-            price: item.service?.price,
-          }],
-    })),
-    totalPrice,
-    address: {
-      address_id: address?.address_id,
-      street: address?.street,
-      city: address?.city,
-    },
-    temporary: true,
-  };
+const Payment = ({ route, navigation }) => {
+    const { bookings = [], workshop_name, totalPrice, date, address, selectedCar, timeSlots,bookingId } = route.params;
+
+ 
 
   console.log('✅ Bookings:', bookings);
   console.log('💵 Total Price:', totalPrice);
   console.log( workshop_name);
   console.log(timeSlots);
+  console.log(bookingId);
+  const handlePay = async () => {
+  try {
+        const token = await AsyncStorage.getItem("accessToken");
 
-  const handlePay = () => {
-    alert("Payment Successful 🎉");
+
+    const paymentPayload = {
+      booking_id: bookingId,
+      income_value: totalPrice,
+      percent_to_admin: 0.1,  // أو احسبيها حسب المشروع
+      percent_to_workshop: 0.9,
+      type: 'card', // or 'cash', حسب ما بدك
+    };
+console.log( 'payment data :',paymentPayload);
+    const res = await axios.post(
+      'http://176.119.254.225:80/payment/payments', // غيّري حسب سيرفرك
+      paymentPayload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log('Payment success:', res.data);
+
+    Alert.alert("Payment Successful 🎉", "Payment confirmed");
 
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
-        routes: [
-          {
-            name: 'MainTabs',
-            state: {
-              routes: [{ name: 'Home' }],
-              index: 0,
-            },
-          },
-        ],
+        routes: [{ name: 'MainTabs', state: { routes: [{ name: 'Home' }], index: 0 } }],
       })
     );
-  };
+  } catch (error) {
+    console.error('Payment failed:', error);
+    Alert.alert("Payment Failed ❌", "Something went wrong. Please try again.");
+  }
+};
 
   // تجميع حسب الورشة
   const groupedByWorkshop = bookings.reduce((acc, item) => {

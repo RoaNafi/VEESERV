@@ -83,6 +83,7 @@ const MyBookingsScreen = () => {
           onPress={() => {
             navigation.navigate('Payment', {
               workshop_name:item.workshop_name,
+              bookingId:item.booking_id,
               bookings: item.services,
               totalPrice: item.services.reduce((total, s) => total + s.price, 0),
               address: item.address,  // Optional: make sure it's available
