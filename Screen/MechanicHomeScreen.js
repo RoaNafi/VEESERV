@@ -88,14 +88,33 @@ const MechanicHomeScreen = () => {
     }
   };
 
-  useEffect(() => {
+ const onCancel = async (bookingId) => {
+  try {
+     const token = await AsyncStorage.getItem('accessToken');
+    const response = await fetch(`http://176.119.254.225:80/booking/mechanic/bookings/${selectedAppointment.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`, // لازم تمرر التوكن
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      alert('Booking cancelled successfully.');
+      fetchTodayBookings(); // حدث قائمة الحجوزات بعد الإلغاء
+    } else {
+      const errorData = await response.json();
+      alert('Failed to cancel booking: ' + errorData.message);
+    }
+  } catch (error) {
+    console.error('Cancel booking error:', error);
+    alert('An error occurred while cancelling the booking.');
+  }
+};
+useEffect(() => {
     fetchTodayBookings();
   }, []);
-  const onCancel = (item) => {
-    console.log('Cancel appointment', item.id);
-  };
-
-  
+ 
  const onDelay = (item) => {
     setSelectedAppointment(item);
     setDelayModalVisible(true);
@@ -213,12 +232,11 @@ const onSelectDelay = async (minutes) => {
                 {item.status}
               </Text>
               <View style={{ flexDirection: 'row', marginTop: 10 }}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, { marginRight: 10 }]}
-                  onPress={() => onCancel(item)}
-                >
-                  <Text style={styles.buttonText}>Cancel</Text>
-                </TouchableOpacity>
+               <TouchableOpacity style={[styles.cancelButton]}
+               onPress={() => onCancel(item.booking_id)}>
+  <Text>Cancel </Text>
+</TouchableOpacity>
+
 
                 <TouchableOpacity
                   style={[styles.delayButton]}
