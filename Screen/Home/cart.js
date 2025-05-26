@@ -75,13 +75,13 @@ const clearCart = async () => {
 };
 
 
-  const total = services.reduce((acc, curr) => acc + parseFloat(curr.price ?? 0), 0);
+  const total = services?.reduce((acc, curr) => acc + parseFloat(curr?.price ?? 0), 0) ?? 0;
 
 return (
   <View style={styles.container}>
     {loading ? (
       <ActivityIndicator size="large" color="#086189" style={{ marginTop: 40 }} />
-    ) : services.length === 0 ? (
+    ) : !services || services.length === 0 ? (
       <View style={styles.emptyContainer}>
         <Ionicons name="cart-outline" size={60} color="#ccc" />
         <Text style={styles.emptyText}>Your cart is empty</Text>
@@ -104,10 +104,10 @@ return (
           renderItem={({ item, index }) => (
             <View style={styles.itemCard}>
               <View>
-                <Text style={styles.itemTitle}>{item.service_name ?? 'Unnamed Service'}</Text>
-                <Text style={styles.itemPrice}>${parseFloat(item.price ?? 0).toFixed(2)}</Text>
+                <Text style={styles.itemTitle}>{item?.service_name ?? 'Unnamed Service'}</Text>
+                <Text style={styles.itemPrice}>${parseFloat(item?.price ?? 0).toFixed(2)}</Text>
               </View>
-              <TouchableOpacity onPress={() => removeFromCart(index, item.cart_id)}>
+              <TouchableOpacity onPress={() => removeFromCart(index, item?.cart_id)}>
                 <Ionicons name="close-circle-outline" size={28} color="#d9534f" />
               </TouchableOpacity>
             </View>
@@ -214,5 +214,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
 

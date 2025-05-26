@@ -32,32 +32,36 @@ const responsiveFontSize = width * 0.04; // 4% of screen width
 
 
 const Book = ({ route, navigation }) => {
-const { workshopData, date, timeSlots } = route.params;
-const { service_name, workshop_name, price ,schedule,
- } = workshopData;
+  const { workshopData, date, timeSlots, selectedCar: initialCar } = route.params;
+  const { service_name, workshop_name, price, service_id, workshop_id } = workshopData;
 
   console.log("Workshop Data:", workshopData);
   console.log("Date:", date);
   console.log("Time Slots:", timeSlots);
+  console.log("Initial Car:", initialCar);
+
   // Initialize with service from route params
   const [selectedServices, setSelectedServices] = useState([
-    { id: 1, name: service_name || 'Service', price: price || 0 }
+    { 
+      id: service_id,
+      service_id: service_id,
+      name: service_name,
+      price: price
+    }
   ]);
   const { showActionSheetWithOptions } = useActionSheet();
 
-  const [scheduledDate, setScheduledDate] = useState(new Date());
+  const [scheduledDate, setScheduledDate] = useState(new Date(date));
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [selectedCar, setSelectedCar] = useState(null);
-const [allCars, setAllCars] = useState([]);
- // All services fetched from server for this workshop
+  const [selectedCar, setSelectedCar] = useState(initialCar);
+  const [allCars, setAllCars] = useState([]);
   const [services, setServices] = useState([]);
-const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
-  // User-selected services (initially empty or preselected)
   // Address state
   const [address, setAddress] = useState({
-    street: 'Al-Tireh Street',
-    city: 'Ramallah',
+    street: '',
+    city: '',
     latitude: '',
     longitude: '',
   });
@@ -66,7 +70,16 @@ const [modalVisible, setModalVisible] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+
   useEffect(() => {
+    // If no car is selected, fetch the default car
+    if (!selectedCar) {
+      fetchDefaultCar();
+    }
+    // Also fetch all cars for the picker
+    fetchAllCars();
+  }, []);
+
   const fetchDefaultCar = async () => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
@@ -78,22 +91,38 @@ const [modalVisible, setModalVisible] = useState(false);
         },
       });
 
-      setSelectedCar(res.data);
+      if (res.data) {
+        setSelectedCar(res.data);
+      }
     } catch (err) {
       console.error('Error fetching default car:', err);
+      Alert.alert('Error', 'Could not fetch default car. Please select a car manually.');
     }
   };
 
-  fetchDefaultCar();
-}, []);
+  const fetchAllCars = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const userId = await AsyncStorage.getItem('userId');
+      
+      const res = await axios.get(`http://176.119.254.225:80/vehicle/vehicles/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      setAllCars(res.data);
+    } catch (err) {
+      console.error('Error fetching all cars:', err);
+    }
+  };
 
-const handleOpenCarPicker = async () => {
-  try {
-    const userId = await AsyncStorage.getItem('userId');
-    const res = await axios.get(`http://176.119.254.225:80/vehicle/vehicles/${userId}`);
-    setAllCars(res.data);
+  const handleOpenCarPicker = async () => {
+    if (allCars.length === 0) {
+      await fetchAllCars();
+    }
 
-    const options = res.data.map(car => `${car.make} ${car.model} (${car.year})`);
+    const options = allCars.map(car => `${car.make} ${car.model} (${car.year})`);
     options.push('Cancel');
 
     showActionSheetWithOptions(
@@ -104,88 +133,82 @@ const handleOpenCarPicker = async () => {
       },
       selectedIndex => {
         if (selectedIndex !== undefined && selectedIndex !== options.length - 1) {
-          setSelectedCar(res.data[selectedIndex]);
+          setSelectedCar(allCars[selectedIndex]);
         }
       }
     );
-  } catch (err) {
-    console.error('Error fetching all vehicles:', err);
-  }
-};
-
+  };
 
   // Handle get current location functionality
- const handleGetLocation = async () => {
-  setLoadingLocation(true);
-
-  try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Location permission not granted.');
-      setLoadingLocation(false);
-      return;
-    }
-
-    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    const { latitude, longitude } = location.coords;
-    console.log("Latitude:", latitude, "Longitude:", longitude);
-
-    let suburb = "Unknown Area";
-    let city = "Unknown City";
+  const handleGetLocation = async () => {
+    setLoadingLocation(true);
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-        {
-          headers: {
-            'User-Agent': 'veeserv-app/1.0',
-          },
-        }
-      );
+      const { status } = await Location.requestForegroundPermissionsAsync();
 
-      if (response.ok) {
-        const data = await response.json();
-
-        // Use suburb (e.g., Bab al-Amari) instead of road
-        suburb = data.address?.suburb || data.address?.residential || "Unknown Area";
-        city = data.address?.city || data.address?.town || data.address?.village || "Unknown City";
-
-        console.log("Address data:", data.address);
-      } else {
-        console.warn("🌐 API response not OK, using fallback address.");
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission not granted.');
+        setLoadingLocation(false);
+        return;
       }
-    } catch (apiError) {
-      console.warn("🌐 API fetch failed, using fallback address:", apiError);
+
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const { latitude, longitude } = location.coords;
+      console.log("Latitude:", latitude, "Longitude:", longitude);
+
+      let suburb = "Unknown Area";
+      let city = "Unknown City";
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+          {
+            headers: {
+              'User-Agent': 'veeserv-app/1.0',
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Use suburb (e.g., Bab al-Amari) instead of road
+          suburb = data.address?.suburb || data.address?.residential || "Unknown Area";
+          city = data.address?.city || data.address?.town || data.address?.village || "Unknown City";
+
+          console.log("Address data:", data.address);
+        } else {
+          console.warn("🌐 API response not OK, using fallback address.");
+        }
+      } catch (apiError) {
+        console.warn("🌐 API fetch failed, using fallback address:", apiError);
+      }
+
+      if (latitude && longitude) {
+        setAddress({
+          street: suburb,  // 👈 here we're using suburb as the 'street'
+          city: city,
+          latitude: latitude,
+          longitude: longitude,
+        });
+
+        console.log("Set address:", {
+          street: suburb,
+          city: city,
+          latitude,
+          longitude,
+        });
+
+      } else {
+        Alert.alert('Error', 'Could not determine coordinates.');
+      }
+
+    } catch (error) {
+      Alert.alert('Error', `Location error: ${error.message}`);
+    } finally {
+      setLoadingLocation(false);
     }
-
-    if (latitude && longitude) {
-      setAddress({
-        street: suburb,  // 👈 here we're using suburb as the 'street'
-        city: city,
-        latitude: latitude,
-        longitude: longitude,
-      });
-
-      console.log("Set address:", {
-        street: suburb,
-        city: city,
-        latitude,
-        longitude,
-      });
-
-    } else {
-      Alert.alert('Error', 'Could not determine coordinates.');
-    }
-
-  } catch (error) {
-    Alert.alert('Error', `Location error: ${error.message}`);
-  } finally {
-    setLoadingLocation(false);
-  }
-};
-
- 
+  };
 
   const handleRemoveService = (id) => {
     setSelectedServices(selectedServices.filter((s) => s.id !== id));
@@ -215,121 +238,119 @@ const handleOpenCarPicker = async () => {
     }
   };
 
-// Replace your current handleAddService:
-const handleAddService = () => {
-  setModalVisible(true);
-};
+  // Replace your current handleAddService:
+  const handleAddService = () => {
+    setModalVisible(true);
+  };
 
-// New: when user taps one in the list
-const handleSelectService = (service) => {
-  // only add if not already selected
-  if (!selectedServices.some(s => s.service_id === service.service_id)) {
-    setSelectedServices([...selectedServices, {
-      id: service.service_id,
-      name: service.service_name,
-      price: service.price,
-      service_id: service.service_id
-    }]);
-  }
-  setModalVisible(false);
-};
-
-const groupServicesByWorkshop = (services) => {
-  return [{
-    workshop_id: workshopData.workshop_id,
-    services,
-    scheduled_date: date,
-    time: timeSlots,
-    location: `${address.street}, ${address.city}`,
-    coordinates: {
-      latitude: address.latitude,
-      longitude: address.longitude
+  // New: when user taps one in the list
+  const handleSelectService = (service) => {
+    // only add if not already selected
+    if (!selectedServices.some(s => s.service_id === service.service_id)) {
+      setSelectedServices([...selectedServices, {
+        id: service.service_id,
+        name: service.service_name,
+        price: service.price,
+        service_id: service.service_id
+      }]);
     }
-  }];
-};
+    setModalVisible(false);
+  };
+
+  const groupServicesByWorkshop = (services) => {
+    return [{
+      workshop_id: workshopData.workshop_id,
+      services,
+      scheduled_date: date,
+      time: timeSlots,
+      location: `${address.street}, ${address.city}`,
+      coordinates: {
+        latitude: address.latitude,
+        longitude: address.longitude
+      }
+    }];
+  };
   const serviceDisplayData = selectedServices.map(s => ({
-  name: s.service_name || s.name, // تأكد إنك تقدر تجيب الاسم من أي مفتاح موجود
-      price: s.price,
-    }));
-const handleConfirmBooking = async () => {
-  const bookingGroups = groupServicesByWorkshop(selectedServices);
-
-  const payload = bookingGroups.map(group => ({
-    workshop_id: group.workshop_id,
-    vehicle_id: selectedCar?.vehicle_id, // ✅ أضفنا الـ vehicle_id
-
-    services: group.services.map(service => ({
-      service_id: service.id,
-      price: service.price
-    })),
-    scheduled_date: group.scheduled_date,
-    time: group.time,
-    location: group.location,
-    coordinates: group.coordinates
+    name: s.service_name || s.name, // تأكد إنك تقدر تجيب الاسم من أي مفتاح موجود
+    price: s.price,
   }));
+  const handleConfirmBooking = async () => {
+    const bookingGroups = groupServicesByWorkshop(selectedServices);
 
-  console.log('📦 Booking payload:', JSON.stringify({ bookings: payload }, null, 2));
+    const payload = bookingGroups.map(group => ({
+      workshop_id: group.workshop_id,
+      vehicle_id: selectedCar?.vehicle_id, // ✅ أضفنا الـ vehicle_id
 
-  const token = await AsyncStorage.getItem('accessToken');
+      services: group.services.map(service => ({
+        service_id: service.id,
+        price: service.price
+      })),
+      scheduled_date: group.scheduled_date,
+      time: group.time,
+      location: group.location,
+      coordinates: group.coordinates
+    }));
 
-  try {
-    const response = await fetch('http://176.119.254.225:80/booking/multiple', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-    body: JSON.stringify({
-  bookings: payload,
-  address,
-  temporary: true, // or false if you have saved addresses
-  totalPrice
-})
-    });
+    console.log('📦 Booking payload:', JSON.stringify({ bookings: payload }, null, 2));
 
-    const result = await response.json();
-    if (response.ok) {
-      console.log('✅ Booking confirmed:', result);
-      Alert.alert('Booking Confirmed', 'Your booking has been confirmed successfully!');
-      
-   
+    const token = await AsyncStorage.getItem('accessToken');
 
-navigation.navigate('Payment', {
-  bookings: payload,
-  totalPrice,
-  workshop_name,
-  address,
-  date: scheduledDate,
-  time: timeSlots,
-  services: serviceDisplayData
-});
-    } else {
-      console.error('❌ Booking failed:', result);
-      Alert.alert('Booking Failed', result.message || 'Something went wrong');
+    try {
+      const response = await fetch('http://176.119.254.225:80/booking/multiple', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+      body: JSON.stringify({
+        bookings: payload,
+        address,
+        temporary: true, // or false if you have saved addresses
+        totalPrice
+      })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log('✅ Booking confirmed:', result);
+        Alert.alert('Booking Confirmed', 'Your booking has been confirmed successfully!');
+        
+        navigation.navigate('Payment', {
+          bookings: payload,
+          totalPrice,
+          workshop_name,
+          address,
+          date: scheduledDate,
+          time: timeSlots,
+          services: serviceDisplayData
+        });
+      } else {
+        console.error('❌ Booking failed:', result);
+        Alert.alert('Booking Failed', result.message || 'Something went wrong');
+      }
+    } catch (error) {
+      console.error('🔥 Error confirming booking:', error);
+      Alert.alert('Error', 'Could not confirm booking. Please try again.');
     }
-  } catch (error) {
-    console.error('🔥 Error confirming booking:', error);
-    Alert.alert('Error', 'Could not confirm booking. Please try again.');
-  }
-};
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
- <View style={styles.innercard}>
-  <Text style={styles.label}>Car</Text>
+        <View style={styles.innercard}>
+          <Text style={styles.label}>Car</Text>
 
-  <Text style={styles.value}>
-    {selectedCar ? `${selectedCar.make} ${selectedCar.model} (${selectedCar.year})` : 'No car selected'}
-  </Text>
+          <Text style={styles.value}>
+            {selectedCar ? `${selectedCar.make} ${selectedCar.model} (${selectedCar.year})` : 'No car selected'}
+          </Text>
 
-  <TouchableOpacity style={styles.changeButton} onPress={handleOpenCarPicker}>
-    <Text style={styles.changeText}>Change</Text>
-  </TouchableOpacity>
-</View>
+          <TouchableOpacity style={styles.changeButton} onPress={handleOpenCarPicker}>
+            <Text style={styles.changeText}>Change</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.innercard}>
-        <Text style={styles.label}>Workshop</Text>
+          <Text style={styles.label}>Workshop</Text>
           <Text style={styles.value}>{workshop_name}</Text>
         </View>
         
@@ -340,19 +361,10 @@ navigation.navigate('Payment', {
               <Text style={styles.serviceText}>
                 {service.name} - {service.price}₪
               </Text>
-              <TouchableOpacity onPress={() => handleRemoveService(service.id)}>
-                <Text style={styles.removeText}>✕</Text>
-              </TouchableOpacity>
             </View>
           ))}
-
-         <TouchableOpacity style={styles.addButton} onPress={handleAddService}>
-  <Text style={styles.addButtonText}>+ Add Another Service</Text>
-</TouchableOpacity>
-
         </View>
 
-       
         <View style={styles.innercard}>
           <Text style={styles.label}>Date & time </Text>
           <Text style={styles.value}>{date} {timeSlots}</Text>
@@ -362,7 +374,7 @@ navigation.navigate('Payment', {
           <Text style={styles.label}>Address</Text>
           <View style={styles.addressContainer}>
             <Text style={styles.addressText}>
-              {address.street}, {address.city}
+              {address.street} {address.city}
             </Text>
           </View>
 
@@ -475,23 +487,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize,
     color: '#333',
     fontWeight: '500',
-  },
-  removeText: {
-    color: '#D32F2F',
-    fontSize: responsiveFontSize * 1.4,
-    fontWeight: 'bold',
-  },
-  addButton: {
-    marginTop: responsiveMargin * 0.8,
-    backgroundColor: '#08618920',
-    paddingVertical: responsiveVerticalPadding,
-    borderRadius: width * 0.03,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: '#086189',
-    fontWeight: '600',
-    fontSize: responsiveFontSize * 0.95,
   },
   addressText: {
     fontSize: responsiveFontSize,

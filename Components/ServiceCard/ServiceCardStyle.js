@@ -86,7 +86,7 @@ export default StyleSheet.create({
   },
   bottomInfo: {
   flexDirection: 'row',
-  justifyContent: 'space-between',
+  justifyContent: "flex-end",
   alignItems: 'center',
   marginTop: 8,
 },
@@ -97,7 +97,7 @@ bookButton: {
     borderRadius: 15,
     paddingVertical: 3,
     paddingHorizontal: 10,
-    
+    marginRight: 10,
   },
 bookButtonText: {
   color: Colors.black,

@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import WorkshopCard from '../../Components/WorkshopCard/WorkshopCard';
 import Colors from '../../Components/Colors/Colors';
-
+import ServiceCard from '../../Components/ServiceCard/ServiceCard';
 
 const SearchResult = ({
   searchResults,
@@ -48,7 +47,7 @@ const SearchResult = ({
       ) : searchResults.length > 0 ? (
         <ScrollView style={styles.scroll}>
           {searchResults.map((result) => (
-            <WorkshopCard
+            <ServiceCard
               key={`result-${result.service_id}`}
               data={result}
               onBookPress={() => navigation.navigate('Book', {

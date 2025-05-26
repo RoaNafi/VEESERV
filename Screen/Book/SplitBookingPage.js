@@ -24,7 +24,12 @@ const SplitBookingPage = ({ route, navigation }) => {
   const [selectedCar, setSelectedCar] = useState(null);
   const [allCars, setAllCars] = useState([]);
   const [loadingLocation, setLoadingLocation] = useState(false);
-  const [address, setAddress] = useState(null);
+  const [address, setAddress] = useState({
+    street: '',
+    city: '',
+    latitude: '',
+    longitude: '',
+  });
 
   const { showActionSheetWithOptions } = useActionSheet();
 
@@ -103,9 +108,10 @@ const SplitBookingPage = ({ route, navigation }) => {
         accuracy: Location.Accuracy.High,
       });
       const { latitude, longitude } = location.coords;
+      console.log("Latitude:", latitude, "Longitude:", longitude);
 
-      let suburb = "Unknown Area";
-      let city = "Unknown City";
+      let suburb = "";
+      let city = "";
 
       try {
         const response = await fetch(
@@ -117,25 +123,39 @@ const SplitBookingPage = ({ route, navigation }) => {
 
         if (response.ok) {
           const data = await response.json();
-          suburb =
-            data.address?.suburb || data.address?.residential || "Unknown Area";
-          city =
-            data.address?.city ||
-            data.address?.town ||
-            data.address?.village ||
-            "Unknown City";
+
+          // Use suburb (e.g., Bab al-Amari) instead of road
+          suburb = data.address?.suburb || data.address?.residential || "";
+          city = data.address?.city || data.address?.town || data.address?.village || "";
+
+          console.log("Address data:", data.address);
+        } else {
+          console.warn("🌐 API response not OK, using fallback address.");
         }
       } catch (apiError) {
-        console.warn("API fetch failed, using fallback address:", apiError);
+        console.warn("🌐 API fetch failed, using fallback address:", apiError);
       }
 
-      setAddress({
-        street: suburb,
-        city: city,
-        latitude: latitude,
-        longitude: longitude,
-      });
+      if (latitude && longitude) {
+        setAddress({
+          street: suburb,
+          city: city,
+          latitude: latitude,
+          longitude: longitude,
+        });
+
+        console.log("Set address:", {
+          street: suburb,
+          city: city,
+          latitude,
+          longitude,
+        });
+      } else {
+        Alert.alert('Error', 'Could not determine coordinates.');
+      }
+
     } catch (error) {
+      console.log("Location error:", error);
       Alert.alert("Error", `Location error: ${error.message}`);
     } finally {
       setLoadingLocation(false);
@@ -240,20 +260,23 @@ Alert.alert("Success ✅", "Booking done! Now sit tight while the mechanic check
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* عرض اختيار السيارة */}
+        {/* Car Selection Box */}
         <View style={styles.selectionBox}>
-          {selectedCar ? (
-            <Text style={styles.selectionText}>
-              {selectedCar.make} {selectedCar.model} ({selectedCar.year})
-            </Text>
-          ) : (
-            <Text style={styles.selectionText}>No car selected</Text>
-          )}
+          <Text style={styles.selectionText}>
+            {selectedCar ? (
+              <Text>
+                {selectedCar.make} {selectedCar.model} ({selectedCar.year})
+              </Text>
+            ) : (
+              <Text>No car selected</Text>
+            )}
+          </Text>
           <TouchableOpacity onPress={handleOpenCarPicker} style={styles.btn}>
             <Text style={styles.btnText}>Choose a Car</Text>
           </TouchableOpacity>
         </View>
-        {/* قائمة الحجز */}
+
+        {/* Bookings List */}
         {bookings.map((item, index) => (
           <View key={index} style={styles.card}>
             <Text style={styles.workshopName}>{item.workshop_name}</Text>
@@ -275,31 +298,38 @@ Alert.alert("Success ✅", "Booking done! Now sit tight while the mechanic check
             </Text>
           </View>
         ))}
-        {/* عرض الموقع الحالي */}
+
+        {/* Address Selection Box */}
         <View style={styles.selectionBox}>
-          <View style={styles.locationHeader}>
-            <Text style={styles.selectionLabel}>Current Location:</Text>
-            <TouchableOpacity onPress={handleGetLocation}>
-              <Ionicons name="location-outline" size={24} color="#086189" />
-            </TouchableOpacity>
+          <Text style={styles.selectionLabel}>Address</Text>
+          <View style={styles.addressContainer}>
+            <Text style={styles.addressText}>
+              {address.street ? (
+                <Text>
+                  {address.street}
+                  {address.city ? `, ${address.city}` : ''}
+                </Text>
+              ) : (
+                <Text>No address set</Text>
+              )}
+            </Text>
           </View>
 
-          {address ? (
-            <Text style={styles.selectionText}>
-              {address.street}, {address.city}
+          <TouchableOpacity 
+            style={[styles.secondaryButton, loadingLocation && styles.disabledButton]}
+            onPress={handleGetLocation}
+            disabled={loadingLocation}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {loadingLocation ? 'Getting Location...' : 'Use My Current Location'}
             </Text>
-          ) : (
-            <Text style={styles.selectionText}>Location not set</Text>
-          )}
-
-          {loadingLocation && (
-            <ActivityIndicator color="#086189" style={{ marginTop: 10 }} />
-          )}
+          </TouchableOpacity>
         </View>
-        <View style={{ height: 100 }} />{" "}
-        {/* مساحة إضافية أسفل عشان الزر ما يتغطى */}
+
+        <View style={{ height: 100 }} />
       </ScrollView>
-      {/* الزر المثبت بأسفل الشاشة */}
+
+      {/* Fixed Bottom Button */}
       <View style={styles.fixedButtonContainer}>
         <View style={styles.bottomBar}>
           <View style={styles.priceWrapper}>
@@ -463,6 +493,32 @@ confirmBtnText: {
   fontSize: 16,
   fontWeight: "800",
   letterSpacing: 1,
+},
+
+addressContainer: {
+  backgroundColor: '#F0F4F8',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 12,
+},
+addressText: {
+  fontSize: 16,
+  color: '#444',
+  fontWeight: '500',
+},
+secondaryButton: {
+  backgroundColor: '#08618910',
+  paddingVertical: 12,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+secondaryButtonText: {
+  color: '#086189',
+  fontWeight: '600',
+  fontSize: 16,
+},
+disabledButton: {
+  opacity: 0.7,
 },
 
 });

@@ -30,11 +30,11 @@ useEffect(() => {
     try {
       const workshopResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}`);
       const workshopJson = await workshopResponse.json();
-      console.log("Workshop JSON:", workshopJson);
+      //console.log("Workshop JSON:", workshopJson);
 
       const reviewsResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}/reviews`);
       const reviewsJson = await reviewsResponse.json();
-      console.log("Reviews JSON:", reviewsJson);
+      //console.log("Reviews JSON:", reviewsJson);
 
       setDetailedWorkshop(workshopJson);
       setReviews(Array.isArray(reviewsJson) ? reviewsJson : []);

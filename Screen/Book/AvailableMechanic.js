@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Alert,
 } from "react-native";
 import WorkshopCard from "../../Components/WorkshopCard/WorkshopCard";
 import axios from "axios";
@@ -125,6 +126,7 @@ const AvailableMechanic = ({ route, navigation }) => {
     }
   };
 
+
   const applySort = () => {
     if (!selectedSortOption) return; // ما تطبقش لو ما فيش اختيار
     console.log("Applying local sort:", selectedSortOption);
@@ -165,6 +167,7 @@ const AvailableMechanic = ({ route, navigation }) => {
     navigation.navigate("WorkshopDetails", { workshopData });
   };
 
+  
   useEffect(() => {
     fetchAvailableWorkshops();
   }, [selectedRating, selectedDistance, mobileServiceOnly, selectedSortOption]);
@@ -237,6 +240,7 @@ const AvailableMechanic = ({ route, navigation }) => {
       resetFilters,
     };
   };
+
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
@@ -329,238 +333,200 @@ const AvailableMechanic = ({ route, navigation }) => {
       </View>
 
       {/* --- WORKSHOP LIST OR SCHEDULED SERVICES --- */}
-      <ScrollView style={{ paddingHorizontal: 12, paddingBottom: 20 }}>
-        {/* If Perfect Match exists */}
-        {workshops.perfectMatch?.length > 0 ? (
-          <>
-            <Text
-              style={{
-                fontSize: 22,
-                fontWeight: "700",
-                marginBottom: 12,
-                color: "#086189",
-                marginTop: 10,
-              }}
-            >
-              Perfect Matches
-            </Text>
+      <FlatList
+        data={[
+          ...(workshops.perfectMatch?.length > 0
+            ? workshops.perfectMatch.map(item => ({ type: 'perfect', item }))
+            : []),
+          ...(workshops.splitMatch?.length > 0
+            ? rawWorkshops.splitMatch.map((combo, index) => ({ type: 'split', combo, index }))
+            : []),
+          { type: 'empty', show: !workshops.perfectMatch?.length && !workshops.splitMatch?.length }
+        ]}
+        keyExtractor={(item, index) => `${item.type}-${index}`}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 20 }}
+        renderItem={({ item }) => {
+          if (item.type === 'perfect') {
+            const service = item.item.service || item.item.services?.[0] || {};
+            const data = {
+              image: item.item.workshop_image || "",
+              service_name: service.name || "Service",
+              service_description: "",
+              workshop_name: item.item.workshop_name || "Workshop",
+              rate: item.item.rate || 0,
+              price: service.price || 0,
+              service_id: service.id || service.service_id || null,
+              workshop_id: item.item.workshop_id,
+            };
 
-            <FlatList
-              data={workshops.perfectMatch}
-              keyExtractor={(item, index) => "perfect-" + index}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12 }}
-              renderItem={({ item }) => {
-                const service = item.service || item.services?.[0] || {};
-                const data = {
-                  image: item.workshop_image || "",
-                  service_name: service.name || "Service",
-                  service_description: "",
-                  workshop_name: item.workshop_name || "Workshop",
-                  rate: item.rate || 0,
-                  price: service.price || 0,
-                  service_id: service.id || service.service_id || null,
+            return (
+              <WorkshopCard
+                data={data}
+                onBookPress={() => handleBookPress(data)}
+                onShopPress={() => handleShopPress(data)}
+               
+              />
+            );
+          }
+
+          if (item.type === 'split') {
+            const workshopsMap = item.combo.reduce((acc, item) => {
+              const key = item.workshop_id;
+              if (!acc[key]) {
+                acc[key] = {
                   workshop_id: item.workshop_id,
+                  workshop_name: item.workshop_name,
+                  rate: item.rating,
+                  time: item.time,
+                  services: [],
                 };
+              }
+              const service = item.service || item.services?.[0];
+              if (service) acc[key].services.push(service);
+              return acc;
+            }, {});
+            const groupedWorkshops = Object.values(workshopsMap);
 
-                return (
-                  <WorkshopCard
-                    data={data}
-                    onBookPress={() => handleBookPress(data)}
-                    onShopPress={() => handleShopPress(data)}
-                  />
-                );
-              }}
-            />
-          </>
-        ) : workshops.splitMatch?.length > 0 ? (
-          <>
-            <View style={{ paddingBottom: 20 }}>
-              <View style={{ gap: 16 }}>
-                {rawWorkshops.splitMatch.map((combo, index) => {
-                  // 🧠 تجميع حسب الورشة
-                  const workshopsMap = combo.reduce((acc, item) => {
-                    const key = item.workshop_id;
-                    if (!acc[key]) {
-                      acc[key] = {
-                        workshop_id: item.workshop_id,
-                        workshop_name: item.workshop_name,
-                        rate: item.rating,
-                        time: item.time,
-                        services: [],
-                      };
-                    }
-                    const service = item.service || item.services?.[0];
-                    if (service) acc[key].services.push(service);
-                    return acc;
-                  }, {});
-                  const groupedWorkshops = Object.values(workshopsMap);
+            return (
+              <View
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: 16,
+                  padding: 10,
+                  marginBottom: 20,
+                  shadowColor: "#000",
+                  shadowOpacity: 0.1,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowRadius: 6,
+                  elevation: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "700",
+                    marginBottom: 10,
+                  }}
+                >
+                  🧩 Schedule Option {item.index + 1}
+                </Text>
 
-                  return (
+                {groupedWorkshops.map((workshop, idx) => (
+                  <View
+                    key={idx}
+                    style={{
+                      backgroundColor: "#f9f9f9",
+                      borderRadius: 12,
+                      padding: 12,
+                      marginBottom: 6,
+                    }}
+                  >
                     <View
-                      key={index}
                       style={{
-                        backgroundColor: "#fff",
-                        borderRadius: 16,
-                        padding: 10,
-                        marginBottom: 20,
-                        shadowColor: "#000",
-                        shadowOpacity: 0.1,
-                        shadowOffset: { width: 0, height: 3 },
-                        shadowRadius: 6,
-                        elevation: 4,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        marginBottom: 12,
                       }}
                     >
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontWeight: "700",
-                          marginBottom: 10,
+                      <Image
+                        source={{
+                          uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
                         }}
-                      >
-                        🧩 Schedule Option {index + 1}
-                      </Text>
-
-                      {groupedWorkshops.map((item, idx) => (
-                        <View
-                          key={idx}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 12,
+                          marginRight: 12,
+                        }}
+                        resizeMode="cover"
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text
                           style={{
-                            backgroundColor: "#f9f9f9",
-                            borderRadius: 12,
-                            padding: 12,
-                            marginBottom: 6,
+                            fontSize: 16,
+                            fontWeight: "700",
+                            color: "#333",
                           }}
                         >
-                          {/* Header with image and rating */}
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              marginBottom: 12,
-                            }}
-                          >
-                            <Image
-                              source={{
-                                uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
-                              }}
-                              style={{
-                                width: 60,
-                                height: 60,
-                                borderRadius: 12,
-                                marginRight: 12,
-                              }}
-                              resizeMode="cover"
-                            />
-                            <View style={{ flex: 1 }}>
-                              <Text
-                                style={{
-                                  fontSize: 16,
-                                  fontWeight: "700",
-                                  color: "#333",
-                                }}
-                              >
-                                {item.workshop_name}
-                              </Text>
-                              <Text style={{ fontSize: 14, color: "#FFD700" }}>
-                                ⭐ {item.rate || "Not rated yet"}
-                              </Text>
-                            </View>
-                          </View>
+                          {workshop.workshop_name}
+                        </Text>
+                        <Text style={{ fontSize: 14, color: "#FFD700" }}>
+                          ⭐ {workshop.rate || "Not rated yet"}
+                        </Text>
+                      </View>
+                    </View>
 
-                          {/* Details */}
-                          <View style={{ gap: 4, marginBottom: 12 }}>
-                            <Text
-                              style={{
-                                fontSize: 14,
-                                color: "#555",
-                                fontWeight: "600",
-                                
-                              }}
-                            >
-                              Services:
-                            </Text>
-                            {item.services.map((srv, i) => (
-                              <Text
-                                key={i}
-                                style={{ fontSize: 13, color: "#555" }}
-                              >
-                                • {srv.name} - {srv.price} NIS
-                              </Text>
-                            ))}
-                            <Text
-                              style={{
-                                fontSize: 14,
-                                color: "#555",
-                                marginTop: 6,
-                              }}
-                            >
-                              Time:{" "}
-                              <Text style={{ fontWeight: "600" }}>
-                                {item.time || "N/A"}
-                              </Text>
-                            </Text>
-                          </View>
-
-                          {/* Location Button */}
-                          {/* <TouchableOpacity
-                            onPress={() => console.log("View Location pressed")}
-                            style={{
-                              backgroundColor: "#e6f1f3",
-                              paddingVertical: 10,
-                              paddingHorizontal: 16,
-                              borderRadius: 10,
-                              flexDirection: "row",
-                              alignItems: "center",
-                              alignSelf: "flex-start",
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 15,
-                                color: "#086189",
-                                fontWeight: "600",
-                              }}
-                            >
-                              📍 View Location
-                            </Text>
-                          </TouchableOpacity> */}
-                        </View>
-                      ))}
-
-                      {/* Book button for the entire combination */}
-                      <TouchableOpacity
-                        onPress={() => handleBookMultiple(combo)} // بدلًا من workshops.splitMatch
+                    <View style={{ gap: 4, marginBottom: 12 }}>
+                      <Text
                         style={{
-                          backgroundColor: "#086189",
-                          paddingVertical: 12,
-                          borderRadius: 12,
-                          alignItems: "center",
+                          fontSize: 14,
+                          color: "#555",
+                          fontWeight: "600",
                         }}
                       >
-                        <Text style={{ color: "#fff", fontWeight: "700" }}>
-                          Book This Schedule
+                        Services:
+                      </Text>
+                      {workshop.services.map((srv, i) => (
+                        <Text
+                          key={i}
+                          style={{ fontSize: 13, color: "#555" }}
+                        >
+                          • {srv.name} - {srv.price} NIS
                         </Text>
-                      </TouchableOpacity>
+                      ))}
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: "#555",
+                          marginTop: 6,
+                        }}
+                      >
+                        Time:{" "}
+                        <Text style={{ fontWeight: "600" }}>
+                          {workshop.time || "N/A"}
+                        </Text>
+                      </Text>
                     </View>
-                  );
-                })}
+                  </View>
+                ))}
+
+                <TouchableOpacity
+                  onPress={() => handleBookMultiple(item.combo)}
+                  style={{
+                    backgroundColor: "#086189",
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "700" }}>
+                    Book This Schedule
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </View>
-          </>
-        ) : (
-          <Text
-            style={{
-              fontSize: 16,
-              fontStyle: "italic",
-              color: "#888",
-              marginTop: 20,
-              textAlign: "center",
-            }}
-          >
-            No workshops or scheduled services available.
-          </Text>
-        )}
-      </ScrollView>
+            );
+          }
+
+          if (item.type === 'empty' && item.show) {
+            return (
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontStyle: "italic",
+                  color: "#888",
+                  marginTop: 20,
+                  textAlign: "center",
+                }}
+              >
+                No workshops or scheduled services available.
+              </Text>
+            );
+          }
+
+          return null;
+        }}
+      />
     </View>
   );
 };
