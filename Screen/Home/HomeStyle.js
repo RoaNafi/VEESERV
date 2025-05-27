@@ -2,6 +2,12 @@ import { StyleSheet, Dimensions } from 'react-native';
 import Colors from '../../Components/Colors/Colors';
 
 const { width } = Dimensions.get('window');
+const CARD_MARGIN = 8;
+const CARD_PADDING = 10;
+const NUM_COLUMNS = 3;
+
+// Calculate card width based on screen width and margins
+const cardWidth = (width - (CARD_MARGIN * 2 * NUM_COLUMNS) - (CARD_PADDING * 2)) / NUM_COLUMNS;
 
 // this insted of add padding to the container
 const PADDING = 20;
@@ -49,73 +55,73 @@ export default StyleSheet.create({
         // Spacing after the line (you can adjust this)
   },
  frequentServicesContainer: {
-  flexDirection: "row",
-  marginHorizontal: 10,
-  marginBottom: 20,
-},serviceCard: {
-  backgroundColor: "#f8f8f9",
-  borderColor: "#086189",
-  borderRadius: 10,
-  padding: 10,
-  width: 250, // Set a fixed width for each card, adjust as necessary
-  height: 120, // Set a fixed height for each card, adjust as necessary
-  marginRight: 15, // Space between cards
-  elevation: 3, // Optional for shadow effect on Android
-  shadowColor: "#000", // Optional for shadow effect on iOS
-  shadowOpacity: 0.1, // Optional for shadow effect on iOS
-  shadowRadius: 5, // Optional for shadow effect on iOS
-  shadowOffset: { width: 0, height: 4 }, // Optional for shadow effect on iOS
-  flexDirection: "column", // Ensures content is stacked vertically
-  justifyContent: "space-between", // Positions the content (name, price, button) properly
-},
-
-serviceInfoRow: {
-  flexDirection: "column", // Allow the content to stack vertically
-  justifyContent: "space-between", // Ensure space between title/price and button
-  flexGrow: 1, // Push the button to the bottom
-},
-serviceDetails: {
-  marginBottom: 10, // Space between title/price and button
-},
-
-addToCartButton: {
-  backgroundColor: "#086189",
-  paddingVertical: 6, // Reduced vertical padding to make the button smaller
-  paddingHorizontal: 8, // Adjusted horizontal padding for smaller size
-  borderRadius: 10,
-  alignItems: "center",
-  justifyContent: "center",
-  marginTop: "auto", // Push the button to the bottom of the container
-  width: "50%", // Set a smaller width, adjust as necessary
-  height: 40, // Set a fixed height for the button
-  alignSelf: "flex-end", // Align the button to the right
-  marginRight: 10, // Small margin from the right edge
-},
-buttonText: {
-  color: "#fff",
-  fontWeight: "bold",
-},
-
-serviceName: {
-  fontSize: 15, // Adjust as needed
-  fontWeight: 'bold', // Apply bold font weight to the service name
-  color: "#333", // Text color
-},
-
-servicePrice: {
-  fontSize: 13, // Adjust as needed
-  fontWeight: 'bold', // Apply bold font weight to the price
-  color: "#086189", // Price color
-  marginTop: 5, // Space between price and button
-},
-
-
-hoveredServiceCard: {
-  transform: [{ scale: 1.05 }], // Slight scaling effect on hover for interaction
-  shadowOpacity: 0.3, // More intense shadow on hover
-},
-
-
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 10,
+  },
+  serviceCard: {
+    backgroundColor: "#f8f8f8",
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    borderRadius: 10,
+    padding: 10,
+    width: width * 0.5,
+    height: width * 0.3,
+    marginRight: 10,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    flexDirection: "column",
+    justifyContent: "space-between",
+    numberOfLines:2,
+    
+  },
+  serviceInfoRow: {
+    flexDirection: "column", // Allow the content to stack vertically
+    justifyContent: "space-between", // Ensure space between title/price and button
+    flexGrow: 1, // Push the button to the bottom
+  },
+  serviceDetails: {
+    marginBottom: 10, // Space between title/price and button
+  },
+  addToCartButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: "#086189",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: width * 0.08,
+    flexDirection: "row",
+    gap: 4,
+  },
+  buttonText: {
+    color: "#086189",
+    fontWeight: "600",
+    fontSize: width * 0.032,
+  },
+  serviceName: {
+    fontSize: width * 0.035,
+    fontWeight: '700',
+    color: "#333",
+    marginBottom: 4,
+  },
+  servicePrice: {
+    fontSize: width * 0.04,
+    fontWeight: '700',
+    color: "#086189",
+    marginBottom: 6,
+  },
+  hoveredServiceCard: {
+    transform: [{ scale: 1.05 }], // Slight scaling effect on hover for interaction
+    shadowOpacity: 0.3, // More intense shadow on hover
+  },
   searchResultsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -140,7 +146,6 @@ hoveredServiceCard: {
     alignItems: 'center',
     //paddingTop: 50,
   },
-
   imageScroll: {
     paddingHorizontal: PADDING,
     marginBottom: 20
@@ -151,8 +156,6 @@ hoveredServiceCard: {
     borderRadius: 12,
     marginLeft: 10,
   },
-
-
   banner: {
     width: '100%',
     height: 160,
@@ -160,7 +163,6 @@ hoveredServiceCard: {
     marginBottom: 20,
     marginHorizontal: PADDING,
   },
-
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -168,18 +170,17 @@ hoveredServiceCard: {
     marginBottom: 10,
     marginHorizontal: 20,
   },
-
   categoryContent: {
-    flexDirection: 'row',
-    marginLeft: 20,
-    marginBottom: 24,
-    gap: 10,
-
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    
   },
   categoryChip: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
+    
 
   },
   categoryText: {
@@ -187,7 +188,6 @@ hoveredServiceCard: {
     fontWeight: 'bold',
     fontSize: 15,
   },
-
   searchResultsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -195,26 +195,22 @@ hoveredServiceCard: {
     marginHorizontal: PADDING,
     marginBottom: 8,
   },
-
   headerButtonsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-
   verticalSeparator: {
     height: 20,
     width: 1,
     backgroundColor: Colors.lightGray,
   },
-
   horizontalSeparator: {
     height: 1,
     backgroundColor: Colors.lightGray,
     marginHorizontal: PADDING,
     marginVertical: 10,
   },
-
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,7 +219,6 @@ hoveredServiceCard: {
     backgroundColor: Colors.lightGray,
     borderRadius: 10,
   },
-
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -232,19 +227,16 @@ hoveredServiceCard: {
     backgroundColor: Colors.lightGray,
     borderRadius: 10,
   },
-
   filterButtonText: {
     marginLeft: 4,
     color: Colors.darkGray,
     fontWeight: 'bold',
   },
-
   sortButtonText: {
     marginLeft: 4,
     color: Colors.darkGray,
     fontWeight: 'bold',
   },
-
   bottomModal: {
     justifyContent: 'flex-end',
     margin: 0,
@@ -503,6 +495,86 @@ cartNotificationText: {
   color: '#fff',
   fontSize: 12,
   fontWeight: 'bold',
+},
+
+categoryGridContainer: {
+  paddingHorizontal: PADDING,
+  paddingBottom: 10,
+},
+categoryGrid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  justifyContent: 'space-between',
+},
+categoryGridItem: {
+  width: (width - (PADDING * 2) - 20) / 3,
+  marginBottom: 10,
+  backgroundColor: '#f8f8f8',
+  borderRadius: 12,
+  padding: 12,
+  aspectRatio: 1,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+  overflow: 'hidden',
+},
+categoryIconContainer: {
+  width: '100%',
+  height: '100%',
+  borderRadius: 25,
+  justifyContent: 'center',
+  alignItems: 'center',
+  
+},
+iconContainer: {
+  position: 'absolute',
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 2,
+  
+},
+categoryGridText: {
+  fontSize: 12,
+  color: '#333',
+  fontWeight: '500',
+  textAlign: 'center',
+  marginTop: 4,
+  paddingHorizontal: 2,
+},
+showMoreButton: {
+  alignSelf: 'center',
+  //padding: 10,
+  marginBottom:50,
+  backgroundColor: 'transparent',
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+showMoreText: {
+  color: Colors.mediumGray,
+  fontWeight: 'bold',
+  fontSize: 13,
+},
+showMoreIcon: {
+  marginLeft: 10,
+  fontSize: 20,
+  fontWeight: 'bold',
+  color: Colors.mediumGray,
+},
+
+iconWrapper: {
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  marginBottom: 8,
+  position: 'relative',
+  alignItems: 'center',
+  justifyContent: 'center',
+  
 },
 });
 

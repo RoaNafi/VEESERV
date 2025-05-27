@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Dimensions,
   Alert,
   Modal,
+  Animated,
+  Easing,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Colors from '../../Components/Colors/Colors';
@@ -18,6 +20,8 @@ import moment from 'moment';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useActionSheet } from '@expo/react-native-action-sheet';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { CommonActions, useNavigation, useFocusEffect } from '@react-navigation/native';
 
 // Get screen dimensions
 const { width, height } = Dimensions.get('window');
@@ -34,6 +38,7 @@ const responsiveFontSize = width * 0.04; // 4% of screen width
 const Book = ({ route, navigation }) => {
   const { workshopData, date, timeSlots, selectedCar: initialCar } = route.params;
   const { service_name, workshop_name, price, service_id, workshop_id } = workshopData;
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   console.log("Workshop Data:", workshopData);
   console.log("Date:", date);
@@ -71,6 +76,10 @@ const Book = ({ route, navigation }) => {
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     // If no car is selected, fetch the default car
     if (!selectedCar) {
@@ -79,6 +88,59 @@ const Book = ({ route, navigation }) => {
     // Also fetch all cars for the picker
     fetchAllCars();
   }, []);
+
+  useEffect(() => {
+    if (showConfirmation) {
+      // Reset animations
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.8);
+      pulseAnim.setValue(1);
+
+      // Start entrance animation
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+      ]).start();
+
+      // Start pulse animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+        ])
+      ).start();
+    }
+  }, [showConfirmation]);
+
+  useEffect(() => {
+    if (showConfirmation) {
+      // Disable back gesture and button
+      navigation.setOptions({
+        headerLeft: () => null,
+        gestureEnabled: false,
+      });
+    }
+  }, [showConfirmation]);
 
   const fetchDefaultCar = async () => {
     try {
@@ -279,8 +341,7 @@ const Book = ({ route, navigation }) => {
 
     const payload = bookingGroups.map(group => ({
       workshop_id: group.workshop_id,
-      vehicle_id: selectedCar?.vehicle_id, // ✅ أضفنا الـ vehicle_id
-
+      vehicle_id: selectedCar?.vehicle_id,
       services: group.services.map(service => ({
         service_id: service.id,
         price: service.price
@@ -291,8 +352,6 @@ const Book = ({ route, navigation }) => {
       coordinates: group.coordinates
     }));
 
-    console.log('📦 Booking payload:', JSON.stringify({ bookings: payload }, null, 2));
-
     const token = await AsyncStorage.getItem('accessToken');
 
     try {
@@ -302,28 +361,18 @@ const Book = ({ route, navigation }) => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-      body: JSON.stringify({
-        bookings: payload,
-        address,
-        temporary: true, // or false if you have saved addresses
-        totalPrice
-      })
+        body: JSON.stringify({
+          bookings: payload,
+          address,
+          temporary: true,
+          totalPrice
+        })
       });
 
       const result = await response.json();
       if (response.ok) {
         console.log('✅ Booking confirmed:', result);
-        Alert.alert('Booking Confirmed', 'Your booking has been confirmed successfully!');
-        
-        navigation.navigate('Payment', {
-          bookings: payload,
-          totalPrice,
-          workshop_name,
-          address,
-          date: scheduledDate,
-          time: timeSlots,
-          services: serviceDisplayData
-        });
+        setShowConfirmation(true);
       } else {
         console.error('❌ Booking failed:', result);
         Alert.alert('Booking Failed', result.message || 'Something went wrong');
@@ -334,176 +383,329 @@ const Book = ({ route, navigation }) => {
     }
   };
 
+  const handleGoToHome = () => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs', state: { routes: [{ name: 'Home' }], index: 0 } }],
+      })
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.innercard}>
-          <Text style={styles.label}>Car</Text>
-
-          <Text style={styles.value}>
-            {selectedCar ? `${selectedCar.make} ${selectedCar.model} (${selectedCar.year})` : 'No car selected'}
-          </Text>
-
-          <TouchableOpacity style={styles.changeButton} onPress={handleOpenCarPicker}>
-            <Text style={styles.changeText}>Change</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.innercard}>
-          <Text style={styles.label}>Workshop</Text>
-          <Text style={styles.value}>{workshop_name}</Text>
-        </View>
-        
-        <View style={styles.innercard}>
-          <Text style={styles.label}>Services</Text>
-          {selectedServices.map((service) => (
-            <View key={service.id} style={styles.serviceCard}>
-              <Text style={styles.serviceText}>
-                {service.name} - {service.price}₪
+        {showConfirmation && (
+          <Animated.View 
+            style={[
+              styles.confirmationCard,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }],
+              }
+            ]}
+          >
+            <View style={styles.confirmationContent}>
+              <Animated.View
+                style={{
+                  transform: [{ scale: pulseAnim }],
+                }}
+              >
+                <Ionicons name="time-outline" size={50} color={Colors.green} />
+              </Animated.View>
+              <Text style={styles.confirmationTitle}>Waiting for Workshop Confirmation</Text>
+              <Text style={styles.confirmationText}>
+                Your booking request has been sent to the workshop. Please wait for their confirmation before proceeding with payment.
               </Text>
             </View>
-          ))}
+          </Animated.View>
+        )}
+<View style={styles.sectionTitle}>
+          <Ionicons name="list" size={20} color="#086189" />
+          <Text style={styles.sectionTitleText}>Summary</Text>
         </View>
 
-        <View style={styles.innercard}>
-          <Text style={styles.label}>Date & time </Text>
-          <Text style={styles.value}>{date} {timeSlots}</Text>
-        </View>
+        {/* Booking Summary */}
+        <View style={[styles.summaryCard, showConfirmation && styles.disabledButton]}>
+          <View style={styles.summaryContent}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryLabelContainer}>
+                <Ionicons name="business-outline" size={20} color="#086189" />
+                <Text style={styles.summaryLabel}>Workshop</Text>
+              </View>
+              <Text style={styles.summaryValue}>{workshop_name}</Text>
+            </View>
 
-        <View style={styles.innercard}>
-          <Text style={styles.label}>Address</Text>
-          <View style={styles.addressContainer}>
-            <Text style={styles.addressText}>
-              {address.street} {address.city}
-            </Text>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryLabelContainer}>
+                <Ionicons name="construct-outline" size={20} color="#086189" />
+                <Text style={styles.summaryLabel}>Service</Text>
+              </View>
+            </View>
+            <View style={styles.serviceDetailsRow}>
+              <View style={styles.serviceNameCell}>
+                <Text style={styles.serviceNameText}>{service_name}</Text>
+              </View>
+              <View style={styles.servicePriceCell}>
+                <Text style={styles.servicePrice}>{price}₪</Text>
+              </View>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryLabelContainer}>
+                <Ionicons name="calendar-outline" size={20} color="#086189" />
+                <Text style={styles.summaryLabel}>Date & Time</Text>
+              </View>
+            </View>
+            <View style={styles.bookingDetails}>
+              <View style={styles.detailRow}>
+                <Ionicons name="calendar-outline" size={16} color="#086189" />
+                <Text style={styles.detailText}>{date}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons name="time-outline" size={16} color="#086189" />
+                <Text style={styles.detailText}>{timeSlots}</Text>
+              </View>
+            </View>
           </View>
+        </View>
 
-          <TouchableOpacity 
-            style={[styles.secondaryButton, loadingLocation && styles.disabledButton]}
-            onPress={handleGetLocation}
-            disabled={loadingLocation}
-          >
-            <Text style={styles.secondaryButtonText}>
-              {loadingLocation ? 'Getting Location...' : 'Use My Current Location'}
-            </Text>
-          </TouchableOpacity>
+        {/* Vehicle Selection */}
+        <View style={styles.sectionTitle}>
+          <Ionicons name="car-outline" size={20} color="#086189" />
+          <Text style={styles.sectionTitleText}>Vehicle</Text>
         </View>
         
-        {/* Add bottom padding to prevent content from being hidden behind footer */}
+        <TouchableOpacity 
+          style={[styles.vehicleButton, showConfirmation && styles.disabledButton]} 
+          onPress={handleOpenCarPicker}
+          disabled={showConfirmation}
+        >
+          {selectedCar ? (
+            <View style={styles.vehicleInfo}>
+              <Text style={[styles.vehicleText, showConfirmation && styles.disabledText]}>
+                {selectedCar.make} {selectedCar.model} ({selectedCar.year})
+              </Text>
+              {!showConfirmation && <Ionicons name="chevron-forward" size={20} color="#666" />}
+            </View>
+          ) : (
+            <View style={styles.vehicleInfo}>
+              <Text style={[styles.selectVehicleText, showConfirmation && styles.disabledText]}>
+                Select Vehicle
+              </Text>
+              {!showConfirmation && <Ionicons name="chevron-forward" size={20} color="#666" />}
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Location Selection */}
+        <View style={styles.sectionTitle}>
+          <Ionicons name="location-outline" size={20} color="#086189" />
+          <Text style={styles.sectionTitleText}>My Address</Text>
+        </View>
+
+        <View style={[styles.locationCard, showConfirmation && styles.disabledButton]}>
+          <View style={styles.locationContent}>
+            <Text style={[styles.locationText, showConfirmation && styles.disabledText]}>
+              {address.street} {address.city}
+            </Text>
+            <TouchableOpacity 
+              style={[styles.locationButton, (loadingLocation || showConfirmation) && styles.disabledButton]}
+              onPress={handleGetLocation}
+              disabled={loadingLocation || showConfirmation}
+            >
+              <Ionicons name="locate-outline" size={20} color={showConfirmation ? "#999" : "#086189"} />
+              <Text style={[styles.locationButtonText, showConfirmation && styles.disabledText]}>
+                {loadingLocation ? 'Getting Location...' : 'Use Current Location'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        
         <View style={styles.bottomPadding} />
       </ScrollView>
       
-      {/* Fixed footer with price and confirm button */}
-      <View style={styles.footer}>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceLabel}>Total Price</Text>
-          <Text style={styles.priceValue}>{totalPrice}₪</Text>
-        </View>
-        
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmBooking}>
-          <Text style={styles.confirmButtonText}>Confirm Booking</Text>
-        </TouchableOpacity>
-      </View>
-      <Modal
-  visible={modalVisible}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      <Text style={styles.modalTitle}>Select a Service</Text>
-      <ScrollView>
-        {services.map(service => (
-          <TouchableOpacity
-            key={service.service_id}
-            style={styles.modalServiceItem}
-            onPress={() => handleSelectService(service)}
+      {showConfirmation ? (
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            style={styles.homeButton} 
+            onPress={handleGoToHome}
+            activeOpacity={0.8}
           >
-            <View>
-              <Text style={styles.serviceName}>{service.service_name}</Text>
-              <Text style={styles.serviceDescription}>{service.service_description}</Text>
-            </View>
-            <Text style={styles.servicePrice}>{service.price}₪</Text>
+            <Text style={styles.homeButtonText}>Go to Home</Text>
+            <Ionicons name="home-outline" size={20} color="#fff" />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
-      <TouchableOpacity
-        style={styles.modalCloseButton}
-        onPress={() => setModalVisible(false)}
-      >
-        <Text style={styles.modalCloseText}>Cancel</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
-
+        </View>
+      ) : (
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            style={styles.confirmButton} 
+            onPress={handleConfirmBooking}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.confirmButtonText}>Confirm Booking</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
 
-
-// Updated styles snippet only (reuse your JSX layout)
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F7FA', // Softer background
+    backgroundColor: '#F5F7FA',
+  },
+  header: {
+    backgroundColor: '#086189',
+    paddingVertical: responsiveVerticalPadding,
+    paddingHorizontal: responsiveHorizontalPadding,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: responsiveFontSize * 1.1,
+    fontWeight: '700',
   },
   container: {
     padding: responsiveHorizontalPadding,
   },
-  innercard: {
-    backgroundColor: Colors.white,
-    padding: responsiveHorizontalPadding * 1.1,
+  serviceCard: {
+    backgroundColor: '#086189',
     borderRadius: width * 0.035,
-    marginBottom: responsiveMargin * 1.2,
+    marginBottom: responsiveMargin * 1.5,
+    overflow: 'hidden',
+  },
+  serviceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: responsiveHorizontalPadding,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  serviceTitle: {
+    color: '#fff',
+    fontSize: responsiveFontSize * 1.1,
+    fontWeight: '700',
+  },
+  serviceContent: {
+    padding: responsiveHorizontalPadding,
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: responsiveVerticalPadding * 0.8,
+  },
+  serviceLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: responsiveFontSize * 0.9,
+  },
+  serviceValue: {
+    color: '#fff',
+    fontSize: responsiveFontSize * 0.9,
+    fontWeight: '500',
+  },
+  priceContainer: {
+    marginTop: responsiveVerticalPadding,
+    paddingTop: responsiveVerticalPadding,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceLabel: {
+    color: '#fff',
+    fontSize: responsiveFontSize,
+    fontWeight: '600',
+  },
+  priceValue: {
+    color: '#fff',
+    fontSize: responsiveFontSize * 1.2,
+    fontWeight: '700',
+  },
+  sectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: responsiveVerticalPadding * 0.8,
+    marginTop: responsiveVerticalPadding,
+  },
+  sectionTitleText: {
+    fontSize: responsiveFontSize,
+    color: '#086189',
+    fontWeight: '600',
+  },
+  vehicleButton: {
+    backgroundColor: '#fff',
+    borderRadius: width * 0.025,
+    padding: responsiveHorizontalPadding,
+    marginBottom: responsiveMargin,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 4,
   },
-  label: {
-    fontSize: responsiveFontSize * 1.2,
-    color: '#086189',
-    fontWeight: '700',
-    marginBottom: responsiveMargin * 0.6,
-  },
-  value: {
-    fontSize: responsiveFontSize * 1.05,
-    color: Colors.black,
-    fontWeight: '600',
-  },
-  serviceCard: {
+  vehicleInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#F0F4F8',
-    padding: responsiveHorizontalPadding * 0.8,
-    borderRadius: width * 0.03,
-    marginVertical: responsiveMargin * 0.4,
     alignItems: 'center',
   },
-  serviceText: {
+  vehicleText: {
     fontSize: responsiveFontSize,
     color: '#333',
     fontWeight: '500',
   },
-  addressText: {
+  selectVehicleText: {
     fontSize: responsiveFontSize,
-    color: '#444',
+    color: '#086189',
     fontWeight: '500',
   },
-  secondaryButton: {
-    marginTop: responsiveMargin,
-    backgroundColor: '#08618910',
-    paddingVertical: responsiveVerticalPadding,
-    borderRadius: width * 0.03,
-    alignItems: 'center',
+  locationCard: {
+    backgroundColor: '#fff',
+    borderRadius: width * 0.025,
+    padding: responsiveHorizontalPadding,
+    marginBottom: responsiveMargin,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  secondaryButtonText: {
-    color: '#086189',
-    fontWeight: '600',
+  locationContent: {
+    gap: responsiveVerticalPadding * 0.8,
+  },
+  locationText: {
     fontSize: responsiveFontSize,
+    color: '#333',
+    fontWeight: '500',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F4F8',
+    paddingVertical: responsiveVerticalPadding * 0.8,
+    borderRadius: width * 0.025,
+    gap: 8,
+  },
+  locationButtonText: {
+    color: '#086189',
+    fontSize: responsiveFontSize * 0.9,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.5,
+   // backgroundColor: Colors.lightGray,
+  },
+  disabledText: {
+    color: '#999',
+  },
+  bottomPadding: {
+    height: height * 0.15,
   },
   footer: {
     position: 'absolute',
@@ -511,10 +713,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#fff',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: responsiveHorizontalPadding,
-    paddingTop: responsiveVerticalPadding,
+    padding: responsiveHorizontalPadding,
     paddingBottom: responsiveVerticalPadding * 1.5,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
@@ -524,99 +723,154 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
-  priceContainer: {
-    justifyContent: 'center',
-  },
-  priceLabel: {
-    fontSize: responsiveFontSize * 0.9,
-    color: '#888',
-  },
-  priceValue: {
-    fontSize: responsiveFontSize * 1.4,
-    fontWeight: 'bold',
-    color: '#111',
-  },
   confirmButton: {
     backgroundColor: '#086189',
     paddingVertical: responsiveVerticalPadding,
-    paddingHorizontal: responsiveHorizontalPadding * 1.2,
     borderRadius: width * 0.035,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: responsiveMargin,
+    gap: 8,
   },
   confirmButtonText: {
     color: '#fff',
     fontSize: responsiveFontSize,
     fontWeight: 'bold',
   },
- 
-
-changeText: {
-  color: '#fff',
-  fontWeight: '600',
-},
-changeButton: {
-  marginTop: 8,
-  alignSelf: 'flex-start',
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-  backgroundColor: '#086189',
-  borderRadius: 8,
-},
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.5)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-modalContent: {
-  width: '90%',
-  maxHeight: '70%',
-  backgroundColor: '#fff',
-  borderRadius: 12,
-  padding: 16,
-},
-modalTitle: {
-  fontSize: responsiveFontSize * 1.1,
-  fontWeight: '700',
-  color: '#086189',
-  marginBottom: 12,
-},
-modalServiceItem: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  paddingVertical: 10,
-  borderBottomWidth: 1,
-  borderColor: '#eee',
-},
-serviceName: {
-  fontSize: responsiveFontSize,
-  fontWeight: '600',
-},
-serviceDescription: {
-  fontSize: responsiveFontSize * 0.85,
-  color: '#666',
-},
-servicePrice: {
-  fontSize: responsiveFontSize,
-  fontWeight: '600',
-  color: '#086189',
-},
-modalCloseButton: {
-  marginTop: 16,
-  backgroundColor: '#086189',
-  paddingVertical: 12,
-  borderRadius: 8,
-  alignItems: 'center',
-},
-modalCloseText: {
-  color: '#fff',
-  fontWeight: '700',
-  fontSize: responsiveFontSize,
-},
-
-
+  summaryCard: {
+    backgroundColor: Colors.white,
+    borderRadius: width * 0.035,
+    marginBottom: responsiveMargin * 1.2,
+    marginTop: responsiveMargin * 1.2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  
+  summaryContent: {
+    padding: responsiveHorizontalPadding,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: responsiveVerticalPadding * 0.6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  summaryLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  summaryLabel: {
+    fontSize: responsiveFontSize * 0.9,
+    color: Colors.mediumGray,
+    fontWeight: '500',
+  },
+  summaryValueContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryValue: {
+    fontSize: responsiveFontSize,
+    color: '#333',
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  servicePrice: {
+    fontSize: responsiveFontSize,
+    color: '#086189',
+    fontWeight: '600',
+  },
+  serviceDetailsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: responsiveHorizontalPadding,
+    paddingVertical: responsiveVerticalPadding * 0.6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  serviceNameCell: {
+    flex: 1,
+  },
+  serviceNameText: {
+    fontSize: responsiveFontSize,
+    color: '#333',
+    fontWeight: '500',
+  },
+  servicePriceCell: {
+    minWidth: 80,
+    alignItems: 'flex-end',
+  },
+  confirmationCard: {
+    backgroundColor: '#F8FFF8',
+    borderRadius: width * 0.035,
+    marginBottom: responsiveMargin * 1.2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 200, 0, 0.1)',
+  },
+  confirmationContent: {
+    padding: responsiveHorizontalPadding * 1.2,
+    alignItems: 'center',
+  },
+  confirmationTitle: {
+    fontSize: responsiveFontSize * 1.2,
+    fontWeight: '600',
+    color: Colors.green,
+    marginTop: responsiveVerticalPadding * 0.8,
+    marginBottom: responsiveVerticalPadding * 0.4,
+    textAlign:"center",
+  },
+  confirmationText: {
+    fontSize: responsiveFontSize * 0.9,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: responsiveFontSize * 1.4,
+  },
+  homeButton: {
+    backgroundColor: Colors.green,
+    paddingVertical: responsiveVerticalPadding,
+    borderRadius: width * 0.035,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+  },
+  homeButtonText: {
+    color: '#fff',
+    fontSize: responsiveFontSize,
+    fontWeight: 'bold',
+  },
+  bookingDetails: {
+    marginTop: responsiveVerticalPadding * 0.8,
+    gap: 8,
+    paddingHorizontal: responsiveHorizontalPadding,
+    paddingBottom: responsiveVerticalPadding * 0.6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailText: {
+    fontSize: responsiveFontSize * 0.9,
+    color: '#666',
+  },
 });
+
 export default Book;

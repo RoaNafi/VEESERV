@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -16,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { config } from '../../../config'; // for API URL
+import Footer from '../../../Components/Footer/Footer ';
 
 const Profile = ({ navigation }) => {
   const [profile, setProfile] = useState(null);
@@ -103,6 +102,7 @@ Alert.alert("Success", "Congratulations! Your account is now a company 🏢✨")
     },
     { icon: 'time', label: 'History', action: () => navigation.navigate('HistoryScreen', { userId: user?.id }) },
     { icon: 'globe', label: 'Language', action: () => navigation.navigate('Language') },
+    { icon: 'business', label: 'Company & Legal', action: () => navigation.navigate('CompanyLegal') },
 
     // 👇 زر التحويل يظهر فقط لو المستخدم زبون مش شركة
     ...(isCustomer && !isCompany ? [{
@@ -117,8 +117,6 @@ Alert.alert("Success", "Congratulations! Your account is now a company 🏢✨")
     ] : []),
 
     { icon: 'key', label: 'Change Password', action: () => navigation.navigate('ChangePassword', { userId: user?.id }) },
-    { icon: 'settings', label: 'Settings & Privacy', action: () => {} },
-    { icon: 'people', label: 'Invite Friends', action: () => {} },
     { icon: 'log-out', label: 'Log out', action: handleLogout, isLogout: true },
   ];
 
@@ -196,6 +194,8 @@ return (
         }
       })}
     </View>
+
+    <Footer/>
   </ScrollView>
 );
   

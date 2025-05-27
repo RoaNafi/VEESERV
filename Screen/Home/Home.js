@@ -7,6 +7,9 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  FlatList,
+  Animated,
+  StyleSheet,
 } from "react-native";
 import styles from "./HomeStyle";
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -24,7 +27,9 @@ import { useSortLogic } from "./ResultOperation/useSortLogic";
 import { ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-
+import Subcategory from './Subcategory';
+// this insted of add padding to the container
+const PADDING = 20;
 
 const { width } = Dimensions.get("window");
 
@@ -33,6 +38,8 @@ const banners = [
   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcScjx6u5FKaBN0-ruxflRpLSztC_4Iuj73PDg&s",
   "https://www.steelcobuildings.com/wp-content/uploads/2024/06/AdobeStock_156266430_Preview-e1718286922289.jpeg",
 ];
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const Home = ({ navigation }) => {
   const scrollRef = useRef(null);
@@ -47,14 +54,35 @@ const Home = ({ navigation }) => {
   const [originalSearchResults, setOriginalSearchResults] = useState([]);
   const [selectedSortOption, setSelectedSortOption] = useState(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
- const [categories, setCategories] = useState([]);
- const [selectedCategory, setSelectedCategory] = useState(null);
-const [subcategories, setSubcategories] = useState([]);
-const [selectedSubcategories, setSelectedSubcategories] = useState([]);
-const [cartCount, setCartCount] = useState(0);
-const [addedServices, setAddedServices] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [cartCount, setCartCount] = useState(0);
+  const [addedServices, setAddedServices] = useState([]);
 
+  const animatedValues = useRef({}).current;
 
+  const getAnimatedValue = (id) => {
+    if (!animatedValues[id]) {
+      animatedValues[id] = new Animated.Value(0);
+    }
+    return animatedValues[id];
+  };
+
+  const handlePressIn = (id) => {
+    Animated.spring(animatedValues[id], {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start(() => {
+      // Reset animation after it completes
+      Animated.spring(animatedValues[id], {
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
+
+  const handlePressOut = (id) => {
+    // No need to do anything on press out since we're handling the reset in press in
+  };
 
   useEffect(() => {
     const fetchFrequentServices = async () => {
@@ -72,7 +100,7 @@ const [addedServices, setAddedServices] = useState([]);
     };
     fetchFrequentServices();
   }, []);
-   useEffect(() => {
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
@@ -82,8 +110,10 @@ const [addedServices, setAddedServices] = useState([]);
           Colors.red,
           Colors.lightblue,
           Colors.blue,
-          Colors.orange,
           Colors.green,
+          Colors.lightOrange,
+          Colors.lightgreen,
+          Colors.yallow,
         ];
 
         const dataWithColors = response.data.map((cat, index) => ({
@@ -110,7 +140,7 @@ const [addedServices, setAddedServices] = useState([]);
     }, 3000);
     return () => clearInterval(interval);
   }, [currentIndex]);
-  
+
 
   const handleSearch = async (text) => {
     setIsSearching(true);
@@ -165,24 +195,8 @@ const [addedServices, setAddedServices] = useState([]);
     setFilterModalVisible,
     sortResults
   );
-const fetchSubcategories = async (categoryId) => {
-  try {
-    const response = await axios.get(`${config.apiUrl}/ServiceCategories/categories/${categoryId}/subcategories`);
-    setSubcategories(response.data);
-    console.log('Category ID:', categoryId);
-    console.log('Subcategories:', response.data);
-  } catch (error) {
-    console.error("Failed to fetch subcategories:", error);
-  }
-};
-const CustomCheckBox = ({ label, checked, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-    <Ionicons name={checked ? 'checkbox' : 'square-outline'} size={24} color="#086189" />
-    <Text style={{ marginLeft: 10 }}>{label}</Text>
-  </TouchableOpacity>
-);
 
- useEffect(() => {
+  useEffect(() => {
     const getCartCount = async () => {
       const userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('accessToken');
@@ -218,349 +232,308 @@ const CustomCheckBox = ({ label, checked, onPress }) => (
     return () => clearInterval(interval);
   }, []); // Remove cartCount dependency to prevent infinite loop
 
-const handleAddToCart = async (serviceId) => {
-  if (addedServices.includes(serviceId)) return;
+  const handleAddToCart = async (serviceId) => {
+    if (addedServices.includes(serviceId)) return;
 
-  setIsLoading(true);
-  const token = await AsyncStorage.getItem('accessToken');
-  const userId = await AsyncStorage.getItem('userId');
-  
-  if (!token || !userId) {
-    setIsLoading(false);
-    Alert.alert('Error', 'User is not logged in');
-    return;
-  }
+    setIsLoading(true);
+    const token = await AsyncStorage.getItem('accessToken');
+    const userId = await AsyncStorage.getItem('userId');
 
-  try {
-    const response = await axios.post(
-      'http://176.119.254.225:80/cart/add-to-cart',
-      { subcategory_id: serviceId },
-      { 
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 5000, // Add timeout
-      }
-    );
+    if (!token || !userId) {
+      setIsLoading(false);
+      Alert.alert('Error', 'User is not logged in');
+      return;
+    }
 
-    if (response.status === 200 || response.status === 201) {
-      Alert.alert('Success', 'Item added to cart!');
-      setAddedServices((prev) => [...prev, serviceId]);
-      
-      // Refresh cart count immediately after adding item
-      try {
-        const cartResponse = await axios.get('http://176.119.254.225:80/cart/cart', {
+    try {
+      const response = await axios.post(
+        'http://176.119.254.225:80/cart/add-to-cart',
+        { subcategory_id: serviceId },
+        {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 5000, // Add timeout
-        });
-        
-        let totalQuantity = 0;
-        if (cartResponse.data && cartResponse.data.cart) {
-          cartResponse.data.cart.forEach((item) => {
-            totalQuantity += item.quantity || 0;
-          });
         }
-        setCartCount(totalQuantity);
-      } catch (error) {
-        console.error('Error refreshing cart count:', error);
-        // Don't update count on network error
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert('Success', 'Item added to cart!');
+        setAddedServices((prev) => [...prev, serviceId]);
+
+        // Refresh cart count immediately after adding item
+        try {
+          const cartResponse = await axios.get('http://176.119.254.225:80/cart/cart', {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 5000, // Add timeout
+          });
+
+          let totalQuantity = 0;
+          if (cartResponse.data && cartResponse.data.cart) {
+            cartResponse.data.cart.forEach((item) => {
+              totalQuantity += item.quantity || 0;
+            });
+          }
+          setCartCount(totalQuantity);
+        } catch (error) {
+          console.error('Error refreshing cart count:', error);
+          // Don't update count on network error
+        }
       }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      Alert.alert('Error', 'Failed to add item to cart');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Error adding to cart:', error);
-    Alert.alert('Error', 'Failed to add item to cart');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-useEffect(() => {
-  let isMounted = true;
-
-  const fetchCartCount = async () => {
   };
 
-  fetchCartCount();
+  useEffect(() => {
+    let isMounted = true;
 
-  return () => {
-    isMounted = false;
+    const fetchCartCount = async () => {
+    };
+
+    fetchCartCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const getCategoryIcon = (categoryName) => {
+    // Map category names to appropriate icons
+    const iconMap = {
+      'Body': 'car-sport',
+      'Car Wash': 'water',
+      'Electrical': 'flash',
+      'Maintenance': 'construct',
+      'Mechanical': 'settings',
+      'Paint': 'color-palette',
+      'Polish': 'brush',
+      'Repair': 'build',
+      'Tire Services': 'aperture',
+      // Default icon if category not found
+      'default': 'car'
+    };
+
+    // Return the mapped icon or default icon if not found
+    return iconMap[categoryName] || iconMap['default'];
   };
-}, []);
 
+  return (
+    <View style={styles.container}>
+      {/* Fixed Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search Anything..."
+          placeholderTextColor="#999"
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          onSubmitEditing={() => handleSearch(searchTerm)}
+          returnKeyType="search"
+        />
+        {searchTerm.length > 0 && (
+          <TouchableOpacity onPress={clearSearch}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
 
+      {!isSearching ? (
+        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Banners */}
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            style={styles.imageScroll}
+          >
+            {banners.map((img, index) => (
+              <Image key={`banner-${index}`} source={{ uri: img }} style={styles.imageBanner} />
+            ))}
+          </ScrollView>
 
-
-  const toggleSubcategory = (subcategoryId) => {
-    setSelectedSubcategories((prev) =>
-      prev.includes(subcategoryId)
-        ? prev.filter((id) => id !== subcategoryId) // remove the subcategory
-        : [...prev, subcategoryId] // add the subcategory
-    );
-  };
-
-return (
-  <View style={styles.container}>
-    {/* Search Bar */}
-    <View style={styles.searchContainer}>
-      <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search Anything..."
-        placeholderTextColor="#999"
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-        onSubmitEditing={() => handleSearch(searchTerm)}
-        returnKeyType="search"
-      />
-      {searchTerm.length > 0 && (
-        <TouchableOpacity onPress={clearSearch}>
-          <Ionicons name="close-circle" size={20} color="#999" />
-        </TouchableOpacity>
-      )}
-    </View>
-
-    {!isSearching ? (
-      <ScrollView style={styles.scrollContent}>
-        {/* Banners */}
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          style={styles.imageScroll}
-        >
-          {banners.map((img, index) => (
-            <Image key={`banner-${index}`} source={{ uri: img }} style={styles.imageBanner} />
-          ))}
-        </ScrollView>
-
-        {/* Frequently Booked Services */}
-        <Text style={styles.sectionTitle}>Frequently Booked Services</Text>
-        <View style={styles.separator} />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.frequentServicesContainer}
-        >
-          {frequentServices.map((service) => (
-            <View key={service.id} style={styles.serviceCard}>
-              <View style={{ flex: 1, justifyContent: 'space-between' }}>
-                <View>
-                  <Text style={styles.serviceName}>{service.name}</Text>
-                  <Text style={styles.servicePrice}>₪{service.price}</Text>
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.addToCartButton,
-                    addedServices.includes(service.id) && { backgroundColor: '#ccc' },
-                  ]}
-                  onPress={() => handleAddToCart(service.id)}
-                  disabled={addedServices.includes(service.id) || isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.buttonText}>
-                      {addedServices.includes(service.id) ? 'Added' : 'Add to Cart'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* Categories or Subcategories */}
-        {selectedCategory ? (
-          <>
-            <Text style={styles.sectionTitle}>
-              Subcategories for {selectedCategory.category_name}
-            </Text>
-            <View style={styles.separator} />
-
-            <View style={styles.subcategoryList}>
-              {subcategories.map((sub) => (
-                <View key={sub.subcategory_id} style={styles.subcategoryItem}>
+          {/* Frequently Booked Services */}
+          <Text style={styles.sectionTitle}>Frequently Booked Services</Text>
+          <View style={styles.separator} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.frequentServicesContainer}
+          >
+            {frequentServices.map((service) => (
+              <View key={service.id} style={styles.serviceCard}>
+                <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                  <View>
+                    <Text style={styles.serviceName}>{service.name}</Text>
+                    <Text style={styles.servicePrice}>₪{service.price}</Text>
+                  </View>
                   <TouchableOpacity
-                    onPress={() => toggleSubcategory(sub.subcategory_id)}
-                    style={styles.checkboxContainer}
+                    style={[
+                      styles.addToCartButton,
+                      addedServices.includes(service.id) && { backgroundColor: '#ccc' },
+                    ]}
+                    onPress={() => handleAddToCart(service.id)}
+                    disabled={addedServices.includes(service.id) || isLoading}
                   >
-                    <Ionicons
-                      name={
-                        selectedSubcategories.includes(sub.subcategory_id)
-                          ? 'checkbox'
-                          : 'square-outline'
-                      }
-                      size={24}
-                      color="#086189"
-                    />
-                    <Text style={styles.subcategoryText}>
-                      {sub.subcategory_name} - 	₪{sub.price}
-                    </Text>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons 
+                          name={addedServices.includes(service.id) ? "checkmark-circle" : "cart-outline"} 
+                          size={width * 0.045} 
+                          color="#086189" 
+                        />
+                        <Text style={styles.buttonText}>
+                          {addedServices.includes(service.id) ? 'Added' : 'Add to Cart'}
+                        </Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
-              ))}
-            </View>
+              </View>
+            ))}
+          </ScrollView>
 
-            {/* Back to Categories */}
-            <TouchableOpacity
-              onPress={() => setSelectedCategory(null)}
-              style={{
-                alignSelf: 'center',
-                marginTop: 20,
-                padding: 10,
-                backgroundColor: '#086189',
-                borderRadius: 6,
-                marginBottom: 30,
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>
-                Back to Categories
-              </Text>
-            </TouchableOpacity>
-           <TouchableOpacity
-  style={[styles.addToCartButton, { alignSelf: 'center', marginTop: 20 }]}
-  onPress={() => {
-    selectedSubcategories.forEach((id) => handleAddToCart(id));
-  }}
->
-  <Text style={styles.buttonText}>Add Selected to Cart</Text>
-</TouchableOpacity>
+          {/* Categories Grid */}
+          <Text style={styles.sectionTitle}>Categories</Text>
+          <View style={styles.separator} />
+          
+          <View style={styles.categoryGridContainer}>
+            <View style={styles.categoryGrid}>
+              {(showAllCategories ? categories : categories.slice(0, 6)).map((item) => {
+                const animatedValue = getAnimatedValue(item.category_id);
+                
+                const circleScale = animatedValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 4]
+                });
 
-          </>
-        ) : (
-          <>
-            <Text style={styles.sectionTitle}>Categories</Text>
-            <View style={styles.separator} />
+                const circleOpacity = animatedValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0.2]
+                });
 
-            {categories
-              .slice(0, showAllCategories ? categories.length : 5)
-              .map((item, index) => (
-                <TouchableOpacity
-                  key={`category-list-${item.category_id}`}
-                  style={{
-                    marginBottom: 10,
-                    marginHorizontal: 20,
-                    padding: 12,
-                    backgroundColor: '#f8f8f8',
-                    borderRadius: 8,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderLeftWidth: 4,
-                    borderLeftColor: item.color,
-                  }}
-                  onPress={() => {
-                    fetchSubcategories(item.category_id);
-                    setSelectedCategory(item);
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 34,
-                      height: 34,
-                      backgroundColor: item.color,
-                      borderRadius: 18,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: 12,
+                return (
+                  <AnimatedTouchable
+                    key={`category-list-${item.category_id}`}
+                    style={styles.categoryGridItem}
+                    onPress={() => {
+                      navigation.navigate('Subcategory', {
+                        categoryId: item.category_id,
+                        categoryName: item.category_name
+                      });
                     }}
+                    onPressIn={() => handlePressIn(item.category_id)}
+                    onPressOut={() => handlePressOut(item.category_id)}
+                    activeOpacity={1}
                   >
-                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>
-                      {index + 1}
-                    </Text>
-                  </View>
-                  <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>
-                    {item.category_name}
-                  </Text>
-                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                    <Ionicons name="chevron-forward" size={20} color={Colors.mediumGray} />
-                  </View>
-                </TouchableOpacity>
-              ))}
-
-            {categories.length > 5 && (
-              <TouchableOpacity
-                style={{
-                  alignSelf: 'center',
-                  padding: 10,
-                  marginBottom: 20,
-                  backgroundColor: 'transparent',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                }}
-                onPress={() => setShowAllCategories(!showAllCategories)}
-              >
-                <Text style={{ color: Colors.mediumGray, fontWeight: 'bold', fontSize: 13 }}>
-                  {showAllCategories ? 'SHOW LESS' : 'SHOW MORE'}
-                </Text>
-                <Ionicons
-                  name={showAllCategories ? 'chevron-up' : 'chevron-down'}
-                  style={{
-                    marginLeft: 10,
-                    fontSize: 20,
-                    fontWeight: 'bold',
-                    color: Colors.mediumGray,
-                  }}
-                />
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-
-       
-      </ScrollView>
-    ) : (
-      <SearchResult
-        searchResults={searchResults}
-        isLoading={isLoading}
-        searchTerm={searchTerm}
-        navigation={navigation}
-        setSortModalVisible={setSortModalVisible}
-        setFilterModalVisible={setFilterModalVisible}
-      />
-    )}
-
-    {/* Modals */}
-    <Filter
-      visible={filterModalVisible}
-      setVisible={setFilterModalVisible}
-      applyFilters={applyFilters}
-      resetFilters={resetFilters}
-      selectedRating={selectedRating}
-      selectedDistance={selectedDistance}
-      mobileServiceOnly={mobileServiceOnly}
-      setSelectedRating={setSelectedRating}
-      setSelectedDistance={setSelectedDistance}
-      setMobileServiceOnly={setMobileServiceOnly}
-    />
-    <Sort
-      visible={sortModalVisible}
-      setVisible={setSortModalVisible}
-      applySort={applySort}
-      setSelectedSortOption={setSelectedSortOption}
-    />
-
-    {/* Floating Buttons */}
-    <View style={styles.fixedButtons}>
-      <TouchableOpacity
-        style={[styles.floatingButton, styles.chatButton]}
-        onPress={() => navigation.navigate('ChatBot')}
-      >
-        <Ionicons name="chatbubbles" size={30} color="#fff" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.floatingButton, styles.cartButton]}
-onPress={() => navigation.navigate('Cart')}>
-    
-        <Ionicons name="cart" size={30} color="#fff" />
-        {cartCount > 0 && (
-          <View style={styles.cartNotification}>
-            <Text style={styles.cartNotificationText}>{cartCount}</Text>
+                    <View style={styles.categoryContent}>
+                      <View style={styles.iconWrapper}>
+                        <Animated.View 
+                          style={[
+                            styles.categoryIconContainer, 
+                            { 
+                              backgroundColor: item.color,
+                              transform: [{ scale: circleScale }],
+                              opacity: circleOpacity,
+                              
+                            }
+                          ]}
+                        />
+                        <View style={styles.iconContainer}>
+                          <Ionicons 
+                            name={getCategoryIcon(item.category_name)} 
+                            size={24} 
+                            color="#fff" 
+                          />
+                        </View>
+                      </View>
+                      <Text 
+                        style={styles.categoryGridText}
+                          numberOfLines={1}
+                      >
+                        {item.category_name}
+                      </Text>
+                    </View>
+                  </AnimatedTouchable>
+                );
+              })}
+            </View>
           </View>
-        )}
-      </TouchableOpacity>
+
+          
+            <TouchableOpacity
+              style={styles.showMoreButton}
+              onPress={() => setShowAllCategories(!showAllCategories)}
+            >
+              <Text style={styles.showMoreText}>
+                {showAllCategories ? 'SHOW LESS' : 'SHOW MORE'}
+              </Text>
+              <Ionicons
+                name={showAllCategories ? 'chevron-up' : 'chevron-down'}
+                style={styles.showMoreIcon}
+              />
+            </TouchableOpacity>
+          
+        </ScrollView>
+      ) : (
+        <SearchResult
+          searchResults={searchResults}
+          isLoading={isLoading}
+          searchTerm={searchTerm}
+          navigation={navigation}
+          setSortModalVisible={setSortModalVisible}
+          setFilterModalVisible={setFilterModalVisible}
+        />
+      )}
+
+      {/* Modals */}
+      <Filter
+        visible={filterModalVisible}
+        setVisible={setFilterModalVisible}
+        applyFilters={applyFilters}
+        resetFilters={resetFilters}
+        selectedRating={selectedRating}
+        selectedDistance={selectedDistance}
+        mobileServiceOnly={mobileServiceOnly}
+        setSelectedRating={setSelectedRating}
+        setSelectedDistance={setSelectedDistance}
+        setMobileServiceOnly={setMobileServiceOnly}
+      />
+      <Sort
+        visible={sortModalVisible}
+        setVisible={setSortModalVisible}
+        applySort={applySort}
+        setSelectedSortOption={setSelectedSortOption}
+      />
+
+      {/* Floating Buttons */}
+      <View style={styles.fixedButtons}>
+        <TouchableOpacity
+          style={[styles.floatingButton, styles.chatButton]}
+          onPress={() => navigation.navigate('ChatBot')}
+        >
+          <Ionicons name="chatbubbles" size={30} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.floatingButton, styles.cartButton]}
+          onPress={() => navigation.navigate('Cart')}>
+          <Ionicons name="cart" size={30} color="#fff" />
+          {cartCount > 0 && (
+            <View style={styles.cartNotification}>
+              <Text style={styles.cartNotificationText}>{cartCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
 
 };
+
 export default Home;

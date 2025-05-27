@@ -40,6 +40,8 @@ import MechanicHomeScreen from "./Screen/MechanicHomeScreen";
 import NotificationsScreen from "./Screen/NotificationsScreen";
 import OffersScreen from "./Screen/OffersScreen";
 import WorkshopBookingsScreen from './Screen/workshopBooking';
+import Subcategory from "./Screen/Home/Subcategory";
+import CompanyLegal from "./Screen/Profile/CompanyLegal";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -197,6 +199,8 @@ function ProfileNavigator() {
       <Stack.Screen name="CertificationScreen" component={Certifications} />
       <Stack.Screen name="HistoryScreen" component={History} />
       <Stack.Screen name="WorkshopSpecializations" component={WorkshopSpecializations} />
+      <Stack.Screen name="CompanyLegal" component={CompanyLegal} options={{ title: "Company & Legal"}} 
+      />
     </Stack.Navigator>
   );
 }
@@ -218,9 +222,14 @@ export default function App() {
             options={{ title: "Back" }}
           />
           <Stack.Screen
+            name="Subcategory"
+            component={Subcategory}
+            options={{ headerShown: true, title: "Subcategories" }}
+          />
+          <Stack.Screen
             name="Book"
             component={Book}
-            options={{ headerShown: true, title: "Confirm Booking" }}
+            options={{ headerShown: true, title: "Booking Summary" }}
           />
           <Stack.Screen
             name="Payment"
