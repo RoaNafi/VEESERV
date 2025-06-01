@@ -337,7 +337,6 @@ export default MechanicHomeScreen;
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#fff',
     flex: 1,
   },
   centered: {
@@ -356,11 +355,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  workshopName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
+ 
   status: {
     fontSize: 14,
     marginVertical: 4,
@@ -507,11 +502,7 @@ floatingButton: {
 },
 
 
-workshopName: {
-  fontSize: 20,
-  fontWeight: '700',
-  color: '#333',
-},
+
 
 status: {
   fontSize: 14,

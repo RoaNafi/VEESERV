@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator ,TouchableOpacity,} from 'react-native';
+import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator, TouchableOpacity, SafeAreaView } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons'; // icons!
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -106,30 +106,60 @@ const MyBookingsScreen = () => {
 );
 
 
-  if (loading) return <ActivityIndicator size="large" color="#086189" style={{ flex: 1 }} />;
+  if (loading) return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerTitle}>My Bookings</Text>
+      <View style={styles.headerDivider} />
+      <ActivityIndicator size="large" color="#086189" style={{ flex: 1 }} />
+    </SafeAreaView>
+  );
 
   if (bookingsArray.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No bookings yet</Text>
-        <Text style={styles.emptySubText}>Once you book a service, it’ll show up here.</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.headerTitle}>My Bookings</Text>
+        <View style={styles.headerDivider} />
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No bookings yet</Text>
+          <Text style={styles.emptySubText}>Once you book a service, it'll show up here.</Text>
+        </View>
+      </SafeAreaView>
     );
-
   }
+
   return (
-    <FlatList
-      data={bookingsArray}
-      keyExtractor={item => `${item.booking_id}-${item.scheduled_date}-${item.scheduled_time}`}
-      renderItem={renderBooking}
-  contentContainerStyle={{ padding: 16, paddingTop: 75 }}  // <-- extra top padding here
-    />
-    
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerTitle}>My Bookings</Text>
+      <View style={styles.headerDivider} />
+      <FlatList
+        data={bookingsArray}
+        keyExtractor={item => `${item.booking_id}-${item.scheduled_date}-${item.scheduled_time}`}
+        renderItem={renderBooking}
+        contentContainerStyle={{ padding: 16 }}
+      />
+    </SafeAreaView>
   );
-  
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#086189",
+    marginBottom: 12,
+    paddingLeft: 8,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginBottom: 20,
+    width: '100%',
+  },
   card: {
     flexDirection: 'row',
     backgroundColor: '#fff',

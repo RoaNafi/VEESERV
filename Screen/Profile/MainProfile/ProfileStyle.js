@@ -7,11 +7,32 @@ const { width, height } = Dimensions.get('window');
 export default StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  header: {
+    marginBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#086189",
+    paddingLeft: 8,
+    marginBottom: 12,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginBottom: 10,
+    width: '100%',
+    
+  },
+  scrollContent: {
+    flex: 1,
   },
   centerContent: {
     alignItems: 'center',
-    marginTop: height * 0.08,
+    marginTop: height * 0.03,
   },
  
   avatar: {
@@ -38,7 +59,7 @@ export default StyleSheet.create({
     paddingHorizontal: width * 0.03,
   },
   menuItem: {
-    backgroundColor: Colors.lightGray,
+    backgroundColor: Colors.white,
    // borderColor: Colors.darkGray,
    // borderWidth: 1,
     paddingVertical: 14,
@@ -84,7 +105,7 @@ export default StyleSheet.create({
   
   halfMenuItem: {
     flex: 1,
-    backgroundColor: Colors.lightGray,
+    backgroundColor: Colors.white,
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 10,
@@ -95,7 +116,7 @@ export default StyleSheet.create({
   workingHoursContainer: {
     marginTop: 15,
     padding: 10,
-    backgroundColor: '#f9f9f9',
+    //backgroundColor: '#f9f9f9',
     borderRadius: 8,
     width: '100%',
     alignItems: 'center',

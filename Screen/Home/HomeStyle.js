@@ -15,13 +15,15 @@ const PADDING = 20;
 export default StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    //backgroundColor: Colors.white,
   },
 
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.lightGray,
+    backgroundColor: "#f8f8f8",
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
     borderRadius: 10,
     paddingHorizontal: 12,
     marginBottom: 20,
@@ -419,37 +421,7 @@ export default StyleSheet.create({
 },
 
 
-subcategoryList: {
-    marginTop: 10,
-    marginBottom: 20,
-    paddingHorizontal: 20, // Add some padding around the list for spacing
-  },
-  subcategoryItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-    borderRadius: 15, // Rounded corners for the box effect
-    marginBottom: 15, // Space between items
-    elevation: 5, // Shadow effect for modern look
-    shadowColor: "#000", // Shadow color
-    shadowOpacity: 0.1, // Light shadow opacity
-    shadowOffset: { width: 0, height: 2 }, // Shadow position
-    shadowRadius: 5, // Shadow blur effect
-    justifyContent: "space-between", // Space out the content inside
-  },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  subcategoryText: {
-    marginLeft: 10,
-    fontSize: 16, // Slightly larger text for better readability
-    fontWeight: "600", // Make text bolder
-    color: "#333",
-    flex: 1, // Take up available space to keep the checkbox at the right
-  },
+
 fixedButtons: {
   position: 'absolute',
   bottom: 20,
@@ -509,7 +481,7 @@ categoryGrid: {
 categoryGridItem: {
   width: (width - (PADDING * 2) - 20) / 3,
   marginBottom: 10,
-  backgroundColor: '#f8f8f8',
+  backgroundColor: Colors.white,
   borderRadius: 12,
   padding: 12,
   aspectRatio: 1,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator, SafeAreaView } from 'react-native';
 import offer from '../assets/offer.png'; // Placeholder image for offers
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -17,98 +17,114 @@ const OfferCard = ({ offer }) => (
   </TouchableOpacity>
 );
 
-export default function OffersScreen() {
+const OffersScreen = () => {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-useEffect(() => {
-  let isMounted = true;
 
-  const fetchOffers = async () => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) throw new Error('No token found');
+  useEffect(() => {
+    let isMounted = true;
 
-      const response = await fetch('http://176.119.254.225:80/offer/offers/customers', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const fetchOffers = async () => {
+      try {
+        const token = await AsyncStorage.getItem('accessToken');
+        if (!token) throw new Error('No token found');
 
-      const data = await response.json();
-      console.log('Fetched offers:', data);
+        const response = await fetch('http://176.119.254.225:80/offer/offers/customers', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!isMounted) return;
+        const data = await response.json();
+        console.log('Fetched offers:', data);
 
-      if (response.ok) {
-        setOffers(data.offers);
-        console.log('Offers:', data.offers);
-      } else {
-        setError(data.message || 'Something went wrong!');
+        if (!isMounted) return;
+
+        if (response.ok) {
+          setOffers(data.offers);
+          console.log('Offers:', data.offers);
+        } else {
+          setError(data.message || 'Something went wrong!');
+        }
+      } catch (err) {
+        if (isMounted) setError('Failed to fetch offers.');
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (err) {
-      if (isMounted) setError('Failed to fetch offers.');
-    } finally {
-      if (isMounted) setLoading(false);
-    }
+    };
+
+    fetchOffers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const formatDate = (dateStr) => {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateStr).toLocaleDateString(undefined, options);
   };
 
-  fetchOffers();
+  const renderOffer = ({ item }) => (
+    <OfferCard
+      offer={{
+        title: item.description || 'Special Offer',
+        description: `Discount: ${item.discount_percentage}% - ${item.total_price ? item.total_price + ' $' : '??'}`,
+        expiry: `Valid until ${formatDate(item.end_date)}`,
+        image: offer,
+      }}
+    />
+  );
 
-  return () => {
-    isMounted = false;
-  };
-}, []);
+  if (loading) return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerTitle}>Offers</Text>
+      <View style={styles.headerDivider} />
+      <ActivityIndicator size="large" color="#086189" style={{ flex: 1 }} />
+    </SafeAreaView>
+  );
 
- const formatDate = (dateStr) => {
-  const options = { year: 'numeric', month: 'short', day: 'numeric' };
-  return new Date(dateStr).toLocaleDateString(undefined, options);
-};
+  if (error) return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerTitle}>Offers</Text>
+      <View style={styles.headerDivider} />
+      <Text style={styles.errorText}>{error}</Text>
+    </SafeAreaView>
+  );
 
-return (
-  <View style={styles.container}>
-    <Text style={styles.header}>🚗 Hot Offers</Text>
-
-    {loading ? (
-      <ActivityIndicator size="large" color="#086189" />
-    ) : error ? (
-      <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
-    ) : (
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerTitle}>Offers</Text>
+      <View style={styles.headerDivider} />
       <FlatList
         data={offers}
-        keyExtractor={item => item.offer_id.toString()}
-        renderItem={({ item }) => (
-          <OfferCard
-            offer={{
-              title: item.description || 'Special Offer',
-              description: `Discount: ${item.discount_percentage}% - ${item.total_price ? item.total_price + ' $' : '??'}`,
-              expiry: `Valid until ${formatDate(item.end_date)}`,
-              image: offer, // ممكن تغيرها لصورة ديناميكية لو عندك
-            }}
-          />
-        )}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
+        keyExtractor={(item) => item.offer_id.toString()}
+        renderItem={renderOffer}
+        contentContainerStyle={styles.contentContainer}
       />
-    )}
-  </View>
-);
-
-}
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F9FC',
-    paddingHorizontal: 20,
-    paddingTop: 70,
+    paddingHorizontal: 24,
+    paddingTop: 16,
   },
-  header: {
+  headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#086189',
-    marginBottom: 25,
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#086189",
+    marginBottom: 12,
+    paddingLeft: 8,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginBottom: 20,
+    width: '100%',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -156,4 +172,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  contentContainer: {
+    padding: 16,
+  },
 });
+
+export default OffersScreen;

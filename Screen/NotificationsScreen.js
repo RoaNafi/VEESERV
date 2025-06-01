@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Colors from "../Components/Colors/Colors";
 
 // Static fallback notifications
 const notificationsData = [
@@ -83,8 +84,9 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>📬 Notifications</Text>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerTitle}>Notifications</Text>
+      <View style={styles.headerDivider} />
       <FlatList
         data={combinedNotifications}
         keyExtractor={(item) => item.id}
@@ -92,36 +94,42 @@ export default function NotificationsScreen() {
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3f9fc",
-    paddingHorizontal: 16,
-    paddingTop: 70,
+    paddingHorizontal: 24,
+    paddingTop: 16,
   },
-  header: {
+  headerTitle: {
     fontSize: 28,
-    fontWeight: "900",
+    fontWeight: "700",
     color: "#086189",
+    marginBottom: 12,
+    paddingLeft: 8,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
     marginBottom: 20,
-    textAlign: "center",
+    width: '100%',
   },
   notificationCard: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.white,
     padding: 16,
     borderRadius: 14,
-    marginBottom: 12,
+    marginBottom: 8,
     shadowColor: "#086189",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 5,
     alignItems: "center",
+    marginHorizontal: 10,
   },
   iconContainer: {
     marginRight: 16,

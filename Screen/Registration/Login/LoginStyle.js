@@ -6,7 +6,7 @@ const { width, height } = Dimensions.get('window');
 export default StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    //backgroundColor: Colors.white,
   },
   innerContainer: {
     flex: 1,
