@@ -7,7 +7,7 @@ import ResetPassword from "./Screen/Registration/ResetPassword";
 import Intro1 from "./Screen/Intro/IntroScreen1";
 import Intro2 from "./Screen/Intro/IntroScreen2";
 import Intro3 from "./Screen/Intro/IntroScreen3";
-import { StyleSheet, Text, View, StatusBar, Platform } from "react-native";
+import { StyleSheet, Text, View, StatusBar, Platform, TouchableOpacity } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -36,12 +36,13 @@ import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import SplitBookingPage from "./Screen/Book/SplitBookingPage";
 import MyBookingsScreen from "./Screen/MyBookingsScreen";
 import WorkshopSpecializations from "./Screen/Profile/specialization/specialization";
-import MechanicHomeScreen from "./Screen/MechanicHomeScreen";
+import MechanicHomeScreen from "./Screen/WorkshopHome/MechanicHomeScreen";
 import NotificationsScreen from "./Screen/NotificationsScreen";
 import OffersScreen from "./Screen/OffersScreen";
-import WorkshopBookingsScreen from "./Screen/workshopBooking";
+import PindingRequests from "./Screen/WorkshopHome/PindingRequests";
 import Subcategory from "./Screen/Home/Subcategory";
 import CompanyLegal from "./Screen/Profile/CompanyLegal";
+import Appointments from "./Screen/WorkshopHome/Appointments";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -84,7 +85,7 @@ function BottomTabs({ route }) {
             case "ProfileNavigator":
               iconName = focused ? "person" : "person-outline";
               break;
-            case "Mechanic":
+            case "My Shop":
               iconName = focused ? "construct" : "construct-outline";
               break;
             default:
@@ -101,20 +102,9 @@ function BottomTabs({ route }) {
           <Home navigation={navigation} route={{ params: { role } }} />
         )}
       />
-      <Tab.Screen
-        name="MyBookings"
-        component={MyBookingsScreen}
-        options={{
-          title: "My Bookings",
-
-
-
-        }}
-      />
-
       {role === "Mechanic" && (
         <Tab.Screen
-          name="Mechanic"
+          name="My Shop"
           children={({ navigation }) => (
             <MechanicHomeScreen
               navigation={navigation}
@@ -123,6 +113,15 @@ function BottomTabs({ route }) {
           )}
         />
       )}
+      <Tab.Screen
+        name="MyBookings"
+        component={MyBookingsScreen}
+        options={{
+          title: "My Bookings",
+        }}
+      />
+
+      
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
@@ -258,6 +257,25 @@ export default function App() {
               options={{ title: "Back" }}
             />
             <Stack.Screen
+              name="Service"
+              component={Service}
+              options={{ 
+                headerShown: true, 
+                title: "Services",
+                headerBackTitle: "Back"
+              }}
+            />
+             <Stack.Screen
+        name="AddService"
+        component={AddService}
+        options={{  headerShown: true, title: "Add Service" }}
+      />
+            <Stack.Screen
+              name="Appointments"
+              component={Appointments}
+              options={{ headerShown: true, title: "Appointments" }}
+            />
+            <Stack.Screen
               name="Subcategory"
               component={Subcategory}
               options={{ headerShown: true, title: " Category Services" }}
@@ -308,9 +326,9 @@ export default function App() {
               options={{ headerShown: true, title: "Confirm Booking" }}
             />
             <Stack.Screen
-              name="workshopBooking"
-              component={WorkshopBookingsScreen}
-              options={{ title: "apointment" }}
+              name="PindingRequests"
+              component={PindingRequests}
+              options={{ headerShown: true, title: "Requests" }}
             />
           </Stack.Navigator>
         </NavigationContainer>

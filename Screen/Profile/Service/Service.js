@@ -3,21 +3,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Text, View, TouchableOpacity, Image, StyleSheet, ScrollView, Alert } from 'react-native';
 import api from '../../../api'; // Adjust the import based on your project structure
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const Colors = {
-    white: '#FFFFFF',
-    orange: '#FF5722',
-    mediumGray: '#A0A0A5', // Darker shade of mediumGray
-    darkGray: '#313335',
-    lightGray: '#EFEFEF',
-    blue: '#086189',
-    lightblue: '#6F9Fee',
+import  Colors  from '../../../Components/Colors/Colors';
 
-    darkblue: '#003B5C',
-    black: '#000000',
-    red: '#B8001F',
-    green: '#387F39',
-    lightgreen: '#A4E1B8',
-  };
 const Service = () => {
   const [services, setServices] = useState([]);
   const [workshopId, setWorkshopId] = useState(null);
@@ -139,7 +126,6 @@ const Service = () => {
 const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Colors.white,
       paddingHorizontal: 20,
       paddingTop: 20,
     },
@@ -152,7 +138,7 @@ const styles = StyleSheet.create({
     header: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: Colors.darkblue,
+      color: Colors.blue,
       letterSpacing: 0.5,
     },
     scrollContainer: {

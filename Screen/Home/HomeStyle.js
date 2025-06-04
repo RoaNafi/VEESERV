@@ -53,7 +53,7 @@ export default StyleSheet.create({
     height: 1,             // Thin line
     backgroundColor: 'black',  // Black color
     marginBottom: 10, 
-        marginHorizontal: 20,  // Adds space to the left and right of the line
+    marginHorizontal: 20,  // Adds space to the left and right of the line
         // Spacing after the line (you can adjust this)
   },
  frequentServicesContainer: {

@@ -7,7 +7,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
-const WorkshopBookingsScreen = () => {
+const PindingRequests = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
@@ -87,13 +87,7 @@ const WorkshopBookingsScreen = () => {
   );
 return (
     <View style={styles.container}>
-      {/* Add a back button at the top */}
-      <TouchableOpacity 
-        style={{ padding: 10 }}
-        onPress={() => navigation.goBack()}
-      >
-        <Ionicons name="arrow-back" size={24} color="#086189" />
-      </TouchableOpacity>
+     
 
       {loading ? (
         <ActivityIndicator size="large" color="#086189" style={{ marginTop: 40 }} />
@@ -124,9 +118,8 @@ const getStatusColor = (status) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f6f8fa',
     paddingHorizontal: 16,
-    paddingTop: 70,
+    paddingTop: 10,
   },
   card: {
     backgroundColor: '#fff',
@@ -187,4 +180,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-export default WorkshopBookingsScreen;
+export default PindingRequests;
