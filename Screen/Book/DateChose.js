@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Alert,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import Colors from "../../Components/Colors/Colors";
 
 const TimeSlots = [
   "08:00 AM",
@@ -29,6 +31,7 @@ const DateTimePickerScreen = ({ navigation }) => {
 
   const [selectedSlot, setSelectedSlot] = useState(null); // can be string like "10:00 AM" or time string from picker
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+  const [disabledSlots, setDisabledSlots] = useState([]); // Add this state for disabled slots
 
   // Format date as YYYY-MM-DD
   const selectedDateOnly =
@@ -38,8 +41,38 @@ const DateTimePickerScreen = ({ navigation }) => {
     "-" +
     String(selectedDate.getDate()).padStart(2, "0");
 
+  // Function to check if a time slot is valid
+  const isTimeSlotValid = (timeStr) => {
+    const now = new Date();
+    const [time, modifier] = timeStr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+    
+    // Convert to 24-hour format
+    if (modifier === "PM" && hours !== 12) hours += 12;
+    if (modifier === "AM" && hours === 12) hours = 0;
+
+    // Create date object for the selected time
+    const slotTime = new Date(selectedDate);
+    slotTime.setHours(hours, minutes, 0, 0);
+
+    // If selected date is today, only check if time is in the future
+    if (selectedDate.toDateString() === now.toDateString()) {
+      return slotTime > now;
+    }
+
+    return true;
+  };
+
+  // Update disabled slots whenever date changes
+  useEffect(() => {
+    const invalidSlots = TimeSlots.filter(slot => !isTimeSlotValid(slot));
+    setDisabledSlots(invalidSlots);
+  }, [selectedDate]);
+
   const toggleTimeSlot = (slot) => {
-    setSelectedSlot((prev) => (prev === slot ? null : slot)); // toggle single slot
+    if (disabledSlots.includes(slot)) return;
+    if (!isTimeSlotValid(slot)) return;
+    setSelectedSlot((prev) => (prev === slot ? null : slot));
   };
 
   const showTimePicker = () => {
@@ -52,12 +85,16 @@ const DateTimePickerScreen = ({ navigation }) => {
 
   // When user picks time from modal, format it nicely and save as selected slot
   const handleTimeConfirm = (time) => {
-    // Format time to "hh:mm AM/PM"
     const formattedTime = time.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
-    setSelectedSlot(formattedTime);
+    
+    if (isTimeSlotValid(formattedTime)) {
+      setSelectedSlot(formattedTime);
+    } else {
+      Alert.alert("Invalid Time", "Please select a future time.");
+    }
     hideTimePicker();
   };
 
@@ -119,15 +156,30 @@ const DateTimePickerScreen = ({ navigation }) => {
         columnWrapperStyle={styles.timeRow}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.timeSlot, selectedSlot === item && styles.selectedSlot]}
+            style={[
+              styles.timeSlot,
+              selectedSlot === item && styles.selectedSlot,
+              disabledSlots.includes(item) && styles.disabledSlot
+            ]}
             onPress={() => toggleTimeSlot(item)}
+            disabled={disabledSlots.includes(item)}
           >
-            <Text style={selectedSlot === item ? styles.selectedText : styles.timeText}>
+            <Text style={[
+              selectedSlot === item ? styles.selectedText : styles.timeText,
+              disabledSlots.includes(item) && styles.disabledText
+            ]}>
               {item}
             </Text>
           </TouchableOpacity>
         )}
       />
+
+      <TouchableOpacity
+        style={styles.searchCompanyText}
+        onPress={() => navigation.navigate('SearchByCompany')}
+      >
+        <Text style={styles.searchCompanyLink}>Search by Company 🔍</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.nextBtn, !(selectedDate && selectedSlot) && styles.disabledBtn]}
@@ -146,7 +198,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-  //  backgroundColor: "#fff",
   },
   heading: {
     fontSize: 18,
@@ -213,5 +264,23 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  searchCompanyText: {
+    alignItems: 'center',
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  searchCompanyLink: {
+    color: Colors.shineBlue,
+    fontSize: 16,
+    //textDecorationLine: 'underline',
+  },
+  disabledSlot: {
+    backgroundColor: '#f0f0f0',
+    borderColor: '#ddd',
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#999',
   },
 });

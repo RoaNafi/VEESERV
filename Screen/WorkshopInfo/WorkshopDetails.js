@@ -41,7 +41,7 @@ useEffect(() => {
          // Fetch services (استخدم axios أو fetch حسب تفضيلك)
         const servicesResponse = await axios.get(`http://176.119.254.225:80/service/workshops/${workshopId}/services`);
       setServices(Array.isArray(servicesResponse.data) ? servicesResponse.data : []);
-      console.log("Services JSON:", servicesResponse.data);
+      //console.log("Services JSON:", servicesResponse.data);
     } catch (error) {
       console.error("Failed to fetch workshop details or reviews:", error);
     } finally {

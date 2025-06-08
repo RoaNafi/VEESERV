@@ -14,19 +14,19 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import SignUp from "./Screen/Registration/SignUp/SignUp";
 import Payment from "./Screen/Book/Payment";
-import Book from "./Screen/Book/Book";
+import BookSummary from "./Screen/Book/BookSummary";
 import ServiceDetails from "./Screen/Home/ServiceDetails";
-import WorkshopDetails from "./Screen/Home/WorkshopDetails";
+import WorkshopDetails from "./Screen/WorkshopInfo/WorkshopDetails";
 import Profile from "./Screen/Profile/MainProfile/Profile";
 import Garage from "./Screen/Profile/Garage/Garage";
 import ChangePassword from "./Screen/Profile/ChangePassword";
-import Service from "./Screen/Profile/Service/Service";
-import AddService from "./Screen/Profile/Service/AddService";
+import Service from "./Screen/WorkshopInfo/Service/Service";
+import AddService from "./Screen/WorkshopInfo/Service/AddService";
 import AddCar from "./Screen/Profile/Garage/AddCar";
 import EditProfile from "./Screen/Profile/EditProfile/EditProfile";
 import Language from "./Screen/Profile/Language/Language";
-import WorkingHours from "./Screen/Profile/WorkingHours/WorkingHours";
-import Certifications from "./Screen/Profile/Certifications/Certifications";
+import WorkingHours from "./Screen/WorkshopInfo/WorkingHours";
+import Certifications from "./Screen/WorkshopInfo/Certifications";
 import History from "./Screen/Profile/History/History";
 import ChatBot from "./Screen/Home/chatbot";
 import Cart from "./Screen/Home/cart";
@@ -35,7 +35,7 @@ import AvailableMechanic from "./Screen/Book/AvailableMechanic";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import SplitBookingPage from "./Screen/Book/SplitBookingPage";
 import MyBookingsScreen from "./Screen/MyBookingsScreen";
-import WorkshopSpecializations from "./Screen/Profile/specialization/specialization";
+import WorkshopSpecializations from "./Screen/WorkshopInfo/specialization";
 import MechanicHomeScreen from "./Screen/WorkshopHome/MechanicHomeScreen";
 import NotificationsScreen from "./Screen/NotificationsScreen";
 import OffersScreen from "./Screen/OffersScreen";
@@ -43,6 +43,7 @@ import PindingRequests from "./Screen/WorkshopHome/PindingRequests";
 import Subcategory from "./Screen/Home/Subcategory";
 import CompanyLegal from "./Screen/Profile/CompanyLegal";
 import Appointments from "./Screen/WorkshopHome/Appointments";
+import SearchByCompany from "./Screen/Book/SearchCompany";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -191,7 +192,7 @@ function ProfileNavigator() {
       <Stack.Screen
         name="ChangePassword"
         component={ChangePassword}
-        options={{ title: "ChangePassword" }}
+        options={{ title: "Change Password" }}
       />
       <Stack.Screen
         name="EditProfile"
@@ -219,11 +220,12 @@ function ProfileNavigator() {
         component={WorkingHours}
         options={{ title: "Working Hours" }}
       />
-      <Stack.Screen name="CertificationScreen" component={Certifications} />
-      <Stack.Screen name="HistoryScreen" component={History} />
+      <Stack.Screen name="CertificationScreen" component={Certifications}  options={{ title: "Certifications" }}/>
+      <Stack.Screen name="HistoryScreen" component={History}  options={{ title: "History" }} />
       <Stack.Screen
         name="WorkshopSpecializations"
         component={WorkshopSpecializations}
+        options={{ title: "Specializations" }}
       />
       <Stack.Screen
         name="CompanyLegal"
@@ -281,8 +283,8 @@ export default function App() {
               options={{ headerShown: true, title: " Category Services" }}
             />
             <Stack.Screen
-              name="Book"
-              component={Book}
+              name="BookSummary"
+              component={BookSummary}
               options={{ headerShown: true, title: "Booking Summary" }}
             />
             <Stack.Screen
@@ -315,6 +317,12 @@ export default function App() {
               component={DateTimePickerScreen}
               options={{ headerShown: true, title: "Pick a date" }}
             />
+            <Stack.Screen
+              name="SearchByCompany"
+              component={SearchByCompany}
+              options={{ headerShown: true, title: "Company" }}
+            />
+            
             <Stack.Screen
               name="AvailableMechanic"
               component={AvailableMechanic}

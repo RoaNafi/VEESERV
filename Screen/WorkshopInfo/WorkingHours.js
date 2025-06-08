@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Dimensions, Modal, ScrollView } from 'react-native';
 import axios from 'axios'; // Import axios for API calls
 import Icon from 'react-native-vector-icons/FontAwesome';
-import Colors from '../../../Components/Colors/Colors';
+import Colors from '../../Components/Colors/Colors';
 import DateTimePickerModal from "react-native-modal-datetime-picker"; // Import the modal date-time picker
 import moment from 'moment'; // To handle formatting of time
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { config } from '../../../config'; // For API URL
+import { config } from '../../config'; // For API URL
 const { width, height } = Dimensions.get('window');
 
 const WorkingHours = ({ navigation, route }) => {

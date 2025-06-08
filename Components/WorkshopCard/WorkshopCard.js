@@ -4,13 +4,18 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from "../Colors/Colors";
 
 const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
+  //console.log("\n=== WORKSHOP CARD DATA ===");
+  //console.log("Full data object:", JSON.stringify(data, null, 2));
+  //console.log("Services array:", JSON.stringify(data.services, null, 2));
+  //console.log("Number of services:", data.services ? data.services.length : 0);
+  //console.log("Is services array?", Array.isArray(data.services));
+  //console.log("Services type:", typeof data.services);
+
   const {
     image,
-    //service_name,
-    //service_description,
+    services,
     workshop_name,
     rate,
-    price,
     workshop_id,
   } = data;
 
@@ -28,33 +33,40 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
 
         <View style={styles.info}>
           <View style={styles.topInfo}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-              <Text style={[styles.serviceName, { flex: 1 }]} numberOfLines={2}>
-                {workshop_name}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.darkGray}/>
-            </View>
+            <Text style={styles.workshopName} numberOfLines={2}>
+              {workshop_name}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.darkGray} style={styles.arrowIcon} />
           </View>
 
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 4,
-            }}
-          >
+          <View style={styles.middleInfo}>
             <Ionicons name="star" size={12} color="#FFD700"/>
             <Text style={styles.ratingText}>{rate.toFixed(1)}</Text>
           </View>
 
-          <Text style={styles.price}>{price}₪</Text>
+          <View style={styles.servicesContainer}>
+            {Array.isArray(services) && services.length > 0 ? (
+              services.map((service, index) => {
+                //console.log(`Rendering service ${index}:`, JSON.stringify(service, null, 2));
+                return (
+                  <View key={index} style={styles.serviceItem}>
+                    <Text style={styles.serviceName}>
+                      {service.service_name || service.name} - {service.price}₪
+                    </Text>
+                  </View>
+                );
+              })
+            ) : (
+              <Text style={styles.serviceName}>No services available</Text>
+            )}
+          </View>
 
           <View style={styles.bottomInfo}>
             <Text style={styles.distance}>6 km</Text>
             <TouchableOpacity 
               style={styles.bookButton} 
               onPress={(e) => {
-                e.stopPropagation(); // Prevent card press when clicking book button
+                e.stopPropagation();
                 onBookPress();
               }}
             >

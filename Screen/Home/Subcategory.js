@@ -32,6 +32,7 @@ const Subcategory = ({ route }) => {
       const response = await axios.get(
         `${config.apiUrl}/ServiceCategories/categories/${categoryId}/subcategories`
       );
+      //console.log('API Response:', JSON.stringify(response.data, null, 2));
       setSubcategories(response.data);
     } catch (error) {
       console.error('Error fetching subcategories:', error);
@@ -100,17 +101,17 @@ const Subcategory = ({ route }) => {
               }
             }
           );
-          console.log('Add response:', response.data);
+          ///console.log('Add response:', response.data);
 
           if (response.status === 200 || response.status === 201) {
             setAddedServices(prev => [...prev, subcategoryId]);
             const cartId = response.data.cart?.cart_id;
-            console.log('Storing cartId:', cartId);
+            //console.log('Storing cartId:', cartId);
             setCartItems(prev => ({
               ...prev,
               [subcategoryId]: cartId
             }));
-            console.log('Successfully added to cart');
+            //console.log('Successfully added to cart');
           }
         } catch (addError) {
           console.error('Add error:', addError.response?.data || addError.message);
@@ -130,7 +131,6 @@ const Subcategory = ({ route }) => {
       <View style={styles.cardContent}>
         <View style={styles.serviceInfo}>
           <Text style={styles.name}>{item.subcategory_name}</Text>
-          <Text style={styles.price}>₪{item.price}</Text>
         </View>
         <TouchableOpacity
           onPress={() => handleAddToCart(item.subcategory_id)}
@@ -219,12 +219,6 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: '600', 
     color: '#333',
-    marginBottom: 4,
-  },
-  price: { 
-    fontSize: 15, 
-    color: '#086189',
-    fontWeight: '500',
   },
   addToCartButton: {
     borderWidth: 1,

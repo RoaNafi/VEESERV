@@ -1,17 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { config } from '../../../config'; // for API URL
+import { Ionicons } from '@expo/vector-icons';
+import { config } from '../../../config';
+import { useFocusEffect } from '@react-navigation/native';
+import styles from './GarageStyle';
+import Colors from '../../../Components/Colors/Colors';
+
 const Garage = ({ navigation }) => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +36,7 @@ const Garage = ({ navigation }) => {
         year: car.year,
         engine: `${car.transmission?.toUpperCase()} | ${car.fuel_type?.toUpperCase()}`,
         quantity: car.quantity,
-        isDefault: false,
+        isDefault: car.is_default,
       }));
 
       setCars(carsFormatted);
@@ -44,20 +47,42 @@ const Garage = ({ navigation }) => {
     }
   };
 
+  const setDefaultCar = async (vehicleId) => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      await axios.put(
+        `${config.apiUrl}/vehicle/vehicles/${vehicleId}/default`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      fetchCars();
+    } catch (err) {
+      console.error('Error setting default car:', err);
+      Alert.alert('Error', 'Failed to set default car');
+    }
+  };
+
   const deleteCar = async (vehicleId) => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
-
       await axios.delete(`${config.apiUrl}/vehicle/vehicles/${vehicleId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      // Remove the deleted car from the state
-      setCars((prevCars) => prevCars.filter((car) => car.id !== vehicleId));
+      setCars(prevCars => prevCars.filter(car => car.id !== vehicleId));
     } catch (err) {
       console.error('Error deleting car:', err);
+      
+      // Check for foreign key constraint error
+      if (err.response?.data?.detail?.includes('is still referenced from table "booking"')) {
+        Alert.alert(
+          'Cannot Delete Vehicle',
+          'This vehicle has active bookings. Please complete or cancel all bookings before deleting the vehicle.'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to delete car');
+      }
     }
   };
 
@@ -66,26 +91,22 @@ const Garage = ({ navigation }) => {
       'Delete Vehicle',
       'Are you sure you want to delete this vehicle?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: () => deleteCar(vehicleId),
-        },
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', onPress: () => deleteCar(vehicleId) }
       ]
     );
   };
 
-  useEffect(() => {
-    fetchCars();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCars();
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
       {loading ? (
-        <ActivityIndicator size="large" color="#086189" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={Colors.shineBlue} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {cars.length === 0 ? (
@@ -95,14 +116,11 @@ const Garage = ({ navigation }) => {
               <View key={car.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.carInfo}>
-                    <Ionicons name="car-outline" size={32} color="#086189" style={styles.carIcon} />
-                    <View>
-                      <Text style={styles.carTitle}>
-                        {car.name} <Text style={styles.carYear}>({car.year})</Text>
-                      </Text>
-                      <Text style={styles.carDetails}>{car.engine}</Text>
-                      <Text style={styles.carDetails}>Quantity: {car.quantity}</Text> 
-                    </View>
+                    <Text style={styles.carTitle}>
+                      {car.name} <Text style={styles.carYear}>({car.year})</Text>
+                    </Text>
+                    <Text style={styles.carDetails}>{car.engine}</Text>
+                    <Text style={styles.carDetails}>Quantity: {car.quantity}</Text>
                   </View>
                   {car.isDefault && (
                     <View style={styles.defaultBadge}>
@@ -112,15 +130,19 @@ const Garage = ({ navigation }) => {
                 </View>
 
                 <View style={styles.actionRow}>
-                  <TouchableOpacity>
-                    <Ionicons
-                      name={car.isDefault ? 'star' : 'star-outline'}
-                      size={24}
-                      color={car.isDefault ? '#FFD700' : '#888'}
-                    />
+                  <TouchableOpacity 
+                    style={[styles.actionButton, car.isDefault && styles.activeButton]} 
+                    onPress={() => setDefaultCar(car.id)}
+                  >
+                    <Text style={[styles.actionButtonText, car.isDefault && styles.activeButtonText]}>
+                      {car.isDefault ? 'Default' : 'Set as Default'}
+                    </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => confirmDelete(car.id)}>
-                    <MaterialIcons name="delete" size={24} color="#e74c3c" />
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.deleteButton]} 
+                    onPress={() => confirmDelete(car.id)}
+                  >
+                    <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Delete</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -141,84 +163,3 @@ const Garage = ({ navigation }) => {
 
 export default Garage;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f6f9fc',
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: 10,
-  },
-  carInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  carIcon: {
-    marginRight: 8,
-    fontSize: 40,
-    color: '#086189',
-  },
-  carTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#086189',
-  },
-  carYear: {
-    fontSize: 16,
-    color: '#555',
-  },
-  carDetails: {
-    fontSize: 15,
-    color: '#666',
-    marginTop: 4,
-  },
-  defaultBadge: {
-    backgroundColor: '#d1f2eb',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  defaultText: {
-    fontSize: 13,
-    color: '#086189',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 16,
-    gap: 20,
-  },
-  noCarText: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#888',
-    marginTop: 40,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#086189',
-    borderRadius: 30,
-    padding: 16,
-    elevation: 4,
-  },
-});

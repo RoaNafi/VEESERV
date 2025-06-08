@@ -13,10 +13,8 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Colors from '../../Components/Colors/Colors';
 import * as Location from 'expo-location'; // Import Location API
-import moment from 'moment';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useActionSheet } from '@expo/react-native-action-sheet';
@@ -36,14 +34,14 @@ const responsiveFontSize = width * 0.04; // 4% of screen width
 
 
 const Book = ({ route, navigation }) => {
-  const { workshopData, date, timeSlots, selectedCar: initialCar } = route.params;
-  const { service_name, workshop_name, price, service_id, workshop_id } = workshopData;
+  const { data, date, timeSlots } = route.params;
+  const { service_name, workshop_name, price, service_id, workshop_id } = data;
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  console.log("Workshop Data:", workshopData);
-  console.log("Date:", date);
-  console.log("Time Slots:", timeSlots);
-  console.log("Initial Car:", initialCar);
+  //console.log("Workshop Data:", data);
+  //console.log("Date:", date);
+  //console.log("Time Slots:", timeSlots);
+  console.log("Initial Car:", selectedCar);
 
   // Initialize with service from route params
   const [selectedServices, setSelectedServices] = useState([
@@ -58,7 +56,7 @@ const Book = ({ route, navigation }) => {
 
   const [scheduledDate, setScheduledDate] = useState(new Date(date));
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [selectedCar, setSelectedCar] = useState(initialCar);
+  const [selectedCar, setSelectedCar] = useState(null);
   const [allCars, setAllCars] = useState([]);
   const [services, setServices] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -81,10 +79,8 @@ const Book = ({ route, navigation }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // If no car is selected, fetch the default car
-    if (!selectedCar) {
-      fetchDefaultCar();
-    }
+    // Always fetch the default car first
+    fetchDefaultCar();
     // Also fetch all cars for the picker
     fetchAllCars();
   }, []);
@@ -285,10 +281,10 @@ const Book = ({ route, navigation }) => {
   };
 
   useEffect(() => {
-    if (workshopData?.workshop_id) {
-      fetchServices(workshopData.workshop_id);
+    if (data?.workshop_id) {
+      fetchServices(data.workshop_id);
     }
-  }, [workshopData]);
+  }, [data]);
 
   // Fetch services for this workshop
   const fetchServices = async (workshopId) => {
@@ -321,7 +317,7 @@ const Book = ({ route, navigation }) => {
 
   const groupServicesByWorkshop = (services) => {
     return [{
-      workshop_id: workshopData.workshop_id,
+      workshop_id: data.workshop_id,
       services,
       scheduled_date: date,
       time: timeSlots,
@@ -337,49 +333,58 @@ const Book = ({ route, navigation }) => {
     price: s.price,
   }));
   const handleConfirmBooking = async () => {
-    const bookingGroups = groupServicesByWorkshop(selectedServices);
-
-    const payload = bookingGroups.map(group => ({
-      workshop_id: group.workshop_id,
-      vehicle_id: selectedCar?.vehicle_id,
-      services: group.services.map(service => ({
-        service_id: service.id,
-        price: service.price
-      })),
-      scheduled_date: group.scheduled_date,
-      time: group.time,
-      location: group.location,
-      coordinates: group.coordinates
-    }));
-
-    const token = await AsyncStorage.getItem('accessToken');
-
     try {
-      const response = await fetch('http://176.119.254.225:80/booking/multiple', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          bookings: payload,
-          address,
-          temporary: true,
-          totalPrice
-        })
-      });
+      const token = await AsyncStorage.getItem("accessToken");
 
-      const result = await response.json();
-      if (response.ok) {
-        console.log('✅ Booking confirmed:', result);
-        setShowConfirmation(true);
-      } else {
-        console.error('❌ Booking failed:', result);
-        Alert.alert('Booking Failed', result.message || 'Something went wrong');
+      if (!selectedCar) {
+        Alert.alert("Please select a car first");
+        return;
       }
-    } catch (error) {
-      console.error('🔥 Error confirming booking:', error);
-      Alert.alert('Error', 'Could not confirm booking. Please try again.');
+
+      // if (!address.street) {
+      //   Alert.alert("Please provide a location");
+      //   return;
+      // }
+
+      const payload = {
+        bookings: [{
+          workshop_id: data.workshop_id,
+          scheduled_date: date,
+          time: timeSlots,
+          vehicle_id: selectedCar?.vehicle_id,
+          services: data.services.map(service => ({
+            service_id: service.service_id,
+            price: service.price
+          }))
+        }],
+        totalPrice: totalPrice,
+        address: {
+          address_id: address?.address_id,
+          street: address?.street,
+          city: address?.city,
+        },
+        temporary: true,
+      };
+
+      console.log('📦 Booking Payload:', JSON.stringify(payload, null, 2));
+
+      const response = await axios.post(
+        "http://176.119.254.225:80/booking/multiple",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.status === 201) {
+        setShowConfirmation(true);
+      }
+    } catch (err) {
+      console.error("❌ Booking failed:", err.response?.data || err.message);
+      Alert.alert(
+        "Booking failed",
+        err.response?.data?.error || "Unknown error"
+      );
     }
   };
 
@@ -442,14 +447,18 @@ const Book = ({ route, navigation }) => {
                 <Text style={styles.summaryLabel}>Service</Text>
               </View>
             </View>
-            <View style={styles.serviceDetailsRow}>
-              <View style={styles.serviceNameCell}>
-                <Text style={styles.serviceNameText}>{service_name}</Text>
+            {data.services && data.services.map((service, index) => (
+              <View key={index} style={styles.serviceDetailsRow}>
+                <View style={styles.serviceNameCell}>
+                  <Text style={styles.serviceNameText}>
+                    {service.service_name || service.name}
+                  </Text>
+                </View>
+                <View style={styles.servicePriceCell}>
+                  <Text style={styles.servicePrice}>{service.price}₪</Text>
+                </View>
               </View>
-              <View style={styles.servicePriceCell}>
-                <Text style={styles.servicePrice}>{price}₪</Text>
-              </View>
-            </View>
+            ))}
 
             <View style={styles.summaryRow}>
               <View style={styles.summaryLabelContainer}>

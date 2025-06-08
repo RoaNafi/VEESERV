@@ -25,14 +25,15 @@ const Cart = () => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
       if (token) {
-        console.log('Fetching cart items with token...');
+        //console.log('Fetching cart items with token...');
         const res = await axios.get('http://176.119.254.225:80/cart/cart', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        console.log('Cart API Response:', res.data);
-        console.log('Cart items:', res.data.cart);
+        //console.log('=============== Cart Screen ============');
+        //console.log('Cart API Response:', res.data);
+        //console.log('Cart items:', res.data.cart);
         setServices(res.data.cart);
       } else {
         console.error('No token found');
@@ -51,7 +52,7 @@ const Cart = () => {
 
   const removeFromCart = async (indexToRemove, cart_id) => {
     try {
-      console.log('Removing item from cart:', { indexToRemove, cart_id });
+      //console.log('Removing item from cart:', { indexToRemove, cart_id });
       const token = await AsyncStorage.getItem('accessToken');
       if (!token) return console.error('No token found');
 
@@ -61,12 +62,12 @@ const Cart = () => {
         },
         data: { cart_id }, // Axios sends body in 'data' for DELETE requests
       });
-      console.log('Remove response:', response.data);
+      //console.log('Remove response:', response.data);
 
       const updatedServices = [...services];
       updatedServices.splice(indexToRemove, 1);
       setServices(updatedServices);
-      console.log('Cart updated after removal');
+      //console.log('Cart updated after removal');
    
     } catch (error) {
       console.error('Failed to remove item from cart:', error.response?.data || error.message);
@@ -118,7 +119,6 @@ const Cart = () => {
     <View style={styles.itemCard}>
       <View>
         <Text style={styles.itemTitle}>{item.service_name}</Text>
-        <Text style={styles.itemPrice}>₪{parseFloat(item.price).toFixed(2)}</Text>
       </View>
       <TouchableOpacity onPress={() => removeFromCart(index, item.cart_id)}>
         <Ionicons name="close-circle-outline" size={28} color="#d9534f" />
@@ -133,21 +133,21 @@ const Cart = () => {
       ) : !services || services.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="cart-outline" size={width * 0.25} color="#ccc" />
-          <Text style={styles.emptyTitle}>Oops! Your Cart is Empty 😢</Text>
-          <Text style={styles.emptySubtitle}>Don't worry! Let's fill it up with some amazing services ✨</Text>
+          <Text style={styles.emptyTitle}>Your Cart is Empty 😢</Text>
+          <Text style={styles.emptySubtitle}>Let's add some services to your cart ✨</Text>
           <TouchableOpacity 
             style={styles.browseButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.browseButtonText}>Let's Go Shopping! 🛍️</Text>
+            <Text style={styles.browseButtonText}>Browse Services</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <>
           <View style={styles.header}>
             <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>Shopping Cart</Text>
-              <Text style={styles.itemCount}>{services.length} {services.length === 1 ? 'item' : 'items'}</Text>
+              <Text style={styles.headerTitle}>Service Cart</Text>
+              <Text style={styles.itemCount}>{services.length} {services.length === 1 ? 'service' : 'services'}</Text>
             </View>
             <TouchableOpacity 
               style={styles.clearCartButton} 
@@ -168,14 +168,14 @@ const Cart = () => {
           <View style={styles.footer}>
             <View style={styles.priceContainer}>
               <Text style={styles.priceLabel}>Total Price</Text>
-              <Text style={styles.priceValue}>₪{total.toFixed(2)}</Text>
+              <Text style={styles.priceValue}>₪ ------</Text>
             </View>
             
             <TouchableOpacity
               style={styles.checkoutButton}
               onPress={() => navigation.navigate('DateTimePickerScreen')}
             >
-              <Text style={styles.checkoutButtonText}>Checkout</Text>
+              <Text style={styles.checkoutButtonText}>Book Now</Text>
             </TouchableOpacity>
           </View>
         </>

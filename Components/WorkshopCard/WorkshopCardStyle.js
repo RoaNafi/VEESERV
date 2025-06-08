@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import Colors from '../../Components/Colors/Colors';
+import Colors from '../Colors/Colors';
 
 export default StyleSheet.create({
   card: {
@@ -20,7 +20,6 @@ export default StyleSheet.create({
     shadowOpacity: 0.20,
     shadowRadius: 3,
     elevation: 2,
-    // height: 120,
   },
   image: {
     width: 90,
@@ -29,99 +28,71 @@ export default StyleSheet.create({
   },
   info: {
     flex: 1,
-    justifyContent: 'space-between',
-    minHeight: 90, 
-    
     paddingVertical: 10,
     paddingHorizontal: 10,
   },
-  
   topInfo: {
+    marginBottom: 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  name: {
-    fontSize: 12,
-    color: Colors.shineBlue,
-    marginRight: 4,
-   
-  },
-  price: {
+  workshopName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: Colors.blue,
-    //marginRight: 15,
-    
+    color: Colors.darkGray,
+    flex: 1,
+    marginRight: 8,
+  },
+  arrowIcon: {
+    marginTop: 2,
   },
   middleInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    
+    marginBottom: 8,
   },
   ratingText: {
     color: Colors.orange,
     fontSize: 12,
-  marginLeft: 2,
+    marginLeft: 2,
   },
-
-
- 
- 
-  serviceInfo: {
-    marginTop: 4,
+  servicesContainer: {
+    marginVertical: 4,
+  },
+  serviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  serviceName: {
+    fontSize: 14,
+    color: Colors.darkGray,
+    flex: 1,
+    marginRight: 8,
   },
   
-  serviceName: {
-    
-    fontSize: 15,
-    fontWeight: 'bold',
+  bottomInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  distance: {
+    fontSize: 12,
     color: Colors.darkGray,
   },
-  
-  serviceDescription: {
-    fontSize: 12,
-    color: Colors.mediumGray,
-    
-  },
-  bottomInfo: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: 8,
-},
-
-bookButton: {
+  bookButton: {
     borderWidth: 1,
     borderColor: Colors.Gray,
     borderRadius: 15,
     paddingVertical: 3,
     paddingHorizontal: 10,
-    
   },
-bookButtonText: {
-  color: Colors.black,
-  fontWeight: '600',
-  fontSize: 14,
-},
-distance: {
-  fontSize: 12,
-  color: Colors.darkGray,
-  flex: 1, // Takes remaining space
-},
-addToCartButton: {
-      borderWidth: 1,
-    borderColor: Colors.Gray,
-    borderRadius: 15,
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-},
-cartIconContainer: {
-  flexDirection: 'row',
-  position: 'relative',
-  marginRight: 4,
-},
-cartIcon: {
- },
-
+  bookButtonText: {
+    color: Colors.black,
+    fontWeight: '600',
+    fontSize: 14,
+  },
 });

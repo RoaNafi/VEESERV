@@ -78,24 +78,26 @@ const [carCount, setCarCount] = useState('1');
       return Alert.alert('Error', 'Please fill in all fields.');
     }
     const token = await AsyncStorage.getItem('accessToken');
-  const carData = {
-  make: carMake,
-  model: carModel,
-  year: carYear,
-  transmission: transmission === 'automatic' ? 'a' : 'm',
-  fuel_type: fuelType,
-  isDefault,
-  quantity: Number(carCount),  // مهم تحولها لرقم
-};
-
-
+    const carData = {
+      make: carMake,
+      model: carModel,
+      year: carYear,
+      transmission: transmission === 'automatic' ? 'a' : 'm',
+      fuel_type: fuelType,
+      isDefault,
+      quantity: Number(carCount),
+    };
 
     try {
       await axios.post(`${config.apiUrl}/api/vehicles`, carData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      Alert.alert('Success', 'Vehicle added!');
-      navigation.goBack();
+      Alert.alert('Success', 'Vehicle added!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack()
+        }
+      ]);
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to add car');

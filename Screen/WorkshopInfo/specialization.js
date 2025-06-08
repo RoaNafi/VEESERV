@@ -4,7 +4,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { Chip, Button } from 'react-native-paper';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { config } from "../../../config";
+import { config } from "../../config";
 
 const PRIMARY_COLOR = '#086189';
 
@@ -169,7 +169,6 @@ export default function WorkshopSpecializations() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#fff',
     flexGrow: 1,
   },
   title: {

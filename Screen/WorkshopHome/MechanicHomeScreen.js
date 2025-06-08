@@ -27,7 +27,7 @@ const delayOptions = [5, 10, 15, 30, 35, 40, 45, 50, 55, 60]; // بالدقائ�
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
-const ACTION_BUTTON_SIZE = width * 0.25;
+const ACTION_BUTTON_SIZE = width * 0.28;
 const STAT_CARD_WIDTH = width * 0.22;
 const STAT_CARD_HEIGHT = height * 0.12;
 
@@ -266,12 +266,29 @@ const toggleExpand = (id) => {
         <Text style={styles.sectionTitle}>Today's Appointments</Text>
         <View style={styles.separator} />
         <FlatList
-          data={appointments}
+          data={appointments.length > 0 ? appointments : [{ id: 'no-appointments', isPlaceholder: true }]}
           keyExtractor={(item) => item.id}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.appointmentsContainer}
           renderItem={({ item }) => {
+            if (item.isPlaceholder) {
+              return (
+                <View style={[styles.appointmentCard, { width: CARD_WIDTH }]}>
+                  <View style={styles.appointmentInfo}>
+                    <View style={styles.appointmentHeader}>
+                      <Text style={styles.appointmentTime}>📅 Today</Text>
+                    </View>
+                    <View style={styles.appointmentDetails}>
+                      <Text style={[styles.appointmentText, { textAlign: 'center', color: '#666' }]}>
+                        No appointments scheduled for today
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            }
+
             const animatedValue = getAnimatedValue(item.id);
             const height = animatedValue.interpolate({
               inputRange: [0, 1],
@@ -371,7 +388,18 @@ const toggleExpand = (id) => {
             label="Appointments"
             onPress={() => navigation.navigate('Appointments')}
           />
-          
+
+          <QuickActionButton
+            icon="calendar-alt"
+            label="Today's Schedule"
+            onPress={() => navigation.navigate('TodaySchedule', { 
+              workshopId: workshopData?.workshop_id,
+              appointments: appointments 
+            })}
+          />
+        </View>
+
+        <View style={[styles.actionsRow, { justifyContent: 'flex-start' }]}>
           <QuickActionButton
             icon="plus"
             label="Add Service"
@@ -561,9 +589,10 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     marginVertical: height * 0.02,
-    paddingHorizontal: width * 0.02,
+    paddingHorizontal: width * 0.04,
+    gap: width * 0.02,
   },
   actionButton: {
     alignItems: 'center',
@@ -580,6 +609,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
     position: 'relative',
+    width: ACTION_BUTTON_SIZE,
+    height: ACTION_BUTTON_SIZE,
   },
   actionLabel: {
     fontSize: width * 0.032,
@@ -808,3 +839,4 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
 });
+

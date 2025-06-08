@@ -55,7 +55,6 @@ const Home = ({ navigation }) => {
   const [selectedSortOption, setSelectedSortOption] = useState(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [cartCount, setCartCount] = useState(0);
   const [addedServices, setAddedServices] = useState([]);
 
   const animatedValues = useRef({}).current;
@@ -91,11 +90,7 @@ const Home = ({ navigation }) => {
         setFrequentServices(response.data);
       } catch (error) {
         console.error("Failed to fetch frequent services:", error);
-        // fallback
-        setFrequentServices([
-          { id: 1, name: "Oil Change", price: 25 },
-          { id: 2, name: "Tire Rotation", price: 15 },
-        ]);
+        
       }
     };
     fetchFrequentServices();
@@ -196,42 +191,6 @@ const Home = ({ navigation }) => {
     sortResults
   );
 
-  useEffect(() => {
-    const getCartCount = async () => {
-      const userId = await AsyncStorage.getItem('userId');
-      const token = await AsyncStorage.getItem('accessToken');
-
-      if (userId && token) {
-        try {
-          const response = await axios.get('http://176.119.254.225:80/cart/cart', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            timeout: 5000, // Add timeout
-          });
-          let totalQuantity = 0;
-          if (response.data && response.data.cart) {
-            response.data.cart.forEach((item) => {
-              totalQuantity += item.quantity || 0;
-            });
-          }
-          setCartCount(totalQuantity);
-        } catch (error) {
-          console.error('Error fetching cart count:', error);
-          // Don't reset count on network error to maintain last known state
-          if (error.code !== 'ERR_NETWORK') {
-            setCartCount(0);
-          }
-        }
-      }
-    };
-
-    getCartCount();
-    // Set up an interval to refresh the cart count every 30 seconds
-    const interval = setInterval(getCartCount, 30000);
-    return () => clearInterval(interval);
-  }, []); // Remove cartCount dependency to prevent infinite loop
-
   const handleAddToCart = async (serviceId) => {
     if (addedServices.includes(serviceId)) return;
 
@@ -251,53 +210,21 @@ const Home = ({ navigation }) => {
         { subcategory_id: serviceId },
         {
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 5000, // Add timeout
+          timeout: 5000,
         }
       );
 
       if (response.status === 200 || response.status === 201) {
         Alert.alert('Success', 'Item added to cart!');
         setAddedServices((prev) => [...prev, serviceId]);
-
-        // Refresh cart count immediately after adding item
-        try {
-          const cartResponse = await axios.get('http://176.119.254.225:80/cart/cart', {
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 5000, // Add timeout
-          });
-
-          let totalQuantity = 0;
-          if (cartResponse.data && cartResponse.data.cart) {
-            cartResponse.data.cart.forEach((item) => {
-              totalQuantity += item.quantity || 0;
-            });
-          }
-          setCartCount(totalQuantity);
-        } catch (error) {
-          console.error('Error refreshing cart count:', error);
-          // Don't update count on network error
-        }
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
+      //console.error('Error adding to cart:', error);
       Alert.alert('Error', 'Failed to add item to cart');
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchCartCount = async () => {
-    };
-
-    fetchCartCount();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const getCategoryIcon = (categoryName) => {
     // Map category names to appropriate icons
@@ -524,11 +451,6 @@ const Home = ({ navigation }) => {
           style={[styles.floatingButton, styles.cartButton]}
           onPress={() => navigation.navigate('Cart')}>
           <Ionicons name="cart" size={30} color="#fff" />
-          {cartCount > 0 && (
-            <View style={styles.cartNotification}>
-              <Text style={styles.cartNotificationText}>{cartCount}</Text>
-            </View>
-          )}
         </TouchableOpacity>
       </View>
     </View>

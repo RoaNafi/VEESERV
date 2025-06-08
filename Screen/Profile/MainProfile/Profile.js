@@ -102,9 +102,11 @@ Alert.alert("Success", "Congratulations! Your account is now a company 🏢✨")
       type: 'double',
       items: [
         { icon: 'create-outline', label: 'Edit Profile', action: () => navigation.navigate('EditProfile') },
-        { icon: isMechanic ? 'construct' : 'car', label: isMechanic ? 'Service' : 'Garage', action: () => navigation.navigate(isMechanic ? 'Service' : 'Garage') },
+        { icon: 'car', label: 'Garage', action: () => navigation.navigate('Garage') },
       ],
     },
+    { icon: 'construct' , label:  'Service' , action: () => navigation.navigate('Service' ) },
+
     { icon: 'time', label: 'History', action: () => navigation.navigate('HistoryScreen', { userId: user?.id }) },
     { icon: 'globe', label: 'Language', action: () => navigation.navigate('Language') },
     { icon: 'business', label: 'Company & Legal', action: () => navigation.navigate('CompanyLegal') },

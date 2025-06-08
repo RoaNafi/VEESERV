@@ -33,8 +33,7 @@ const convertTo24HourFormat = (time) => {
 
 const AvailableMechanic = ({ route, navigation }) => {
   const { date, timeSlots } = route.params;
-  console.log("Selected date:", date);
-  console.log("Selected time slot(s):", timeSlots);
+  console.log("date:", date, "time", timeSlots);
 
   const [rawWorkshops, setRawWorkshops] = useState({
     perfectMatch: [],
@@ -59,26 +58,31 @@ const AvailableMechanic = ({ route, navigation }) => {
   const convertedTimeSlots = timeSlots.map((time) =>
     convertTo24HourFormat(time)
   );
-  console.log("Converted time slots:", convertedTimeSlots);
+  //console.log("Converted time slots:", convertedTimeSlots);
   // إذا كانت timeSlots تحتوي على عدة أوقات، سنحولها إلى سلسلة مفصولة بفواصل
   const formattedTimeSlots = convertedTimeSlots.join(", "); // جعلها سلسلة نصية مفصولة بفواصل
-  console.log("Formatted time slots:", formattedTimeSlots);
-  const transform = (list) =>
-    list.map((item) => {
-      const service = item.service || item.services?.[0] || {};
-      return {
+  //console.log("Formatted time slots:", formattedTimeSlots);
+  const transform = (list) => {
+    //console.log("\n=== TRANSFORM INPUT ===");
+    //console.log("Input list:", JSON.stringify(list, null, 2));
+    
+    const transformed = list.map((item) => {
+      //console.log("\nProcessing item:", JSON.stringify(item, null, 2));
+      const result = {
         image: item.workshop_image || "",
-        service_name: service.name || "Service",
-        service_description: "",
         workshop_name: item.workshop_name || "Workshop",
         rate: item.rate || item.rating || 0,
-        price: service.price || 0,
-        time: item.time || "N/A",
-        service_id: service.id || service.service_id || null,
         workshop_id: item.workshop_id,
-        services: item.services || [], // عشان الـ splitMatch تحتاج services كمصفوفة
+        services: item.services || []
       };
+      //console.log("Transformed result:", JSON.stringify(result, null, 2));
+      return result;
     });
+    //to show all results in console
+    //console.log("\n=== FINAL TRANSFORMED DATA ===");
+    //console.log(JSON.stringify(transformed, null, 2));
+    return transformed;
+  };
   const fetchAvailableWorkshops = async () => {
     setLoading(true);
 
@@ -92,32 +96,34 @@ const AvailableMechanic = ({ route, navigation }) => {
           preferred_time: formattedTimeSlots,
           minRating: selectedRating,
           mobileAssistance: mobileServiceOnly,
-          sortBy: selectedSortOption, // ⬅️ أرسليها للباك
+          sortBy: selectedSortOption,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      console.log("Response status:", response.status);
-      console.log("Response data:", response.data);
+      //console.log("\n=== RAW API RESPONSE ===");
+      //console.log(JSON.stringify(response.data, null, 2));
+
       const {
         perfectMatch = [],
         partialMatch = [],
         splitMatch = [],
       } = response.data;
 
-      const mergedWorkshops = [...perfectMatch, ...partialMatch, ...splitMatch];
-      console.log("Merged workshops:", mergedWorkshops);
+      //console.log("\n=== PERFECT MATCH RAW DATA ===");
+      //console.log(JSON.stringify(perfectMatch, null, 2));
 
-      console.log("Transformed perfectMatch:", transform(perfectMatch));
-      console.log("Transformed partialMatch:", transform(partialMatch));
-      console.log("Transformed splitMatch:", transform(splitMatch));
+      const transformedPerfect = transform(perfectMatch);
+      //console.log("\n=== FINAL DATA BEING SET TO STATE ===");
+      //console.log(JSON.stringify(transformedPerfect, null, 2));
+
       setRawWorkshops({ perfectMatch, partialMatch, splitMatch });
       setWorkshops({
-        perfectMatch: transform(perfectMatch),
+        perfectMatch: transformedPerfect,
         partialMatch: transform(partialMatch),
-        splitMatch: splitMatch.map((group) => transform(group)), // ✅
+        splitMatch: splitMatch.map((group) => transform(group)),
       });
     } catch (error) {
       console.error("❌ Error fetching workshops:", error);
@@ -155,16 +161,26 @@ const AvailableMechanic = ({ route, navigation }) => {
     fetchAvailableWorkshops();
   };
 
-  const handleBookPress = (workshopData) => {
-    navigation.navigate("Book", {
-      workshopData,
+  const handleBookPress = (data) => {
+    // Ensure services data is properly structured
+    const formattedData = {
+      ...data,
+      services: data.services.map(service => ({
+        service_id: service.service_id,
+        service_name: service.name,
+        price: service.price
+      }))
+    };
+    
+    navigation.navigate("BookSummary", {
+      data: formattedData,
       date,
       timeSlots,
     });
   };
 
-  const handleShopPress = (workshopData) => {
-    navigation.navigate("WorkshopDetails", { workshopData });
+  const handleShopPress = (data) => {
+    navigation.navigate("WorkshopDetails", { data });
   };
 
   
@@ -177,7 +193,6 @@ const AvailableMechanic = ({ route, navigation }) => {
       splitMatches: combo, // 🔥 أرسل المجموعة المختارة فقط
       date,
       timeSlots,
-
       selectedCar: route.params.selectedCar,
     });
   };
@@ -351,13 +366,14 @@ const AvailableMechanic = ({ route, navigation }) => {
             const service = item.item.service || item.item.services?.[0] || {};
             const data = {
               image: item.item.workshop_image || "",
-              service_name: service.name || "Service",
-              service_description: "",
-              workshop_name: item.item.workshop_name || "Workshop",
+              workshop_name: item.item.workshop_name || "unknow",
               rate: item.item.rate || 0,
-              price: service.price || 0,
-              service_id: service.id || service.service_id || null,
               workshop_id: item.item.workshop_id,
+              services: item.item.services ? item.item.services.map(s => ({
+                name: s.name,
+                price: s.price,
+                service_id: s.service_id || s.id
+              })) : []
             };
 
             return (
@@ -365,7 +381,6 @@ const AvailableMechanic = ({ route, navigation }) => {
                 data={data}
                 onBookPress={() => handleBookPress(data)}
                 onShopPress={() => handleShopPress(data)}
-               
               />
             );
           }
