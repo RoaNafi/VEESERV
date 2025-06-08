@@ -60,7 +60,7 @@ const MechanicHomeScreen = () => {
           });
 
           setWorkshopData(response.data);
-          console.log('Workshop data:', response.data);
+          //console.log('Workshop data:', response.data);
         } catch (error) {
           console.error('Failed to fetch workshop details:', error.message);
         } finally {

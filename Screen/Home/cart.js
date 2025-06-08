@@ -189,7 +189,7 @@ export default Cart;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    
   },
   header: {
     flexDirection: 'row',
@@ -197,7 +197,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: responsiveHorizontalPadding,
     paddingTop: responsiveVerticalPadding * 1.2,
-    backgroundColor: '#f9f9f9',
    
   },
   headerContent: {

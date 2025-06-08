@@ -55,9 +55,11 @@ const DateTimePickerScreen = ({ navigation }) => {
     const slotTime = new Date(selectedDate);
     slotTime.setHours(hours, minutes, 0, 0);
 
-    // If selected date is today, only check if time is in the future
+    // If selected date is today, check if time is in the future
     if (selectedDate.toDateString() === now.toDateString()) {
-      return slotTime > now;
+      // Add 30 minutes buffer to current time to allow for booking
+      const bufferTime = new Date(now.getTime() + 30 * 60000);
+      return slotTime > bufferTime;
     }
 
     return true;
@@ -90,10 +92,21 @@ const DateTimePickerScreen = ({ navigation }) => {
       minute: "2-digit",
     });
     
-    if (isTimeSlotValid(formattedTime)) {
-      setSelectedSlot(formattedTime);
+    // Create a new date object for comparison
+    const selectedTime = new Date(selectedDate);
+    selectedTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    
+    const now = new Date();
+    const bufferTime = new Date(now.getTime() + 30 * 60000);
+
+    if (selectedDate.toDateString() === now.toDateString()) {
+      if (selectedTime > bufferTime) {
+        setSelectedSlot(formattedTime);
+      } else {
+        Alert.alert("Invalid Time", "Please select a time at least 30 minutes in the future.");
+      }
     } else {
-      Alert.alert("Invalid Time", "Please select a future time.");
+      setSelectedSlot(formattedTime);
     }
     hideTimePicker();
   };

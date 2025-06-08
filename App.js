@@ -43,7 +43,7 @@ import PindingRequests from "./Screen/WorkshopHome/PindingRequests";
 import Subcategory from "./Screen/Home/Subcategory";
 import CompanyLegal from "./Screen/Profile/CompanyLegal";
 import Appointments from "./Screen/WorkshopHome/Appointments";
-import SearchByCompany from "./Screen/Book/SearchCompany";
+import SearchByCompany from "./Screen/Book/SearchByCompany";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
