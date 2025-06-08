@@ -18,6 +18,7 @@ const Appointments = () => {
         },
       });
       setBookings(res.data.bookings);
+console.log('Bookings fetched successfully:', res.data.bookings);
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {
@@ -32,6 +33,7 @@ const Appointments = () => {
   const renderBooking = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.info}>
+        <Text style={styles.title}>{item.first_name}{item.last_name}</Text>
         <Text style={styles.title}>{item.service_name}</Text>
         <Text style={styles.subtitle}>{item.make} {item.model} ({item.year})</Text>
         <Text style={styles.dateTime}>
@@ -51,7 +53,7 @@ const Appointments = () => {
       ) : (
         <FlatList
           data={bookings}
-          keyExtractor={(item) => item.booking_id.toString()}
+keyExtractor={(item) => `${item.booking_id}-${item.service_id}`}
           renderItem={renderBooking}
           contentContainerStyle={{ paddingBottom: 80 }}
           showsVerticalScrollIndicator={false}

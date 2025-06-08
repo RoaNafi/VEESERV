@@ -23,9 +23,11 @@ const Subcategory = ({ route }) => {
   const [cartItems, setCartItems] = useState({});
   const [loadingItem, setLoadingItem] = useState(null); // Track which item is loading
 
-  useEffect(() => {
-    fetchSubcategories();
-  }, []);
+ useEffect(() => {
+  fetchSubcategories();
+  fetchCartServices(); // ⬅️ هون
+}, [categoryId]);
+
 
   const fetchSubcategories = async () => {
     try {
@@ -125,6 +127,24 @@ const Subcategory = ({ route }) => {
       setLoadingItem(null); // Clear loading state
     }
   };
+ const fetchCartServices = async () => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken'); // جلب التوكن
+
+    const response = await axios.get(`${config.apiUrl}/cart/cart`, {
+      headers: {
+        Authorization: `Bearer ${token}`, // أرسل التوكن في الهيدر
+      },
+    });
+
+    const servicesInCart = response.data.cart || [];
+    const serviceIds = servicesInCart.map(item => item.subcategory_id);
+    setAddedServices(serviceIds);
+  } catch (error) {
+    console.error('Error fetching cart services:', error);
+  }
+};
+
 
   const renderSubcategory = ({ item }) => (
     <View style={styles.card}>
@@ -132,40 +152,35 @@ const Subcategory = ({ route }) => {
         <View style={styles.serviceInfo}>
           <Text style={styles.name}>{item.subcategory_name}</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => handleAddToCart(item.subcategory_id)}
-          style={[
-            styles.addToCartButton,
-            addedServices.includes(item.subcategory_id) && styles.addedButton,
-          ]}
-          disabled={loadingItem === item.subcategory_id}
-        >
-          {loadingItem === item.subcategory_id ? (
-            <ActivityIndicator size="small" color={Colors.black} />
-          ) : addedServices.includes(item.subcategory_id) ? (
-            <View style={styles.cartIconContainer}>
-              <Ionicons name="checkmark" size={16} color={Colors.black} />
-              <Ionicons
-                name="cart"
-                size={16}
-                marginLeft={-4}
-                color={Colors.black}
-                style={styles.cartIcon}
-              />
-            </View>
-          ) : (
-            <View style={styles.cartIconContainer}>
-              <Ionicons name="add" size={16} color={Colors.black} />
-              <Ionicons
-                name="cart"
-                size={16}
-                marginLeft={-4}
-                color={Colors.black}
-                style={styles.cartIcon}
-              />
-            </View>
-          )}
-        </TouchableOpacity>
+       <TouchableOpacity
+  onPress={() => handleAddToCart(item.subcategory_id)}
+  style={[
+    styles.addToCartButton,
+    addedServices.includes(item.subcategory_id) && styles.addedButton,
+  ]}
+  disabled={loadingItem === item.subcategory_id}
+>
+  {loadingItem === item.subcategory_id ? (
+    <ActivityIndicator size="small" color={Colors.black} />
+  ) : addedServices.includes(item.subcategory_id) ? (
+    <View style={styles.cartIconContainer}>
+      <Ionicons name="checkmark" size={16} color={Colors.black} />
+      <Text style={styles.addedText}>In Cart</Text>
+    </View>
+  ) : (
+    <View style={styles.cartIconContainer}>
+      <Ionicons name="add" size={16} color={Colors.black} />
+      <Ionicons
+        name="cart"
+        size={16}
+        marginLeft={-4}
+        color={Colors.black}
+        style={styles.cartIcon}
+      />
+    </View>
+  )}
+</TouchableOpacity>
+
       </View>
     </View>
   );

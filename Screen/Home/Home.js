@@ -147,11 +147,12 @@ const Home = ({ navigation }) => {
     }
     setIsLoading(true);
     try {
-      const response = await axios.get(`${config.apiUrl}/search/search`, {
-        params: { searchQuery: text },
+      const response = await axios.get(`${config.apiUrl}/search/subcategories/search`, {
+      params: { keyword: text },  // هنا صححتها
       });
       setOriginalSearchResults(response.data);
       setSearchResults(response.data);
+      console.log("Search results:", response.data);
     } catch (error) {
       console.error("Search error:", error);
       setSearchResults([]);

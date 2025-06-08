@@ -34,6 +34,10 @@ const EditProfile = ({ navigation }) => {
   const [address, setAddress] = useState("");
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+const [street, setStreet] = useState("");
+const [city, setCity] = useState("");
+const [latitude, setLatitude] = useState(null);
+const [longitude, setLongitude] = useState(null);
 
   // just for mechanics
   const [userRole, setUserRole] = useState("");
@@ -41,40 +45,55 @@ const EditProfile = ({ navigation }) => {
   // Loading state for location
   const [loadingLocation, setLoadingLocation] = useState(false);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const token = await AsyncStorage.getItem("accessToken");
+ useEffect(() => {
+  const fetchUserProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
 
-        const response = await axios.get(`${config.apiUrl}/myprofile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const response = await axios.get(`${config.apiUrl}/myprofile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        const { user, workshopDetails } = response.data;
+      const { user, address, workshopDetails } = response.data;
 
-        setFirstName(user.first_name);
-        setLastName(user.last_name);
-        setEmail(user.email_address);
-        setPhone(user.phone_number);
-        setAddress(user.address || ""); // Set address with fallback to empty string
-        setImage(user.profile_picture);
-        setUserRole(user.role);
+      setFirstName(user.first_name);
+      setLastName(user.last_name);
+      setEmail(user.email_address);
+      setPhone(user.phone_number);
+      setImage(user.profile_picture);
+      setUserRole(user.role);
 
-        //console.log("data :", user.role);
-        // If mechanic, set workshop details
-        if (user.role === "Mechanic" && workshopDetails) {
-          setWorkshopName(workshopDetails.workshop_name || "");
-        }
-      } catch (err) {
-        console.error("Error fetching user profile:", err);
-        Alert.alert("Error", "Failed to load profile info.");
+      // ✅ التعامل مع العنوان إذا موجود
+     if (address) {
+  setAddress({
+    street: address.street || "",
+    cityName: address.city || "",
+    latitude: address.latitude || null,
+    longitude: address.longitude || null,
+  });
+
+  // ✨ عرض العنوان كمجرد نص في واجهة المستخدم
+const addressText = `${address.street || ""}, ${address.city || ""}`;
+  setAddress(addressText);
+} else {
+  setAddress(null);
+  setAddress("");
+}
+
+      // ✅ لو المستخدم ميكانيكي نجيب اسم الورشة
+      if (user.role === "Mechanic" && workshopDetails) {
+        setWorkshopName(workshopDetails.workshop_name || "");
       }
-    };
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      Alert.alert("Error", "Failed to load profile info.");
+    }
+  };
 
-    fetchUserProfile();
-  }, []);
+  fetchUserProfile();
+}, []);
 
   // Handle get current location functionality
   // Handle get current location functionality
@@ -96,7 +115,7 @@ const EditProfile = ({ navigation }) => {
       const { latitude, longitude } = location.coords;
       console.log("Latitude:", latitude, "Longitude:", longitude);
 
-      let road = "Unknown Street";
+      let street = "Unknown Street";
       let city = "Unknown City";
 
       try {
@@ -112,31 +131,16 @@ const EditProfile = ({ navigation }) => {
         if (response.ok) {
           const data = await response.json();
 
-          // Extract address components from the response
-          road = data.address?.road || data.address?.street || "Unknown Street";
-          city =
-            data.address?.city ||
-            data.address?.town ||
-            data.address?.village ||
-            "Unknown City";
-          const suburb = data.address?.suburb || "";
-          const state = data.address?.state || "";
-          const country = data.address?.country || "";
+        const road = data.address?.road || data.address?.street || data.address?.suburb || "Unknown Street";
+const cityName = data.address?.city || data.address?.town || data.address?.village || "Unknown City";
+setAddress(`${road }, ${cityName}`);
 
-          console.log("Address data:", data.address);
+setStreet(road);
+setCity(cityName);
+setLatitude(latitude);
+setLongitude(longitude);
 
-          // Format a complete address string
-          let formattedAddress = "";
-          if (road) formattedAddress += road;
-          if (suburb)
-            formattedAddress += (formattedAddress ? ", " : "") + suburb;
-          if (city) formattedAddress += (formattedAddress ? ", " : "") + city;
-          if (state) formattedAddress += (formattedAddress ? ", " : "") + state;
-          if (country)
-            formattedAddress += (formattedAddress ? ", " : "") + country;
 
-          // Set the address field with the formatted address
-          setAddress(formattedAddress);
 
           // Show success toast or small notification
           // Alert.alert('Location Updated', 'Your current location has been added to the address field.');
@@ -175,14 +179,22 @@ quality: 0.4, // reduces size
     try {
       const token = await AsyncStorage.getItem("accessToken");
 
-      const payload = {
-        first_name: firstName,
-        last_name: lastName,
-        email_address: email,
-        phone_number: phone,
-        address: address, // Include address in payload
-        profile_picture: image,
-      };
+    const payload = {
+  first_name: firstName,
+  last_name: lastName,
+  email_address: email,
+  phone_number: phone,
+  profile_picture: image,
+  address: {
+    street,
+    city,
+    latitude,
+    longitude,
+  },
+};
+
+
+      console.log("📤 Profile update payload:", city , street);
 
       // Add mechanic-specific fields if the user is a mechanic
       if (userRole === "Mechanic") {
@@ -299,13 +311,15 @@ quality: 0.4, // reduces size
         </View>
 
         <View style={styles.fieldContainer}>
-          <Text style={styles.label}>Address</Text>
-          <TextInput
-            style={styles.input}
-            value={address}
-            onChangeText={setAddress}
-            placeholder="Enter your address"
-          />
+        <Text style={styles.label}>Address</Text> 
+<TextInput
+  style={styles.input}
+  value={address} // هذا سترينغ مركّب مثل "Main St, London"
+  onChangeText={setAddress}
+  placeholder="Your address will appear here"
+  editable={false} // اختياري، إذا ما بدك المستخدم يعدله يدويًا
+/>
+
         </View>
 
         <TouchableOpacity

@@ -153,8 +153,7 @@ const Book = ({ route, navigation }) => {
         setSelectedCar(res.data);
       }
     } catch (err) {
-      console.error('Error fetching default car:', err);
-      Alert.alert('Error', 'Could not fetch default car. Please select a car manually.');
+      Alert.alert('Please select a vehicle before proceeding with the booking.');
     }
   };
 

@@ -36,55 +36,67 @@ const Garage = ({ navigation }) => {
         year: car.year,
         engine: `${car.transmission?.toUpperCase()} | ${car.fuel_type?.toUpperCase()}`,
         quantity: car.quantity,
-        isDefault: car.is_default,
+        isDefault: car.isdefault,
       }));
 
       setCars(carsFormatted);
+      console.log('Cars fetched successfully:', carsFormatted);
     } catch (err) {
       console.error('Error fetching cars:', err);
     } finally {
       setLoading(false);
     }
   };
+ const setDefaultCar = async (vehicleId) => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
 
-  const setDefaultCar = async (vehicleId) => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      await axios.put(
-        `${config.apiUrl}/vehicle/vehicles/${vehicleId}/default`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      fetchCars();
-    } catch (err) {
-      console.error('Error setting default car:', err);
-      Alert.alert('Error', 'Failed to set default car');
-    }
-  };
+    // لو عندك طريقة تفكيك التوكن لاستخراج userId، استخدمها هنا
+    // فرضًا عندك userId مخزن مثلاً:
+    const userId = await AsyncStorage.getItem('userId');
 
-  const deleteCar = async (vehicleId) => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      await axios.delete(`${config.apiUrl}/vehicle/vehicles/${vehicleId}`, {
+    await axios.put(
+      `http://176.119.254.225:80/vehicle/vehicles/default/${vehicleId}`,
+      { userId },  // هادي المهمة عشان توصل للسيرفر
+      {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      setCars(prevCars => prevCars.filter(car => car.id !== vehicleId));
-    } catch (err) {
-      console.error('Error deleting car:', err);
-      
-      // Check for foreign key constraint error
-      if (err.response?.data?.detail?.includes('is still referenced from table "booking"')) {
-        Alert.alert(
-          'Cannot Delete Vehicle',
-          'This vehicle has active bookings. Please complete or cancel all bookings before deleting the vehicle.'
-        );
-      } else {
-        Alert.alert('Error', 'Failed to delete car');
       }
-    }
-  };
+    );
+
+    Alert.alert('Success', 'Default car has been updated');
+    fetchCars();
+  } catch (err) {
+    console.error('Error setting default car:', err);
+    Alert.alert('Error', 'Failed to set default car');
+  }
+};
+
+
+
+
+ const deleteCar = async (vehicleId) => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    await axios.delete(`${config.apiUrl}/vehicle/vehicles/${vehicleId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setCars(prevCars => prevCars.filter(car => car.id !== vehicleId));
+  } catch (err) {
+    console.error('Error deleting car:', err);
+
+const errorMsg = err.response?.data?.error || err.response?.data;
+console.log('Error response:', err.response?.data);
+
+   if (typeof errorMsg === 'string' && errorMsg.includes('Cannot delete vehicle with active or upcoming bookings')) {
+  Alert.alert(
+    'Cannot Delete Vehicle',
+    'This vehicle has active or upcoming bookings. Please complete or cancel them first.'
+  );
+} else {
+  Alert.alert('Error', 'Failed to delete car');
+}
+  }
+};
 
   const confirmDelete = (vehicleId) => {
     Alert.alert(

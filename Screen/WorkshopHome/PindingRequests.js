@@ -17,7 +17,7 @@ const PindingRequests = () => {
       const token = await AsyncStorage.getItem('accessToken');
       console.log('Fetched token:', token); // تحقق من صحة التوكن
 
-      const res = await axios.get('http://176.119.254.225:80/booking/Mechanic/bookings', {
+      const res = await axios.get('http://176.119.254.225:80/booking/Mechanic/bookings/pending', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -56,9 +56,11 @@ const PindingRequests = () => {
    const renderBooking = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.info}>
+        <Text style={styles.title}>{item.first_name} {item.last_name}</Text>
+        <Text style={styles.subtitle}>Phone: {item.phone_number}</Text>
         <Text style={styles.title}>Service: {item.service_name}</Text>
         <Text style={styles.subtitle}>Car: {item.make} {item.model} ({item.year})</Text>
-        <Text style={styles.subtitle}>Booking Date: {new Date(item.booking_date).toLocaleDateString()}</Text>
+        <Text style={styles.subtitle}>Booking Date: {new Date(item.scheduled_date).toLocaleDateString()}</Text>
         <Text style={styles.statusText}>
           Status: 
           <Text style={{ fontWeight: '700', color: getStatusColor(item.booking_status) }}> {item.booking_status.toUpperCase()}</Text>
@@ -94,7 +96,7 @@ return (
       ) : (
         <FlatList
           data={bookings}
-          keyExtractor={(item) => item.booking_id.toString()}
+keyExtractor={(item) => `${item.booking_id}-${item.service_id}`}
           renderItem={renderBooking}
           contentContainerStyle={{ paddingBottom: 80 }}
           showsVerticalScrollIndicator={false}
