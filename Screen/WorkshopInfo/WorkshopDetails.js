@@ -13,64 +13,53 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import axios from "axios";
 
 const WorkshopDetails = ({ route }) => {
-const { workshopData } = route.params;
-const workshopId = workshopData.workshop_id;
-
-const [detailedWorkshop, setDetailedWorkshop] = useState(null);
-const [reviews, setReviews] = useState([]);
-const [loading, setLoading] = useState(true);
-const [showAllReviews, setShowAllReviews] = useState(false);
-
-  const [services, setServices] = useState([]);
-  const [showAllServices, setShowAllServices] = useState(false);
-
-
-useEffect(() => {
-  const fetchWorkshopDetails = async () => {
-    try {
-      const workshopResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}`);
-      const workshopJson = await workshopResponse.json();
-      //console.log("Workshop JSON:", workshopJson);
-
-      const reviewsResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}/reviews`);
-      const reviewsJson = await reviewsResponse.json();
-      //console.log("Reviews JSON:", reviewsJson);
-
-      setDetailedWorkshop(workshopJson);
-      setReviews(Array.isArray(reviewsJson) ? reviewsJson : []);
-         // Fetch services (استخدم axios أو fetch حسب تفضيلك)
-        const servicesResponse = await axios.get(`http://176.119.254.225:80/service/workshops/${workshopId}/services`);
-      setServices(Array.isArray(servicesResponse.data) ? servicesResponse.data : []);
-      //console.log("Services JSON:", servicesResponse.data);
-    } catch (error) {
-      console.error("Failed to fetch workshop details or reviews:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (workshopId) {
-    fetchWorkshopDetails();
-    
-  } else {
-    console.warn("No workshopId received in params");
-    setLoading(false);
-  }
-}, [workshopId]);
-  if (loading) {
+  const { workshopData } = route.params || {};
+  
+  // Add error checking for workshopData
+  if (!workshopData || !workshopData.workshop_id) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color={Colors.blue} />
+        <Text style={{ color: Colors.darkGray }}>Invalid workshop data</Text>
       </View>
     );
   }
 
-  if (!workshopData) {
+  const workshopId = workshopData.workshop_id;
+  const [detailedWorkshop, setDetailedWorkshop] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [services, setServices] = useState([]);
+  const [showAllServices, setShowAllServices] = useState(false);
+
+  useEffect(() => {
+    const fetchWorkshopDetails = async () => {
+      try {
+        const workshopResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}`);
+        const workshopJson = await workshopResponse.json();
+
+        const reviewsResponse = await fetch(`http://176.119.254.225:80/mechanic/workshop/${workshopId}/reviews`);
+        const reviewsJson = await reviewsResponse.json();
+
+        setDetailedWorkshop(workshopJson);
+        setReviews(Array.isArray(reviewsJson) ? reviewsJson : []);
+
+        const servicesResponse = await axios.get(`http://176.119.254.225:80/service/workshops/${workshopId}/services`);
+        setServices(Array.isArray(servicesResponse.data) ? servicesResponse.data : []);
+      } catch (error) {
+        console.error("Failed to fetch workshop details or reviews:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWorkshopDetails();
+  }, [workshopId]);
+
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: "center", marginTop: 20, color: Colors.darkGray }}>
-          Workshop data not available.
-        </Text>
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={Colors.blue} />
       </View>
     );
   }
@@ -81,8 +70,6 @@ useEffect(() => {
     
   const reviewsToShow = showAllReviews ? reviews : reviews.slice(0, 5);
 
-  // Fetch services for this workshop
- 
   return (
     <View style={styles.container}>
       <ScrollView>
@@ -113,85 +100,88 @@ useEffect(() => {
               <Text style={styles.infoText}>{workshopData.address_id || "Address not available"}</Text>
             </View>
           </View>
- <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Services</Text>
 
-        {servicesToShow.length === 0 ? (
-          <Text>No services available.</Text>
-        ) : (
-          servicesToShow.map((service) => (
-            <View key={service.service_id} style={styles.serviceItem}>
-              <View style={styles.serviceLeft}>
-                <Text style={styles.serviceName}>{service.service_name}</Text>
-                <Text style={styles.serviceDescription}>{service.service_description}</Text>
-              </View>
-              <Text style={styles.servicePrice}>{service.price}₪</Text>
-            </View>
-          ))
-        )}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Services</Text>
 
-        {services.length > 5 && (
-          <TouchableOpacity
-            style={styles.showMoreButton}
-            onPress={() => setShowAllServices(!showAllServices)}
-          >
-            <Text style={styles.showMoreText}>
-              {showAllServices ? "Show Less" : "Show More"}
-            </Text>
-            <Ionicons
-              name={showAllServices ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={Colors.blue}
-            />
-          </TouchableOpacity>
-        )}
-      </View>
-<View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Reviews</Text>
+            {servicesToShow.length === 0 ? (
+              <Text>No services available.</Text>
+            ) : (
+              servicesToShow.map((service) => (
+                <View key={service.service_id} style={styles.serviceItem}>
+                  <View style={styles.serviceLeft}>
+                    <Text style={styles.serviceName}>{service.service_name}</Text>
+                    <Text style={styles.serviceDescription}>{service.service_description}</Text>
+                  </View>
+                  <Text style={styles.servicePrice}>{service.price}₪</Text>
+                </View>
+              ))
+            )}
 
-      {reviewsToShow.length === 0 ? (
-        <Text>No reviews available.</Text>
-      ) : (
-        reviewsToShow.map((review) => (
-          <View key={review.review_id} style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <Text style={styles.reviewUser}>Anonymous</Text>
-              <View style={styles.reviewRating}>
-                <Ionicons name="star" size={14} color="#FFD700" />
-                <Text style={styles.reviewRatingText}>{review.rating}</Text>
-              </View>
-            </View>
-            <Text style={styles.reviewDate}>
-              {new Date(review.review_date).toLocaleDateString() || "Date unknown"}
-            </Text>
-            <Text style={styles.reviewComment}>{review.comment}</Text>
+            {services.length > 5 && (
+              <TouchableOpacity
+                style={styles.showMoreButton}
+                onPress={() => setShowAllServices(!showAllServices)}
+              >
+                <Text style={styles.showMoreText}>
+                  {showAllServices ? "Show Less" : "Show More"}
+                </Text>
+                <Ionicons
+                  name={showAllServices ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={Colors.blue}
+                />
+              </TouchableOpacity>
+            )}
           </View>
-        ))
-      )}
 
-      {reviews.length > 5 && (
-        <TouchableOpacity
-          accessible={true}
-          accessibilityRole="button"
-          style={styles.showMoreButton}
-          onPress={() => setShowAllReviews(!showAllReviews)}
-        >
-          <Text style={styles.showMoreText}>
-            {showAllReviews ? "Show Less" : "Show More"}
-          </Text>
-          <Ionicons
-            name={showAllReviews ? "chevron-up" : "chevron-down"}
-            size={16}
-            color={Colors.blue}
-          />
-        </TouchableOpacity>
-      )}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Reviews</Text>
+
+            {reviewsToShow.length === 0 ? (
+              <Text>No reviews available.</Text>
+            ) : (
+              reviewsToShow.map((review) => (
+                <View key={review.review_id} style={styles.reviewItem}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.reviewUser}>Anonymous</Text>
+                    <View style={styles.reviewRating}>
+                      <Ionicons name="star" size={14} color="#FFD700" />
+                      <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.review_date).toLocaleDateString() || "Date unknown"}
+                  </Text>
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                </View>
+              ))
+            )}
+
+            {reviews.length > 5 && (
+              <TouchableOpacity
+                accessible={true}
+                accessibilityRole="button"
+                style={styles.showMoreButton}
+                onPress={() => setShowAllReviews(!showAllReviews)}
+              >
+                <Text style={styles.showMoreText}>
+                  {showAllReviews ? "Show Less" : "Show More"}
+                </Text>
+                <Ionicons
+                  name={showAllReviews ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={Colors.blue}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </ScrollView>
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -375,6 +365,5 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 });
-
 
 export default WorkshopDetails;

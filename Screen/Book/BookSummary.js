@@ -78,6 +78,19 @@ const Book = ({ route, navigation }) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // Add this near the top of the component, after other state declarations
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Add this useEffect to handle refresh
+  useEffect(() => {
+    if (route.params?.refresh) {
+      fetchAllCars();
+      fetchDefaultCar();
+      // Clear the refresh param
+      navigation.setParams({ refresh: undefined });
+    }
+  }, [route.params?.refresh]);
+
   useEffect(() => {
     // Always fetch the default car first
     fetchDefaultCar();
@@ -153,7 +166,8 @@ const Book = ({ route, navigation }) => {
         setSelectedCar(res.data);
       }
     } catch (err) {
-      Alert.alert('Please select a vehicle before proceeding with the booking.');
+      // Remove the alert since we don't want to show it
+      // Alert.alert('Please select a vehicle before proceeding with the booking.');
     }
   };
 
@@ -179,7 +193,34 @@ const Book = ({ route, navigation }) => {
       await fetchAllCars();
     }
 
+    if (allCars.length === 0) {
+      // If no cars available, show option to add a car
+      Alert.alert(
+        'No Cars Available',
+        'You need to add a car to proceed with the booking.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Add Car',
+            onPress: () => navigation.navigate('AddCar', { 
+              fromBooking: true,
+              bookingData: {
+                data: route.params.data,
+                date: route.params.date,
+                timeSlots: route.params.timeSlots
+              }
+            })
+          }
+        ]
+      );
+      return;
+    }
+
     const options = allCars.map(car => `${car.make} ${car.model} (${car.year})`);
+    options.push('Add New Car');
     options.push('Cancel');
 
     showActionSheetWithOptions(
@@ -189,7 +230,20 @@ const Book = ({ route, navigation }) => {
         title: 'Select a Car',
       },
       selectedIndex => {
-        if (selectedIndex !== undefined && selectedIndex !== options.length - 1) {
+        if (selectedIndex === undefined) return;
+        
+        if (selectedIndex === options.length - 2) {
+          // Add New Car option selected
+          navigation.navigate('AddCar', { 
+            fromBooking: true,
+            bookingData: {
+              data: route.params.data,
+              date: route.params.date,
+              timeSlots: route.params.timeSlots
+            }
+          });
+        } else if (selectedIndex !== options.length - 1) {
+          // Regular car selected
           setSelectedCar(allCars[selectedIndex]);
         }
       }
@@ -336,7 +390,6 @@ const Book = ({ route, navigation }) => {
       const token = await AsyncStorage.getItem("accessToken");
 
       if (!selectedCar) {
-        Alert.alert("Please select a car first");
         return;
       }
 
@@ -387,7 +440,22 @@ const Book = ({ route, navigation }) => {
     }
   };
 
-  const handleGoToHome = () => {
+  const handleGoToHome = async () => {
+    try {
+      // Clear the cart first
+      const token = await AsyncStorage.getItem('accessToken');
+      if (token) {
+        await axios.delete('http://176.119.254.225:80/cart/clear-cart', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+    }
+
+    // Then navigate home
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
@@ -395,6 +463,19 @@ const Book = ({ route, navigation }) => {
       })
     );
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Only fetch cars if we don't have any
+      if (allCars.length === 0) {
+        fetchAllCars();
+      }
+      // Only fetch default car if we don't have one selected
+      if (!selectedCar) {
+        fetchDefaultCar();
+      }
+    }, [allCars.length, selectedCar])
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -499,7 +580,7 @@ const Book = ({ route, navigation }) => {
           ) : (
             <View style={styles.vehicleInfo}>
               <Text style={[styles.selectVehicleText, showConfirmation && styles.disabledText]}>
-                Select Vehicle
+                {allCars.length === 0 ? 'Add a Vehicle' : 'Select Vehicle'}
               </Text>
               {!showConfirmation && <Ionicons name="chevron-forward" size={20} color="#666" />}
             </View>

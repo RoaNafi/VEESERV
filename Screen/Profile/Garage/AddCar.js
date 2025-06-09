@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Dropdown } from 'react-native-element-dropdown';
 import { config } from '../../../config'; // for API URL
-const AddCarScreen = ({ navigation }) => {
+const AddCarScreen = ({ navigation, route }) => {
   const [makes, setMakes] = useState([]);
   const [models, setModels] = useState([]);
   const [years, setYears] = useState([]);
@@ -26,6 +26,8 @@ const AddCarScreen = ({ navigation }) => {
   const [fuelType, setFuelType] = useState('');
   const [isDefault, setIsDefault] = useState(false);
 const [carCount, setCarCount] = useState('1');
+
+  const fromBooking = route.params?.fromBooking;
 
   // Fetch lists
   useEffect(() => { fetchMakes(); }, []);
@@ -95,7 +97,15 @@ const [carCount, setCarCount] = useState('1');
       Alert.alert('Success', 'Vehicle added!', [
         {
           text: 'OK',
-          onPress: () => navigation.goBack()
+          onPress: () => {
+            if (route.params?.fromBooking) {
+              // If coming from booking, go back to BookSummary
+              navigation.goBack();
+            } else {
+              // Otherwise, go back to Garage
+              navigation.goBack();
+            }
+          }
         }
       ]);
     } catch (err) {

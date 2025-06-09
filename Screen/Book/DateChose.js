@@ -187,12 +187,9 @@ const DateTimePickerScreen = ({ navigation }) => {
         )}
       />
 
-      <TouchableOpacity
-        style={styles.searchCompanyText}
-        onPress={() => navigation.navigate('SearchByCompany')}
-      >
-        <Text style={styles.searchCompanyLink}>Search by Company 🔍</Text>
-      </TouchableOpacity>
+      <Text style={styles.noteText}>
+        Don't worry! You can change the date and time before confirming your booking. This is just to help us find available workshops.
+      </Text>
 
       <TouchableOpacity
         style={[styles.nextBtn, !(selectedDate && selectedSlot) && styles.disabledBtn]}
@@ -278,16 +275,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  searchCompanyText: {
-    alignItems: 'center',
-    marginTop: 5,
-    marginBottom: 10,
-  },
-  searchCompanyLink: {
-    color: Colors.shineBlue,
-    fontSize: 16,
-    //textDecorationLine: 'underline',
-  },
   disabledSlot: {
     backgroundColor: '#f0f0f0',
     borderColor: '#ddd',
@@ -295,5 +282,14 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#999',
+  },
+  noteText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+    paddingHorizontal: 20,
+    fontStyle: 'italic',
   },
 });

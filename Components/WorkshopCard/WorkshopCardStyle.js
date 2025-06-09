@@ -9,17 +9,17 @@ export default StyleSheet.create({
     borderColor: Colors.lightGray,
     borderRadius: 10,
     marginBottom: 10,
-    marginHorizontal: 10,
-    backgroundColor: Colors.lightGray,
+    marginHorizontal: 1,
+    backgroundColor: "#fff",
     overflow: 'hidden',
-    shadowColor: Colors.lightGray,
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.20,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   image: {
     width: 90,
@@ -36,25 +36,52 @@ export default StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    position: 'relative',
+  },
+  nameLocationContainer: {
+    flex: 1,
+    marginRight: 16,
   },
   workshopName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: Colors.darkGray,
-    flex: 1,
-    marginRight: 8,
+    marginBottom: 2,
+  },
+  location: {
+    fontSize: 12,
+    color: Colors.darkGray,
+    opacity: 0.8,
   },
   arrowIcon: {
-    marginTop: 2,
+    marginTop: 4,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 1,
   },
-  middleInfo: {
+  ratingDistanceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    gap: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   ratingText: {
     color: Colors.orange,
     fontSize: 12,
+    marginLeft: 2,
+  },
+  distanceText: {
+    fontSize: 12,
+    color: Colors.blue,
     marginLeft: 2,
   },
   servicesContainer: {
@@ -72,15 +99,15 @@ export default StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  
   bottomInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
   },
-  distance: {
-    fontSize: 12,
+  totalPrice: {
+    fontSize: 14,
+    fontWeight: '600',
     color: Colors.darkGray,
   },
   bookButton: {

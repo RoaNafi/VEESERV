@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator, SafeAreaView } from 'react-native';
-import offer from '../assets/offer.png'; // Placeholder image for offers
+import offer from '../../assets/offer.png'; // Placeholder image for offers
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const OfferCard = ({ offer }) => (

@@ -17,7 +17,13 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
     workshop_name,
     rate,
     workshop_id,
+    location,
   } = data;
+
+  // Calculate total price
+  const totalPrice = Array.isArray(services) 
+    ? services.reduce((sum, service) => sum + (service.price || 0), 0)
+    : 0;
 
   return (
     <TouchableOpacity onPress={onShopPress} activeOpacity={0.7}>
@@ -33,15 +39,26 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
 
         <View style={styles.info}>
           <View style={styles.topInfo}>
-            <Text style={styles.workshopName} numberOfLines={2}>
-              {workshop_name}
-            </Text>
+            <View style={styles.nameLocationContainer}>
+              <Text style={styles.workshopName} numberOfLines={2}>
+                {workshop_name}
+              </Text>
+              <Text style={styles.location} numberOfLines={1}>
+                {location || "Location not available"}
+              </Text>
+            </View>
             <Ionicons name="chevron-forward" size={16} color={Colors.darkGray} style={styles.arrowIcon} />
           </View>
 
-          <View style={styles.middleInfo}>
-            <Ionicons name="star" size={12} color="#FFD700"/>
-            <Text style={styles.ratingText}>{rate.toFixed(1)}</Text>
+          <View style={styles.ratingDistanceContainer}>
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={12} color="#FFD700"/>
+              <Text style={styles.ratingText}>{rate.toFixed(1)}</Text>
+            </View>
+            <View style={styles.distanceContainer}>
+              <Ionicons name="location-outline" size={12} color={Colors.blue}/>
+              <Text style={styles.distanceText}>6 km</Text>
+            </View>
           </View>
 
           <View style={styles.servicesContainer}>
@@ -62,7 +79,7 @@ const WorkshopCard = ({ data, onBookPress, onShopPress }) => {
           </View>
 
           <View style={styles.bottomInfo}>
-            <Text style={styles.distance}>6 km</Text>
+            <Text style={styles.totalPrice}>Total: {totalPrice}₪</Text>
             <TouchableOpacity 
               style={styles.bookButton} 
               onPress={(e) => {

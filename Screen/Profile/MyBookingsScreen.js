@@ -3,7 +3,7 @@ import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator, TouchableOp
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons'; // icons!
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import book from '../assets/booki.png';
+import book from '../../assets/booki.png';
 import { useNavigation } from '@react-navigation/native';
 
 const MyBookingsScreen = () => {

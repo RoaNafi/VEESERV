@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   FlatList,
@@ -8,6 +8,8 @@ import {
   Image,
   ScrollView,
   Alert,
+  TextInput,
+  Animated,
 } from "react-native";
 import WorkshopCard from "../../Components/WorkshopCard/WorkshopCard";
 import axios from "axios";
@@ -51,8 +53,14 @@ const AvailableMechanic = ({ route, navigation }) => {
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [selectedRating, setSelectedRating] = useState(null);
   const [selectedDistance, setSelectedDistance] = useState(null);
-  const [mobileServiceOnly, setMobileServiceOnly] = useState(false);
   const [selectedSortOption, setSelectedSortOption] = useState(null);
+  const [showAllResults, setShowAllResults] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredPerfectMatch, setFilteredPerfectMatch] = useState([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchBarWidth = useRef(new Animated.Value(1)).current;
+  const [selectedTab, setSelectedTab] = useState('available');
+  const borderAnim = useRef(new Animated.Value(0)).current;
 
   // تحويل الوقت إلى تنسيق 24 ساعة قبل الإرسال
   const convertedTimeSlots = timeSlots.map((time) =>
@@ -89,22 +97,29 @@ const AvailableMechanic = ({ route, navigation }) => {
     try {
       const token = await AsyncStorage.getItem("accessToken");
 
+      // Prepare filter parameters
+      const filterParams = {
+        preferred_date: date,
+        preferred_time: formattedTimeSlots,
+      };
+
+      // Add rating filter if selected
+      if (selectedRating) {
+        filterParams.minRating = selectedRating;
+      }
+
+      // Add distance filter if selected
+      if (selectedDistance) {
+        filterParams.maxDistance = selectedDistance;
+      }
+
       const response = await axios.post(
         "http://176.119.254.225:80/search/search-available-workshops",
-        {
-          preferred_date: date,
-          preferred_time: formattedTimeSlots,
-          minRating: selectedRating,
-          mobileAssistance: mobileServiceOnly,
-          sortBy: selectedSortOption,
-        },
+        filterParams,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      //console.log("\n=== RAW API RESPONSE ===");
-      //console.log(JSON.stringify(response.data, null, 2));
 
       const {
         perfectMatch = [],
@@ -112,38 +127,102 @@ const AvailableMechanic = ({ route, navigation }) => {
         splitMatch = [],
       } = response.data;
 
-      //console.log("\n=== PERFECT MATCH RAW DATA ===");
-      //console.log(JSON.stringify(perfectMatch, null, 2));
+      // Apply local filtering for any additional criteria
+      const filterWorkshops = (workshops) => {
+        return workshops.filter(workshop => {
+          // Rating filter
+          if (selectedRating && workshop.rate < selectedRating) {
+            return false;
+          }
 
-      const transformedPerfect = transform(perfectMatch);
-      //console.log("\n=== FINAL DATA BEING SET TO STATE ===");
-      //console.log(JSON.stringify(transformedPerfect, null, 2));
+          // Distance filter
+          if (selectedDistance && workshop.distance_km > selectedDistance) {
+            return false;
+          }
 
-      setRawWorkshops({ perfectMatch, partialMatch, splitMatch });
-      setWorkshops({
-        perfectMatch: transformedPerfect,
-        partialMatch: transform(partialMatch),
-        splitMatch: splitMatch.map((group) => transform(group)),
+          return true;
+        });
+      };
+
+      // Apply filters to each category
+      const filteredPerfectMatch = filterWorkshops(perfectMatch);
+      const filteredPartialMatch = filterWorkshops(partialMatch);
+      const filteredSplitMatch = splitMatch.map(group => filterWorkshops(group));
+
+      setRawWorkshops({ 
+        perfectMatch: filteredPerfectMatch, 
+        partialMatch: filteredPartialMatch, 
+        splitMatch: filteredSplitMatch 
       });
+
+      setWorkshops({
+        perfectMatch: transform(filteredPerfectMatch),
+        partialMatch: transform(filteredPartialMatch),
+        splitMatch: filteredSplitMatch.map(group => transform(group)),
+      });
+
     } catch (error) {
       console.error("❌ Error fetching workshops:", error);
+      Alert.alert(
+        "Error",
+        "Failed to fetch workshops. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // Update sorting functions
+  const sortWorkshops = (workshops, sortOption) => {
+    if (!sortOption) return workshops;
 
-  const applySort = () => {
-    if (!selectedSortOption) return; // ما تطبقش لو ما فيش اختيار
-    console.log("Applying local sort:", selectedSortOption);
-    const sorted = sortWorkshopsLocally(workshops, selectedSortOption);
-    setWorkshops(sorted);
-    console.log(
-      "✅ Sorted workshops (perfectMatch):",
-      sorted.perfectMatch.map((w) => w.price)
-    );
+    const sortedWorkshops = [...workshops];
+    const [category, direction] = sortOption.split('_');
+
+    switch (category) {
+      case 'rating':
+        return direction === 'high' 
+          ? sortedWorkshops.sort((a, b) => (b.rate || 0) - (a.rate || 0))
+          : sortedWorkshops.sort((a, b) => (a.rate || 0) - (b.rate || 0));
+      
+      case 'distance':
+        return direction === 'high'
+          ? sortedWorkshops.sort((a, b) => (b.distance || 0) - (a.distance || 0))
+          : sortedWorkshops.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+      
+      case 'price':
+        return direction === 'high'
+          ? sortedWorkshops.sort((a, b) => {
+              const totalPriceB = b.services?.reduce((sum, service) => sum + (service.price || 0), 0) || 0;
+              const totalPriceA = a.services?.reduce((sum, service) => sum + (service.price || 0), 0) || 0;
+              return totalPriceB - totalPriceA;
+            })
+          : sortedWorkshops.sort((a, b) => {
+              const totalPriceA = a.services?.reduce((sum, service) => sum + (service.price || 0), 0) || Infinity;
+              const totalPriceB = b.services?.reduce((sum, service) => sum + (service.price || 0), 0) || Infinity;
+              return totalPriceA - totalPriceB;
+            });
+      
+      default:
+        return workshops;
+    }
   };
 
+  const applySort = () => {
+    if (!selectedSortOption) return;
+
+    const sortedWorkshops = {
+      perfectMatch: sortWorkshops(workshops.perfectMatch, selectedSortOption),
+      partialMatch: sortWorkshops(workshops.partialMatch, selectedSortOption),
+      splitMatch: workshops.splitMatch.map(group => 
+        sortWorkshops(group, selectedSortOption)
+      )
+    };
+
+    setWorkshops(sortedWorkshops);
+  };
+
+  // Update useEffect to handle sorting
   useEffect(() => {
     if (selectedSortOption) {
       applySort();
@@ -151,15 +230,63 @@ const AvailableMechanic = ({ route, navigation }) => {
   }, [selectedSortOption]);
 
   const applyFilters = () => {
-    fetchAvailableWorkshops();
+    setShowAllResults(false); // Reset to show only first 3 results
+    
+    // Filter the workshops based on selected criteria
+    const filterWorkshops = (workshops) => {
+      return workshops.filter(workshop => {
+        // Rating filter
+        if (selectedRating && workshop.rate < selectedRating) {
+          return false;
+        }
+
+        // Distance filter
+        if (selectedDistance && workshop.distance_km > selectedDistance) {
+          return false;
+        }
+
+        return true;
+      });
+    };
+
+    // Apply filters to each category
+    const filteredPerfectMatch = filterWorkshops(rawWorkshops.perfectMatch);
+    const filteredPartialMatch = filterWorkshops(rawWorkshops.partialMatch);
+    const filteredSplitMatch = rawWorkshops.splitMatch.map(group => filterWorkshops(group));
+
+    // Update the workshops state with filtered results
+    setWorkshops({
+      perfectMatch: transform(filteredPerfectMatch),
+      partialMatch: transform(filteredPartialMatch),
+      splitMatch: filteredSplitMatch.map(group => transform(group)),
+    });
+
+    // Update filtered perfect match for search
+    setFilteredPerfectMatch(transform(filteredPerfectMatch));
   };
 
   const resetFilters = () => {
     setSelectedRating(null);
     setSelectedDistance(null);
-    setMobileServiceOnly(false);
-    fetchAvailableWorkshops();
+    setShowAllResults(false);
+    
+    // Reset to original data
+    setWorkshops({
+      perfectMatch: transform(rawWorkshops.perfectMatch),
+      partialMatch: transform(rawWorkshops.partialMatch),
+      splitMatch: rawWorkshops.splitMatch.map(group => transform(group)),
+    });
+    
+    // Reset filtered perfect match for search
+    setFilteredPerfectMatch(transform(rawWorkshops.perfectMatch));
   };
+
+  // Update useEffect to handle filter changes
+  useEffect(() => {
+    if (selectedRating !== null || selectedDistance !== null) {
+      applyFilters();
+    }
+  }, [selectedRating, selectedDistance]);
 
   const handleBookPress = (data) => {
     // Ensure services data is properly structured
@@ -180,13 +307,23 @@ const AvailableMechanic = ({ route, navigation }) => {
   };
 
   const handleShopPress = (data) => {
-    navigation.navigate("WorkshopDetails", { data });
+    // Ensure we have all required data before navigation
+    const workshopData = {
+      ...data,
+      workshop_id: data.workshop_id,
+      workshop_name: data.workshop_name,
+      rate: data.rate,
+      image: data.image,
+      services: data.services || []
+    };
+    
+    navigation.navigate("WorkshopDetails", { workshopData });
   };
 
   
   useEffect(() => {
     fetchAvailableWorkshops();
-  }, [selectedRating, selectedDistance, mobileServiceOnly, selectedSortOption]);
+  }, [selectedRating, selectedDistance]);
 
   const handleBookMultiple = (combo) => {
     navigation.navigate("SplitBookingPage", {
@@ -206,10 +343,9 @@ const AvailableMechanic = ({ route, navigation }) => {
   ) => {
     const [selectedRating, setSelectedRating] = useState(null);
     const [selectedDistance, setSelectedDistance] = useState(null);
-    const [mobileServiceOnly, setMobileServiceOnly] = useState(false);
 
     const applyFilters = () => {
-      if (!selectedRating && !selectedDistance && !mobileServiceOnly) {
+      if (!selectedRating && !selectedDistance) {
         const sorted = sortResults(originalData, selectedSortOption);
         setWorkshops(sorted);
         setFilterModalVisible(false);
@@ -218,8 +354,7 @@ const AvailableMechanic = ({ route, navigation }) => {
 
       const filterFn = (item) => {
         if (selectedRating && item.rate < selectedRating) return false;
-        if (selectedDistance && item.distance > selectedDistance) return false;
-        if (mobileServiceOnly && !item.mobile_service) return false;
+        if (selectedDistance && item.distance_km > selectedDistance) return false;
         return true;
       };
 
@@ -238,7 +373,6 @@ const AvailableMechanic = ({ route, navigation }) => {
     const resetFilters = () => {
       setSelectedRating(null);
       setSelectedDistance(null);
-      setMobileServiceOnly(false);
 
       const sorted = sortResults(originalData, selectedSortOption);
       setWorkshops(sorted);
@@ -249,16 +383,93 @@ const AvailableMechanic = ({ route, navigation }) => {
       setSelectedRating,
       selectedDistance,
       setSelectedDistance,
-      mobileServiceOnly,
-      setMobileServiceOnly,
       applyFilters,
       resetFilters,
     };
   };
 
+  // Function to get limited results
+  const getLimitedResults = (data) => {
+    if (showAllResults) return data;
+    return data.slice(0, 3);
+  };
+
+  // Add loading indicator
+  const renderLoading = () => {
+    if (loading) {
+      return (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        }}>
+          <ActivityIndicator size="large" color={Colors.blue} />
+        </View>
+      );
+    }
+    return null;
+  };
+
+  // Add search filter function
+  const filterWorkshopsBySearch = (query) => {
+    if (!query.trim()) {
+      setFilteredPerfectMatch(workshops.perfectMatch);
+      return;
+    }
+
+    const filtered = workshops.perfectMatch.filter(workshop => 
+      workshop.workshop_name.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredPerfectMatch(filtered);
+  };
+
+  // Update useEffect to handle search
+  useEffect(() => {
+    filterWorkshopsBySearch(searchQuery);
+  }, [searchQuery, workshops.perfectMatch]);
+
+  const animateSearchFocus = (focused) => {
+    Animated.spring(searchBarWidth, {
+      toValue: focused ? 1 : 1,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  const handleSearchFocus = () => {
+    setIsSearchFocused(true);
+    animateSearchFocus(true);
+  };
+
+  const handleSearchBlur = () => {
+    setIsSearchFocused(false);
+    animateSearchFocus(false);
+  };
+
+  const animateBorder = (toValue) => {
+    Animated.spring(borderAnim, {
+      toValue,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  useEffect(() => {
+    animateBorder(selectedTab === 'available' ? 0 : 1);
+  }, [selectedTab]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
+    <View style={{ flex: 1 }}>
+      {renderLoading()}
+      
       {/* --- FILTER & SORT MODALS --- */}
       <Filter
         visible={filterModalVisible}
@@ -267,10 +478,8 @@ const AvailableMechanic = ({ route, navigation }) => {
         resetFilters={resetFilters}
         selectedRating={selectedRating}
         selectedDistance={selectedDistance}
-        mobileServiceOnly={mobileServiceOnly}
         setSelectedRating={setSelectedRating}
         setSelectedDistance={setSelectedDistance}
-        setMobileServiceOnly={setMobileServiceOnly}
       />
 
       <Sort
@@ -278,6 +487,12 @@ const AvailableMechanic = ({ route, navigation }) => {
         setVisible={setSortModalVisible}
         applySort={applySort}
         setSelectedSortOption={setSelectedSortOption}
+        selectedSortOption={selectedSortOption}
+        sortOptions={[
+          { id: 'price', label: 'Price', icon: 'pricetag' },
+          { id: 'rating', label: 'Rating', icon: 'star' },
+          { id: 'distance', label: 'Distance', icon: 'location' }
+        ]}
       />
 
       {/* --- FILTER & SORT BUTTONS TOP BAR (Right Aligned) --- */}
@@ -286,300 +501,469 @@ const AvailableMechanic = ({ route, navigation }) => {
           flexDirection: "row",
           justifyContent: "space-between",
           marginHorizontal: 20,
-          marginVertical: 8,
+          marginVertical: 12,
           alignItems: "center",
         }}
       >
-        <Text style={{ fontSize: 18, fontWeight: "bold", color: Colors.black }}>
-          Results
-        </Text>
-
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <TouchableOpacity
-            onPress={() => setFilterModalVisible(true)}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              backgroundColor: Colors.lightGray,
-              borderRadius: 10,
-            }}
-          >
-            <Ionicons name="filter-outline" size={16} color={Colors.darkGray} />
-            <Text
-              style={{
-                marginLeft: 4,
-                color: Colors.darkGray,
-                fontWeight: "bold",
-              }}
-            >
-              Filter
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setSortModalVisible(true)}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              backgroundColor: Colors.lightGray,
-              borderRadius: 10,
-            }}
-          >
-            <Ionicons
-              name="swap-vertical-outline"
-              size={16}
-              color={Colors.darkGray}
-            />
-            <Text
-              style={{
-                marginLeft: 4,
-                color: Colors.darkGray,
-                fontWeight: "bold",
-              }}
-            >
-              Sort
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* --- WORKSHOP LIST OR SCHEDULED SERVICES --- */}
-      <FlatList
-        data={[
-          ...(workshops.perfectMatch?.length > 0
-            ? workshops.perfectMatch.map(item => ({ type: 'perfect', item }))
-            : []),
-          ...(workshops.splitMatch?.length > 0
-            ? rawWorkshops.splitMatch.map((combo, index) => ({ type: 'split', combo, index }))
-            : []),
-          { type: 'empty', show: !workshops.perfectMatch?.length && !workshops.splitMatch?.length }
-        ]}
-        keyExtractor={(item, index) => `${item.type}-${index}`}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 20 }}
-        renderItem={({ item }) => {
-          if (item.type === 'perfect') {
-            const service = item.item.service || item.item.services?.[0] || {};
-            const data = {
-              image: item.item.workshop_image || "",
-              workshop_name: item.item.workshop_name || "unknow",
-              rate: item.item.rate || 0,
-              workshop_id: item.item.workshop_id,
-              services: item.item.services ? item.item.services.map(s => ({
-                name: s.name,
-                price: s.price,
-                service_id: s.service_id || s.id
-              })) : []
-            };
-
-            return (
-              <WorkshopCard
-                data={data}
-                onBookPress={() => handleBookPress(data)}
-                onShopPress={() => handleShopPress(data)}
+        {workshops.perfectMatch?.length > 0 ? (
+          <Animated.View style={{
+            flex: searchBarWidth,
+            marginRight: isSearchFocused ? 0 : 10,
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#fff',
+              borderRadius: 12,
+              paddingHorizontal: 15,
+              height: 45,
+              borderWidth: 1,
+              borderColor: isSearchFocused ? Colors.mediumGray : '#E5E5E5',
+              shadowColor: "#000",
+              shadowOffset: {
+                width: 0,
+                height: 1,
+              },
+              shadowOpacity: 0.1,
+              shadowRadius: 2,
+              elevation: 2,
+            }}>
+              <Ionicons 
+                name="search-outline" 
+                size={20} 
+                color={Colors.darkGray} 
               />
-            );
-          }
-
-          if (item.type === 'split') {
-            const workshopsMap = item.combo.reduce((acc, item) => {
-              const key = item.workshop_id;
-              if (!acc[key]) {
-                acc[key] = {
-                  workshop_id: item.workshop_id,
-                  workshop_name: item.workshop_name,
-                  rate: item.rating,
-                  time: item.time,
-                  services: [],
-                };
-              }
-              const service = item.service || item.services?.[0];
-              if (service) acc[key].services.push(service);
-              return acc;
-            }, {});
-            const groupedWorkshops = Object.values(workshopsMap);
-
-            return (
-              <View
+              <TextInput
                 style={{
-                  backgroundColor: "#fff",
-                  borderRadius: 16,
-                  padding: 10,
-                  marginBottom: 20,
-                  shadowColor: "#000",
-                  shadowOpacity: 0.1,
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowRadius: 6,
-                  elevation: 4,
+                  flex: 1,
+                  marginLeft: 10,
+                  fontSize: 15,
+                  color: Colors.darkGray,
+                }}
+                placeholder="Search workshops..."
+                value={searchQuery}
+                onChangeText={(text) => setSearchQuery(text)}
+                placeholderTextColor="#999"
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <Ionicons name="close-circle" size={20} color={Colors.mediumGray} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </Animated.View>
+        ) : (
+          <Text style={{ 
+            fontSize: 18, 
+            fontWeight: "600", 
+            color: Colors.darkGray,
+            letterSpacing: 0.3,
+          }}>
+            Results
+          </Text>
+        )}
+
+        {!isSearchFocused && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => setFilterModalVisible(true)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                height: 45,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                shadowColor: "#000",
+                shadowOffset: {
+                  width: 0,
+                  height: 1,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+                elevation: 2,
+              }}
+            >
+              <Ionicons name="filter-outline" size={18} color={Colors.darkGray} />
+              <Text
+                style={{
+                  marginLeft: 6,
+                  color: Colors.darkGray,
+                  fontWeight: "600",
+                  fontSize: 15,
                 }}
               >
-                <Text
+                Filter
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setSortModalVisible(true)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                height: 45,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                shadowColor: "#000",
+                shadowOffset: {
+                  width: 0,
+                  height: 1,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+                elevation: 2,
+              }}
+            >
+              <Ionicons
+                name="swap-vertical-outline"
+                size={18}
+                color={Colors.darkGray}
+              />
+              <Text
+                style={{
+                  marginLeft: 6,
+                  color: Colors.darkGray,
+                  fontWeight: "600",
+                  fontSize: 15,
+                }}
+              >
+                Sort
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* --- TABS --- */}
+      {workshops.perfectMatch?.length > 0 && (
+        <View style={{
+          flexDirection: 'row',
+          marginHorizontal: 10,
+          marginBottom: 10,
+          borderBottomWidth: 1,
+          borderBottomColor: Colors.mediumGray,
+        }}>
+          <Animated.View style={{
+            flex: 1,
+            borderBottomWidth: borderAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [2, 0]
+            }),
+            borderBottomColor: Colors.blue,
+            marginBottom: -1,
+          }}>
+            <TouchableOpacity
+              onPress={() => setSelectedTab('available')}
+              style={{
+                paddingVertical: 0,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{
+                color: selectedTab === 'available' ? Colors.blue : Colors.mediumGray,
+                fontWeight: '600',
+                fontSize: 16,
+              }}>
+                Available
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <View style={{
+            width: 1,
+            height: 20,
+            backgroundColor: Colors.mediumGray,
+            alignSelf: 'center',
+          }} />
+
+          <Animated.View style={{
+            flex: 1,
+            borderBottomWidth: borderAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 2]
+            }),
+            borderBottomColor: Colors.blue,
+            marginBottom: -1,
+          }}>
+            <TouchableOpacity
+              onPress={() => setSelectedTab('notAvailable')}
+              style={{
+                paddingVertical: 0,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{
+                color: selectedTab === 'notAvailable' ? Colors.blue : Colors.mediumGray,
+                fontWeight: '600',
+                fontSize: 16,
+              }}>
+                Not Available
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* --- WORKSHOP LIST OR SCHEDULED SERVICES --- */}
+      {selectedTab === 'available' ? (
+        <FlatList
+          data={[
+            ...(filteredPerfectMatch?.length > 0
+              ? getLimitedResults(filteredPerfectMatch.map(item => ({ type: 'perfect', item })))
+              : []),
+            ...(workshops.splitMatch?.length > 0
+              ? getLimitedResults(rawWorkshops.splitMatch.map((combo, index) => ({ type: 'split', combo, index })))
+              : []),
+            { type: 'empty', show: !filteredPerfectMatch?.length && !workshops.splitMatch?.length }
+          ]}
+          keyExtractor={(item, index) => `${item.type}-${index}`}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 20 }}
+          ListFooterComponent={() => {
+            const totalResults = (filteredPerfectMatch?.length || 0) + (workshops.splitMatch?.length || 0);
+            if (totalResults > 3) {
+              return (
+                <TouchableOpacity
+                  onPress={() => setShowAllResults(!showAllResults)}
                   style={{
-                    fontSize: 16,
-                    fontWeight: "700",
-                    marginBottom: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 15,
+                    marginTop: 5,
                   }}
                 >
-                  🧩 Schedule Option {item.index + 1}
-                </Text>
+                  <Text style={{ 
+                    color: Colors.blue,
+                    fontSize: 15,
+                    fontWeight: '500',
+                  }}>
+                    {showAllResults ? 'Show Less' : `View ${totalResults - 3} more results`}
+                  </Text>
+                  <Ionicons 
+                    name={showAllResults ? "chevron-up" : "chevron-down"} 
+                    size={16} 
+                    color={Colors.blue}
+                    style={{ marginLeft: 4 }}
+                  />
+                </TouchableOpacity>
+              );
+            }
+            return null;
+          }}
+          renderItem={({ item }) => {
+            if (item.type === 'perfect') {
+              const service = item.item.service || item.item.services?.[0] || {};
+              const data = {
+                image: item.item.workshop_image || "",
+                workshop_name: item.item.workshop_name || "unknow",
+                rate: item.item.rate || 0,
+                workshop_id: item.item.workshop_id,
+                services: item.item.services ? item.item.services.map(s => ({
+                  name: s.name,
+                  price: s.price,
+                  service_id: s.service_id || s.id
+                })) : []
+              };
 
-                {groupedWorkshops.map((workshop, idx) => (
-                  <View
-                    key={idx}
+              return (
+                <WorkshopCard
+                  data={data}
+                  onBookPress={() => handleBookPress(data)}
+                  onShopPress={() => handleShopPress(data)}
+                />
+              );
+            }
+
+            if (item.type === 'split') {
+              const workshopsMap = item.combo.reduce((acc, item) => {
+                const key = item.workshop_id;
+                if (!acc[key]) {
+                  acc[key] = {
+                    workshop_id: item.workshop_id,
+                    workshop_name: item.workshop_name,
+                    rate: item.rating,
+                    time: item.time,
+                    services: [],
+                  };
+                }
+                const service = item.service || item.services?.[0];
+                if (service) acc[key].services.push(service);
+                return acc;
+              }, {});
+              const groupedWorkshops = Object.values(workshopsMap);
+
+              return (
+                <View
+                  style={{
+                    backgroundColor: "#fff",
+                    borderRadius: 16,
+                    padding: 10,
+                    marginBottom: 20,
+                    shadowColor: "#000",
+                    shadowOpacity: 0.1,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }}
+                >
+                  <Text
                     style={{
-                      backgroundColor: "#f9f9f9",
-                      borderRadius: 12,
-                      padding: 12,
-                      marginBottom: 6,
+                      fontSize: 16,
+                      fontWeight: "700",
+                      marginBottom: 10,
                     }}
                   >
+                    🧩 Schedule Option {item.index + 1}
+                  </Text>
+
+                  {groupedWorkshops.map((workshop, idx) => (
                     <View
+                      key={idx}
                       style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginBottom: 12,
+                        backgroundColor: "#f9f9f9",
+                        borderRadius: 12,
+                        padding: 12,
+                        marginBottom: 6,
                       }}
                     >
-                      <Image
-                        source={{
-                          uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
-                        }}
+                      <View
                         style={{
-                          width: 60,
-                          height: 60,
-                          borderRadius: 12,
-                          marginRight: 12,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          marginBottom: 12,
                         }}
-                        resizeMode="cover"
-                      />
-                      <View style={{ flex: 1 }}>
+                      >
+                        <Image
+                          source={{
+                            uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
+                          }}
+                          style={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: 12,
+                            marginRight: 12,
+                          }}
+                          resizeMode="cover"
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={{
+                              fontSize: 16,
+                              fontWeight: "700",
+                              color: "#333",
+                            }}
+                          >
+                            {workshop.workshop_name}
+                          </Text>
+                          <Text style={{ fontSize: 14, color: "#FFD700" }}>
+                            ⭐ {workshop.rate || "Not rated yet"}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ gap: 4, marginBottom: 12 }}>
                         <Text
                           style={{
-                            fontSize: 16,
-                            fontWeight: "700",
-                            color: "#333",
+                            fontSize: 14,
+                            color: "#555",
+                            fontWeight: "600",
                           }}
                         >
-                          {workshop.workshop_name}
+                          Services:
                         </Text>
-                        <Text style={{ fontSize: 14, color: "#FFD700" }}>
-                          ⭐ {workshop.rate || "Not rated yet"}
+                        {workshop.services.map((srv, i) => (
+                          <Text
+                            key={i}
+                            style={{ fontSize: 13, color: "#555" }}
+                          >
+                            • {srv.name} - {srv.price} NIS
+                          </Text>
+                        ))}
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#555",
+                            marginTop: 6,
+                          }}
+                        >
+                          Time:{" "}
+                          <Text style={{ fontWeight: "600" }}>
+                            {workshop.time || "N/A"}
+                          </Text>
                         </Text>
                       </View>
                     </View>
+                  ))}
 
-                    <View style={{ gap: 4, marginBottom: 12 }}>
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: "#555",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Services:
-                      </Text>
-                      {workshop.services.map((srv, i) => (
-                        <Text
-                          key={i}
-                          style={{ fontSize: 13, color: "#555" }}
-                        >
-                          • {srv.name} - {srv.price} NIS
-                        </Text>
-                      ))}
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: "#555",
-                          marginTop: 6,
-                        }}
-                      >
-                        Time:{" "}
-                        <Text style={{ fontWeight: "600" }}>
-                          {workshop.time || "N/A"}
-                        </Text>
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+                  <TouchableOpacity
+                    onPress={() => handleBookMultiple(item.combo)}
+                    style={{
+                      backgroundColor: "#086189",
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "700" }}>
+                      Book This Schedule
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }
 
-                <TouchableOpacity
-                  onPress={() => handleBookMultiple(item.combo)}
+            if (item.type === 'empty' && item.show) {
+              return (
+                <Text
                   style={{
-                    backgroundColor: "#086189",
-                    paddingVertical: 12,
-                    borderRadius: 12,
-                    alignItems: "center",
+                    fontSize: 16,
+                    fontStyle: "italic",
+                    color: "#888",
+                    marginTop: 20,
+                    textAlign: "center",
                   }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700" }}>
-                    Book This Schedule
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            );
-          }
+                  No workshops or scheduled services available.
+                </Text>
+              );
+            }
 
-          if (item.type === 'empty' && item.show) {
-            return (
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontStyle: "italic",
-                  color: "#888",
-                  marginTop: 20,
-                  textAlign: "center",
-                }}
-              >
-                No workshops or scheduled services available.
-              </Text>
-            );
-          }
-
-          return null;
-        }}
-      />
+            return null;
+          }}
+        />
+      ) : (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ 
+            fontSize: 16, 
+            color: Colors.darkGray,
+            textAlign: 'center',
+            marginBottom: 10
+          }}>
+            Not Available workshops will be shown here
+          </Text>
+          <Text style={{ 
+            fontSize: 14, 
+            color: Colors.mediumGray,
+            textAlign: 'center'
+          }}>
+            Coming soon...
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
 
-const styles = {
-  fixedButtons: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    flexDirection: "column",
-    gap: 12,
-    zIndex: 10,
-  },
-
-  floatingButton: {
-    width: 55,
-    height: 55,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-
-  filterButton: {
-    backgroundColor: "#4a90e2",
-  },
-
-  sortButton: {
-    backgroundColor: "#50e3c2",
-  },
-
-  chatButton: {
-    backgroundColor: "#f5a623",
-  },
-};
 
 export default AvailableMechanic;

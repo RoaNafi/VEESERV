@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, 
 import Ionicons from "react-native-vector-icons/Ionicons";
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Colors from "../Components/Colors/Colors";
+import Colors from "../../Components/Colors/Colors";
 
 // Static fallback notifications
 const notificationsData = [

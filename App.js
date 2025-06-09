@@ -34,11 +34,11 @@ import DateTimePickerScreen from "./Screen/Book/DateChose";
 import AvailableMechanic from "./Screen/Book/AvailableMechanic";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import SplitBookingPage from "./Screen/Book/SplitBookingPage";
-import MyBookingsScreen from "./Screen/MyBookingsScreen";
+import MyBookingsScreen from "./Screen/Profile/MyBookingsScreen";
 import WorkshopSpecializations from "./Screen/WorkshopInfo/specialization";
 import MechanicHomeScreen from "./Screen/WorkshopHome/MechanicHomeScreen";
-import NotificationsScreen from "./Screen/NotificationsScreen";
-import OffersScreen from "./Screen/OffersScreen";
+import NotificationsScreen from "./Screen/Notifications/NotificationsScreen";
+import OffersScreen from "./Screen/Offers/OffersScreen";
 import PindingRequests from "./Screen/WorkshopHome/PindingRequests";
 import Subcategory from "./Screen/Home/Subcategory";
 import CompanyLegal from "./Screen/Profile/CompanyLegal";
@@ -272,6 +272,9 @@ export default function App() {
         component={AddService}
         options={{  headerShown: true, title: "Add Service" }}
       />
+
+<Stack.Screen name="AddCar" component={AddCar} />
+
             <Stack.Screen
               name="Appointments"
               component={Appointments}
