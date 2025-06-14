@@ -43,7 +43,7 @@ import PindingRequests from "./Screen/WorkshopHome/PindingRequests";
 import Subcategory from "./Screen/Home/Subcategory";
 import CompanyLegal from "./Screen/Profile/CompanyLegal";
 import Appointments from "./Screen/WorkshopHome/Appointments";
-import SearchByCompany from "./Screen/Book/SearchByCompany";
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -320,11 +320,7 @@ export default function App() {
               component={DateTimePickerScreen}
               options={{ headerShown: true, title: "Pick a date" }}
             />
-            <Stack.Screen
-              name="SearchByCompany"
-              component={SearchByCompany}
-              options={{ headerShown: true, title: "Company" }}
-            />
+            
             
             <Stack.Screen
               name="AvailableMechanic"

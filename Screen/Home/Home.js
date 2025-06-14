@@ -58,6 +58,9 @@ const Home = ({ navigation }) => {
   const [addedServices, setAddedServices] = useState([]);
 
   const animatedValues = useRef({}).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const searchAnim = useRef(new Animated.Value(0)).current;
 
   const getAnimatedValue = (id) => {
     if (!animatedValues[id]) {
@@ -136,6 +139,85 @@ const Home = ({ navigation }) => {
     return () => clearInterval(interval);
   }, [currentIndex]);
 
+  useEffect(() => {
+    if (isSearching) {
+      Animated.spring(searchAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 40,
+        friction: 7,
+      }).start();
+    } else {
+      Animated.spring(searchAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 40,
+        friction: 7,
+      }).start();
+    }
+  }, [isSearching]);
+
+  const animateTransition = (toSearch) => {
+    if (toSearch) {
+      // Animate to search results - smoother transition
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -20,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setIsSearching(true);
+        // Reset position before fading in
+        slideAnim.setValue(20);
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    } else {
+      // Animate back to home - keep the current smooth animation
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 50,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setIsSearching(false);
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    }
+  };
 
   const handleSearch = async (text) => {
     setIsSearching(true);
@@ -148,7 +230,7 @@ const Home = ({ navigation }) => {
     setIsLoading(true);
     try {
       const response = await axios.get(`${config.apiUrl}/search/subcategories/search`, {
-      params: { keyword: text },  // هنا صححتها
+        params: { keyword: text },
       });
       setOriginalSearchResults(response.data);
       setSearchResults(response.data);
@@ -164,7 +246,7 @@ const Home = ({ navigation }) => {
   const clearSearch = () => {
     setSearchTerm("");
     setSearchResults([]);
-    setIsSearching(false);
+    animateTransition(false);
   };
 
 
@@ -249,175 +331,236 @@ const Home = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Fixed Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search Anything..."
-          placeholderTextColor="#999"
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-          onSubmitEditing={() => handleSearch(searchTerm)}
-          returnKeyType="search"
-        />
-        {searchTerm.length > 0 && (
-          <TouchableOpacity onPress={clearSearch}>
-            <Ionicons name="close-circle" size={20} color="#999" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {!isSearching ? (
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Banners */}
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            style={styles.imageScroll}
-          >
-            {banners.map((img, index) => (
-              <Image key={`banner-${index}`} source={{ uri: img }} style={styles.imageBanner} />
-            ))}
-          </ScrollView>
-
-          {/* Frequently Booked Services */}
-          <Text style={styles.sectionTitle}>Frequently Booked Services</Text>
-          <View style={styles.separator} />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.frequentServicesContainer}
-          >
-            {frequentServices.map((service) => (
-              <View key={service.id} style={styles.serviceCard}>
-                <View style={{ flex: 1, justifyContent: 'space-between' }}>
-                  <View>
-                    <Text style={styles.serviceName}>{service.name}</Text>
-                    <Text style={styles.servicePrice}>₪{service.price}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.addToCartButton,
-                      addedServices.includes(service.id) && { backgroundColor: '#ccc' },
-                    ]}
-                    onPress={() => handleAddToCart(service.id)}
-                    disabled={addedServices.includes(service.id) || isLoading}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons 
-                          name={addedServices.includes(service.id) ? "checkmark-circle" : "cart-outline"} 
-                          size={width * 0.045} 
-                          color="#086189" 
-                        />
-                        <Text style={styles.buttonText}>
-                          {addedServices.includes(service.id) ? 'Added' : 'Add to Cart'}
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* Categories Grid */}
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <View style={styles.separator} />
-          
-          <View style={styles.categoryGridContainer}>
-            <View style={styles.categoryGrid}>
-              {(showAllCategories ? categories : categories.slice(0, 6)).map((item) => {
-                const animatedValue = getAnimatedValue(item.category_id);
-                
-                const circleScale = animatedValue.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 4]
-                });
-
-                const circleOpacity = animatedValue.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 0.2]
-                });
-
-                return (
-                  <AnimatedTouchable
-                    key={`category-list-${item.category_id}`}
-                    style={styles.categoryGridItem}
-                    onPress={() => {
-                      navigation.navigate('Subcategory', {
-                        categoryId: item.category_id,
-                        categoryName: item.category_name
-                      });
-                    }}
-                    onPressIn={() => handlePressIn(item.category_id)}
-                    onPressOut={() => handlePressOut(item.category_id)}
-                    activeOpacity={1}
-                  >
-                    <View style={styles.categoryContent}>
-                      <View style={styles.iconWrapper}>
-                        <Animated.View 
-                          style={[
-                            styles.categoryIconContainer, 
-                            { 
-                              backgroundColor: item.color,
-                              transform: [{ scale: circleScale }],
-                              opacity: circleOpacity,
-                              
-                            }
-                          ]}
-                        />
-                        <View style={styles.iconContainer}>
-                          <Ionicons 
-                            name={getCategoryIcon(item.category_name)} 
-                            size={24} 
-                            color="#fff" 
-                          />
-                        </View>
-                      </View>
-                      <Text 
-                        style={styles.categoryGridText}
-                          numberOfLines={1}
-                      >
-                        {item.category_name}
-                      </Text>
-                    </View>
-                  </AnimatedTouchable>
-                );
-              })}
-            </View>
-          </View>
-
-          
-            <TouchableOpacity
-              style={styles.showMoreButton}
-              onPress={() => setShowAllCategories(!showAllCategories)}
+      {/* Search Bar with Filter/Sort */}
+      <Animated.View 
+        style={[
+          styles.searchContainer,
+          {
+            transform: [{
+              scale: searchAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.03]
+              })
+            }]
+          }
+        ]}
+      >
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color={Colors.mediumGray} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Anything..."
+            placeholderTextColor={Colors.mediumGray}
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            onSubmitEditing={() => {
+              handleSearch(searchTerm);
+              animateTransition(true);
+            }}
+            returnKeyType="search"
+          />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity 
+              onPress={clearSearch}
+              style={{ padding: 4 }}
             >
-              <Text style={styles.showMoreText}>
-                {showAllCategories ? 'SHOW LESS' : 'SHOW MORE'}
-              </Text>
-              <Ionicons
-                name={showAllCategories ? 'chevron-up' : 'chevron-down'}
-                style={styles.showMoreIcon}
-              />
+              <Ionicons name="close-circle" size={20} color={Colors.mediumGray} />
             </TouchableOpacity>
-          
-        </ScrollView>
-      ) : (
-        <SearchResult
-          searchResults={searchResults}
-          isLoading={isLoading}
-          searchTerm={searchTerm}
-          navigation={navigation}
-          setSortModalVisible={setSortModalVisible}
-          setFilterModalVisible={setFilterModalVisible}
-        />
-      )}
+          )}
+        </View>
+
+        {isSearching && (
+          <Animated.View 
+            style={[
+              styles.searchActions,
+              {
+                opacity: searchAnim,
+                transform: [{
+                  translateX: searchAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0]
+                  })
+                }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.searchActionButton} 
+              onPress={() => setSortModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="swap-vertical" size={24} color={Colors.green} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.searchActionButton} 
+              onPress={() => setFilterModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="options" size={24} color={Colors.orange} />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+      </Animated.View>
+
+      <Animated.View 
+        style={[
+          styles.contentContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }
+        ]}
+      >
+        {!isSearching ? (
+          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Banners */}
+            <ScrollView
+              ref={scrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              style={styles.imageScroll}
+            >
+              {banners.map((img, index) => (
+                <Image key={`banner-${index}`} source={{ uri: img }} style={styles.imageBanner} />
+              ))}
+            </ScrollView>
+
+            {/* Frequently Booked Services */}
+            <Text style={styles.sectionTitle}>Frequently Booked Services</Text>
+            <View style={styles.separator} />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.frequentServicesContainer}
+            >
+              {frequentServices.map((service) => (
+                <View key={service.id} style={styles.serviceCard}>
+                  <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                    <View>
+                      <Text style={styles.serviceName}>{service.name}</Text>
+                      <Text style={styles.servicePrice}>₪{service.price}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.addToCartButton,
+                        addedServices.includes(service.id) && { backgroundColor: '#ccc' },
+                      ]}
+                      onPress={() => handleAddToCart(service.id)}
+                      disabled={addedServices.includes(service.id) || isLoading}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons 
+                            name={addedServices.includes(service.id) ? "checkmark-circle" : "cart-outline"} 
+                            size={width * 0.045} 
+                            color="#086189" 
+                          />
+                          <Text style={styles.buttonText}>
+                            {addedServices.includes(service.id) ? 'Added' : 'Add to Cart'}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Categories Grid */}
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <View style={styles.separator} />
+            
+            <View style={styles.categoryGridContainer}>
+              <View style={styles.categoryGrid}>
+                {(showAllCategories ? categories : categories.slice(0, 6)).map((item) => {
+                  const animatedValue = getAnimatedValue(item.category_id);
+                  
+                  const circleScale = animatedValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 4]
+                  });
+
+                  const circleOpacity = animatedValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 0.2]
+                  });
+
+                  return (
+                    <AnimatedTouchable
+                      key={`category-list-${item.category_id}`}
+                      style={styles.categoryGridItem}
+                      onPress={() => {
+                        navigation.navigate('Subcategory', {
+                          categoryId: item.category_id,
+                          categoryName: item.category_name
+                        });
+                      }}
+                      onPressIn={() => handlePressIn(item.category_id)}
+                      onPressOut={() => handlePressOut(item.category_id)}
+                      activeOpacity={1}
+                    >
+                      <View style={styles.categoryContent}>
+                        <View style={styles.iconWrapper}>
+                          <Animated.View 
+                            style={[
+                              styles.categoryIconContainer, 
+                              { 
+                                backgroundColor: item.color,
+                                transform: [{ scale: circleScale }],
+                                opacity: circleOpacity,
+                                
+                              }
+                            ]}
+                          />
+                          <View style={styles.iconContainer}>
+                            <Ionicons 
+                              name={getCategoryIcon(item.category_name)} 
+                              size={24} 
+                              color="#fff" 
+                            />
+                          </View>
+                        </View>
+                        <Text 
+                          style={styles.categoryGridText}
+                            numberOfLines={1}
+                        >
+                          {item.category_name}
+                        </Text>
+                      </View>
+                    </AnimatedTouchable>
+                  );
+                })}
+              </View>
+            </View>
+
+            
+              <TouchableOpacity
+                style={styles.showMoreButton}
+                onPress={() => setShowAllCategories(!showAllCategories)}
+              >
+                <Text style={styles.showMoreText}>
+                  {showAllCategories ? 'SHOW LESS' : 'SHOW MORE'}
+                </Text>
+                <Ionicons
+                  name={showAllCategories ? 'chevron-up' : 'chevron-down'}
+                  style={styles.showMoreIcon}
+                />
+              </TouchableOpacity>
+            
+          </ScrollView>
+        ) : (
+          <SearchResult
+            searchResults={searchResults}
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            navigation={navigation}
+          />
+        )}
+      </Animated.View>
 
       {/* Modals */}
       <Filter
@@ -440,20 +583,22 @@ const Home = ({ navigation }) => {
       />
 
       {/* Floating Buttons */}
-      <View style={styles.fixedButtons}>
-        <TouchableOpacity
-          style={[styles.floatingButton, styles.chatButton]}
-          onPress={() => navigation.navigate('ChatBot')}
-        >
-          <Ionicons name="chatbubbles" size={30} color="#fff" />
-        </TouchableOpacity>
+      {!isSearching && (
+        <View style={styles.fixedButtons}>
+          <TouchableOpacity
+            style={[styles.floatingButton, styles.chatButton]}
+            onPress={() => navigation.navigate('ChatBot')}
+          >
+            <Ionicons name="chatbubbles" size={30} color="#fff" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.floatingButton, styles.cartButton]}
-          onPress={() => navigation.navigate('Cart')}>
-          <Ionicons name="cart" size={30} color="#fff" />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.floatingButton, styles.cartButton]}
+            onPress={() => navigation.navigate('Cart')}>
+            <Ionicons name="cart" size={30} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 

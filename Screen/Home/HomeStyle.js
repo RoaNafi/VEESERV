@@ -15,32 +15,77 @@ const PADDING = 20;
 export default StyleSheet.create({
   container: {
     flex: 1,
-    //backgroundColor: Colors.white,
   },
 
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: "#f8f8f8",
+    marginHorizontal: 20,
+    marginTop: width * 0.13,
+    gap: 10,
+  },
+
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#E8E8E8",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 20,
-    marginHorizontal: 20,
-    height: 44,
-    marginTop: width * 0.13,
-    zIndex: 10,
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
+
   searchIcon: {
-    marginRight: 8,
+    marginRight: 12,
+    color: Colors.mediumGray,
   },
+
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    color: Colors.black,
+    height: '100%',
+    paddingVertical: 0,
   },
+
+  searchActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  searchActionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+
   scrollContent: {
     flex: 1,
+    marginTop:20,
   },
   searchResultsContainer: {
     flex: 1,
@@ -547,6 +592,11 @@ iconWrapper: {
   alignItems: 'center',
   justifyContent: 'center',
   
+},
+
+contentContainer: {
+  flex: 1,
+  position: 'relative',
 },
 });
 

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import Colors from '../../Components/Colors/Colors';
+import Colors from '../Colors/Colors';
 
 export default StyleSheet.create({
   card: {
@@ -7,121 +7,65 @@ export default StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.lightGray,
-    borderRadius: 10,
-    marginBottom: 10,
-    marginHorizontal: 10,
-    backgroundColor: Colors.lightGray,
+    borderRadius: 12,
+    marginBottom: 12,
+    marginHorizontal: 16,
+    backgroundColor: Colors.white,
     overflow: 'hidden',
     shadowColor: Colors.lightGray,
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.20,
-    shadowRadius: 3,
-    elevation: 2,
-    // height: 120,
-  },
-  image: {
-    width: 90,
-    height: "100%",
-    marginRight: 0,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   info: {
     flex: 1,
-    justifyContent: 'space-between',
-    minHeight: 90, 
-    
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  
-  topInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  name: {
-    fontSize: 12,
-    color: Colors.shineBlue,
-    marginRight: 4,
-   
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.blue,
-    //marginRight: 15,
-    
-  },
-  middleInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    
-  },
-  ratingText: {
-    color: Colors.orange,
-    fontSize: 12,
-  marginLeft: 2,
-  },
-
-
- 
- 
-  serviceInfo: {
-    marginTop: 4,
-  },
-  
   serviceName: {
-    
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: Colors.darkGray,
+    marginBottom: 8,
   },
-  
   serviceDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.mediumGray,
-    
+    marginBottom: 16,
+    lineHeight: 18,
   },
   bottomInfo: {
-  flexDirection: 'row',
-  justifyContent: "flex-end",
-  alignItems: 'center',
-  marginTop: 8,
-},
-
-bookButton: {
-    borderWidth: 1,
-    borderColor: Colors.Gray,
-    borderRadius: 15,
-    paddingVertical: 3,
-    paddingHorizontal: 10,
+    flexDirection: 'row',
+    justifyContent: "flex-end",
+    alignItems: 'center',
+  },
+  bookButton: {
+    backgroundColor: Colors.blue,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     marginRight: 10,
   },
-bookButtonText: {
-  color: Colors.black,
-  fontWeight: '600',
-  fontSize: 14,
-},
-distance: {
-  fontSize: 12,
-  color: Colors.darkGray,
-  flex: 1, // Takes remaining space
-},
-addToCartButton: {
-      borderWidth: 1,
-    borderColor: Colors.Gray,
-    borderRadius: 15,
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-},
-cartIconContainer: {
-  flexDirection: 'row',
-  position: 'relative',
-  marginRight: 4,
-},
-cartIcon: {
- },
-
+  bookButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  addToCartButton: {
+    backgroundColor: Colors.orange,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  cartIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cartIcon: {
+    marginLeft: -4,
+  },
 });
