@@ -20,6 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import Colors from '../../Components/Colors/Colors';
+import api from '../../api'; // Adjust the import based on your project structure
 
 const PRIMARY_COLOR = '#086189';
 
@@ -42,6 +43,12 @@ const MechanicHomeScreen = () => {
   const animatedValues = useRef({}).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+const [services, setServices] = useState([]); // قائمة الخدمات المتاحة للورشة
+const [modalVisible, setModalVisible] = useState(false);
+const [selectedBooking, setSelectedBooking] = useState(null);
+const [token, setToken] = useState('');
+const [selectedServices, setSelectedServices] = useState([]); // خدمات مختارة في المودال
+  const [reportText, setReportText] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -60,7 +67,8 @@ const MechanicHomeScreen = () => {
           });
 
           setWorkshopData(response.data);
-          //console.log('Workshop data:', response.data);
+
+          console.log('Workshop data:', response.data);
         } catch (error) {
           console.error('Failed to fetch workshop details:', error.message);
         } finally {
@@ -71,39 +79,71 @@ const MechanicHomeScreen = () => {
       fetchWorkshopDetails();
     }, [])
   );
+const fetchTodayBookings = async () => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
 
- const fetchTodayBookings = async () => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
+    const res = await axios.get('http://176.119.254.225:80/booking/Mechanic/bookings/today', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      const res = await axios.get('http://176.119.254.225:80/booking/Mechanic/bookings/today', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    // جمع الخدمات لكل booking_id
+    const grouped = {};
 
-      // Map your backend data to the frontend format expected by your UI
-      const formatted = res.data.bookings.map(item => ({
-        id: item.booking_id.toString(),
-        time: item.scheduled_time,
-        customer: `${item.first_name}  ${item.last_name}`, // replace with real customer name if you have it
-        car: `${item.make} ${item.model} (${item.year})`,
-        service: item.service_name,
-        status: item.status_name ,
-      }));
+    res.data.bookings.forEach(item => {
+      const id = item.booking_id.toString();
 
-      setAppointments(formatted);
-    } catch (error) {
-      console.error('Error fetching today\'s bookings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!grouped[id]) {
+        grouped[id] = {
+          id,
+          booking_id: item.booking_id,
+          scheduled_time: item.scheduled_time,
+          scheduled_date: item.scheduled_date,
+          city: item.city,
+          street: item.street,
+          price: 0, // نجمع السعر بعدين
+          time: item.scheduled_time,
+          customer: `${item.first_name} ${item.last_name}`,
+          car: `${item.make} ${item.model} (${item.year})`,
+          services: [],  // مصفوفة الخدمات
+          status: item.status_name,
+          notes: item.notes || '', // لو موجود
+          workshop_id : item.workshop_id,
+        };
+      }
+
+      // نجمع الأسعار للخدمات كلها
+      grouped[id].price += item.price;
+
+      // نجمع أسماء الخدمات
+if (!grouped[id].services.some(s => s.name === item.service_name)) {
+  grouped[id].services.push({
+    name: item.service_name,
+    status: item.service_status,
+  });
+}
+
+    });
+    
+
+    // نحول المجموع لكائنات مصفوفة 
+    const formatted = Object.values(grouped);
+
+    setAppointments(formatted);
+    console.log('Fetched and grouped bookings:', formatted);
+  } catch (error) {
+    console.error('Error fetching today\'s bookings:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
  const onCancel = async (bookingId) => {
   try {
      const token = await AsyncStorage.getItem('accessToken');
-    const response = await fetch(`http://176.119.254.225:80/booking/mechanic/bookings/${selectedAppointment.id}`, {
+    const response = await fetch(`http://176.119.254.225:80/booking/mechanic/bookings/${bookingId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`, // لازم تمرر التوكن
@@ -126,7 +166,19 @@ const MechanicHomeScreen = () => {
 useEffect(() => {
     fetchTodayBookings();
   }, []);
- 
+
+   const fetchServices = async (id, token) => {
+    try {
+      const response = await api.get(`/service/workshops/${id}/services`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setServices(response.data);
+    } catch (error) {
+      console.error("🚫 Failed to fetch services:", error);
+      Alert.alert('Error', 'Failed to fetch services.');
+    }
+  };
+
  const showModal = () => {
     setDelayModalVisible(true);
     Animated.parallel([
@@ -196,6 +248,47 @@ useEffect(() => {
       Alert.alert('Error', 'Something went wrong');
     }
   };
+ const updateBookingStatus = async (status, bookingId) => {
+  try {
+    const token = await AsyncStorage.getItem("accessToken");
+
+    const response = await axios.patch(
+      `http://176.119.254.225:80/booking/update/status/${bookingId}`,
+      { status },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    Alert.alert("Success", response.data.message);
+  } catch (error) {
+    console.error("❌ Error updating booking status:", error);
+    Alert.alert("Error", error?.response?.data?.message || "Something went wrong");
+  }
+};
+
+const onEditbookStatus = (item) => {
+  Alert.alert(
+    "Update Status",
+    "Choose booking status",
+    [
+      {
+        text: "Completed",
+        onPress: () => updateBookingStatus("completed", item.booking_id),
+      },
+      {
+        text: "In Progress",
+        onPress: () => updateBookingStatus("in progress", item.booking_id),
+      },
+      { text: "Cancel", style: "cancel" },
+    ],
+    { cancelable: true }
+  );
+};
+
+
 
 const getAnimatedValue = (id) => {
   if (!animatedValues[id]) {
@@ -215,6 +308,82 @@ const toggleExpand = (id) => {
   }).start();
 
   setExpandedCard(isExpanded ? null : id);
+};
+const addServiceToBooking = 
+  async () => {
+  if (selectedServices.length === 0) {
+    Alert.alert('Please select at least one service!');
+    return;
+  }
+
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    if (!token) {
+      Alert.alert('Error', 'User token is missing');
+      return;
+    }
+
+    const bookingId = selectedBooking?.booking_id;
+    if (!bookingId) {
+      Alert.alert('Error', 'Booking ID is missing');
+      return;
+    }
+
+    // جهزي الداتا المطلوبة
+    const servicesPayload = selectedServices.map(service => ({
+      service_id: service.service_id, // أو service.id حسب الشكل
+      price: service.price,
+    }));
+
+    // ابعتيها للباكند
+    const response = await axios.patch(
+      `http://176.119.254.225:80/booking/update/services/${bookingId}`,
+      { services: servicesPayload },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    console.log('✅ Services added:', response.data);
+    Alert.alert('Success', 'Services added to booking');
+    setModalVisible(false);
+  } catch (error) {
+    console.error('🚫 Error adding services:', error);
+    Alert.alert('Error', 'Failed to add services');
+  }
+}
+
+const onAddService = async (booking) => {
+  setSelectedBooking(booking);
+  setSelectedServices([]); // مسح الاختيارات القديمة
+
+  const token = await AsyncStorage.getItem('accessToken'); // جيب التوكن هنا
+  if (!token) {
+    Alert.alert('Error', 'User token is missing');
+    return;
+  }
+
+  if (!booking.workshop_id) {
+    Alert.alert('Error', 'Workshop ID missing in booking');
+    return;
+  }
+
+  await fetchServices(booking.workshop_id, token); // مرر الـ token صح
+  console.log('Fetched services for workshop:', booking.workshop_id);
+  console.log('Available services:', services);
+  setModalVisible(true);
+};
+ const getStatusColor = (status) => {
+  switch (status) {
+    case 'approved':
+      return 'green';
+    case 'requested':
+      return 'orange';
+    case 'rejected':
+      return 'red';
+    case 'completed':
+      return 'blue';
+    default:
+      return 'gray';
+  }
 };
 
   if (loading) {
@@ -257,6 +426,57 @@ const toggleExpand = (id) => {
           </View>
         </View>
       </View>
+<Modal visible={modalVisible} animationType="slide" transparent>
+  <View style={{ flex:1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
+    <View style={{ backgroundColor: 'white', borderRadius: 10, maxHeight: '80%' }}>
+      <Text style={{ fontSize: 20, fontWeight: 'bold', padding: 15 }}>Select Services</Text>
+      <FlatList
+        data={services}
+        keyExtractor={item => item.service_id.toString()}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => {
+              if(selectedServices.some(s => s.service_id === item.service_id)) {
+                setSelectedServices(selectedServices.filter(s => s.service_id !== item.service_id));
+              } else {
+                setSelectedServices([...selectedServices, item]);
+              }
+            }}
+            style={{
+              padding: 15,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              borderBottomWidth: 1,
+              borderColor: '#eee'
+            }}
+          >
+            <Text>{item.service_name}</Text>
+            <Text> {item.price} NIS</Text>
+            {selectedServices.some(s => s.service_id === item.service_id) && <Text style={{ fontSize: 18 }}>✅</Text>}
+          </TouchableOpacity>
+        )}
+      />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around', padding: 15 }}>
+        <TouchableOpacity
+          onPress={() => setModalVisible(false)}
+          style={{ padding: 10, backgroundColor: '#ccc', borderRadius: 8, width: '40%' }}
+        >
+          <Text style={{ textAlign: 'center' }}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            addServiceToBooking(); // استدعاء الدالة لإضافة الخدمات
+            // هنا حط كود إضافة الخدمات للبوكينغ
+            setModalVisible(false);
+          }}
+          style={{ padding: 10, backgroundColor: PRIMARY_COLOR, borderRadius: 8, width: '40%' }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center' }}>Add Services</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
 
       <ScrollView 
         style={styles.scrollContainer} 
@@ -267,7 +487,7 @@ const toggleExpand = (id) => {
         <View style={styles.separator} />
         <FlatList
           data={appointments.length > 0 ? appointments : [{ id: 'no-appointments', isPlaceholder: true }]}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id+ '-' + item.scheduled_time}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.appointmentsContainer}
@@ -290,10 +510,11 @@ const toggleExpand = (id) => {
             }
 
             const animatedValue = getAnimatedValue(item.id);
-            const height = animatedValue.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 60]
-            });
+           const height = animatedValue.interpolate({
+  inputRange: [0, 1],
+  outputRange: [0, 220], // كبرّي الرقم لو في محتوى أكتر
+});
+
 
             return (
               <TouchableOpacity 
@@ -342,32 +563,92 @@ const toggleExpand = (id) => {
                   <View style={styles.appointmentDetails}>
                     <Text style={styles.appointmentText}>{item.customer}</Text>
                     <Text style={styles.appointmentText}>{item.car}</Text>
-                    <Text style={styles.appointmentText}>{item.service}</Text>
-                  </View>
 
-                  <Animated.View style={[
-                    styles.expandedContent,
-                    {
-                      height,
-                      opacity: animatedValue,
-                      overflow: 'hidden'
-                    }
-                  ]}>
-                    <View style={styles.buttonContainer}>
-                      <TouchableOpacity 
-                        style={styles.cancelButton}
-                        onPress={() => onCancel(item.booking_id)}
-                      >
-                        <Text style={styles.buttonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.delayButton}
-                        onPress={() => onDelay(item)}
-                      >
-                        <Text style={styles.buttonText}>Delay</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </Animated.View>
+                 </View>
+<Animated.View style={[
+  styles.expandedContent,
+  {
+    height,
+    opacity: animatedValue,
+    overflow: 'hidden',
+    padding: 10,
+    backgroundColor: '#F9F9F9',
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+    borderRadius: 8,
+    
+  }
+]}>
+  {/* التفاصيل الأساسية */}
+  <Text style={styles.detailText}>📍 Location: {item.city} {item.street}  no address </Text>
+
+<Text style={styles.detailText}>💰 Total: {item.price} NIS</Text> 
+ <Text style={styles.detailText}>📋 Notes: {item.notes || 'No additional notes'}</Text>
+<View style={{ marginTop: 5 }}>
+  <Text style={styles.appointmentText}>Services:</Text>
+  {item.services.length > 0 ? (
+    item.services.map((service, index) => (
+      <Text key={index} style={[styles.appointmentText, { marginLeft: 10 }]}>
+        • {service.name} 
+        <Text style={{ color: getStatusColor(service.status) }}>
+          {` (${service.status})`}
+        </Text>
+      </Text>
+    ))
+  ) : (
+    <Text style={[styles.appointmentText, { marginLeft: 10 }]}>
+      No services listed
+    </Text>
+  )}
+</View>
+
+  {/* زرّين أوليين */}
+  <View style={styles.buttonContainer}>
+    <TouchableOpacity 
+      style={styles.cancelButton}
+      onPress={() => onCancel(item.booking_id)}
+    >
+      <Text style={styles.buttonText}>Cancel</Text>
+    </TouchableOpacity>
+    <TouchableOpacity
+      style={styles.delayButton}
+      onPress={() => onDelay(item)}
+    >
+      <Text style={styles.buttonText}>Delay</Text>
+    </TouchableOpacity>
+  </View>
+
+  {/* زرار الإدارة الإضافية */}
+  <View style={styles.buttonRow}>
+  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    <TouchableOpacity 
+      style={[styles.actionButton2, styles.updateBooking]}
+      onPress={() => onEditbookStatus(item)}
+    >
+      <Text style={styles.buttonText}>Update service status</Text>
+    </TouchableOpacity>
+
+    
+
+    <TouchableOpacity 
+      style={[styles.actionButton2, styles.addService]}
+      onPress={() => onAddService(item)}
+    >
+      <Text style={styles.buttonText}>Add Service</Text>
+    </TouchableOpacity>
+
+   <TouchableOpacity
+  style={[styles.actionButton2, styles.viewReport]}
+  onPress={() => navigation.navigate('GenerateReportScreen', { booking: item })}
+>
+  <Text style={styles.buttonText}>Generate Report</Text>
+</TouchableOpacity>
+
+  </ScrollView>
+</View>
+
+</Animated.View>
+
                 </View>
               </TouchableOpacity>
             );
@@ -393,8 +674,7 @@ const toggleExpand = (id) => {
             icon="calendar-alt"
             label="Today's Schedule"
             onPress={() => navigation.navigate('TodaySchedule', { 
-              workshopId: workshopData?.workshop_id,
-              appointments: appointments 
+              workshopId: workshopData?.workshop_id 
             })}
           />
         </View>
@@ -838,5 +1118,124 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.mediumGray,
     opacity: 0.3,
   },
+  detailText: {
+  fontSize: 13,
+  color: '#444',
+  marginBottom: 4,
+},
+
+buttonRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginTop: 10,
+},
+
+editButton: {
+  backgroundColor: '#FFF9C4',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+
+addButton: {
+  backgroundColor: '#C8E6C9',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+
+reportButton: {
+  backgroundColor: '#BBDEFB',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+detailText: {
+  fontSize: 13,
+  color: '#444',
+  marginBottom: 4,
+},
+
+buttonContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginTop: 8,
+},
+
+
+
+editButton: {
+  backgroundColor: '#FFF9C4',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+
+addButton: {
+  backgroundColor: '#C8E6C9',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+
+reportButton: {
+  backgroundColor: '#BBDEFB',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+
+cancelButton: {
+  backgroundColor: '#FFCDD2',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+
+delayButton: {
+  backgroundColor: '#FFE0B2',
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+  borderRadius: 6,
+},
+
+buttonText: {
+  fontWeight: '600',
+  fontSize: 13,
+  color: '#333',
+},
+
+
+actionButton2: {
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 8,
+  marginRight: 8,
+  minWidth: 120,
+  alignItems: 'center',
+},
+
+updateBooking: {
+  backgroundColor: '#1976D2', // أزرق
+},
+
+updateService: {
+  backgroundColor: '#0288D1', // أزرق أفتح
+},
+
+addService: {
+  backgroundColor: '#388E3C', // أخضر
+},
+
+viewReport: {
+  backgroundColor: '#F57C00', // برتقالي
+},
+
+buttonText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 14,
+},
+
 });
 

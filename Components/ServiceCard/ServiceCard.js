@@ -5,14 +5,13 @@ import Colors from "../Colors/Colors";
 
 const ServiceCard = ({ data }) => {
   const {
-    service_name,
-    service_description,
+    name, // اسم الخدمة
   } = data;
 
   const handleAddToCart = () => {
     Alert.alert(
       "Added to Cart",
-      `${service_name} has been added to your cart`,
+      `${name} has been added to your cart`,
       [{ text: "OK" }]
     );
   };
@@ -20,7 +19,7 @@ const ServiceCard = ({ data }) => {
   const handleBookPress = () => {
     Alert.alert(
       "Book Service",
-      `Would you like to book ${service_name}?`,
+      `Would you like to book ${name}?`,
       [
         { text: "Cancel", style: "cancel" },
         { text: "Book Now", onPress: () => Alert.alert("Success", "Service booked successfully!") }
@@ -32,14 +31,10 @@ const ServiceCard = ({ data }) => {
     <View style={styles.card}>
       <View style={styles.info}>
         <Text style={styles.serviceName} numberOfLines={2}>
-          {service_name}
+          {name}
         </Text>
 
-        {service_description && (
-          <Text style={styles.serviceDescription} numberOfLines={2}>
-            {service_description}
-          </Text>
-        )}
+       
 
         <View style={styles.bottomInfo}>
           <TouchableOpacity 

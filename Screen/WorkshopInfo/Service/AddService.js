@@ -72,42 +72,80 @@ const fetchSubCategories = async (categoryId) => {
     console.error('Error fetching subcategories:', err);
   }
 };
-
 const handleSubmit = async () => {
+  console.log('handleSubmit called! Button pressed.'); // تأكيد أن الدالة بدأت
+  console.log('------------------------------------');
+
   const name = selectedService || customServiceName;
 
+  // 1. تحقق من قيم الحقول قبل الإرسال
+  console.log('Checking form fields...');
+  console.log('name:', name);
+  console.log('description:', description);
+  console.log('price:', price);
+  console.log('subcategory_id (selectedService):', selectedService); // تأكد أن subcategory_id هي نفسها selectedService
+  console.log('selectedCategory (category_id):', selectedCategory);
+  console.log('estimatedDuration:', estimatedDuration);
+  console.log('workshopId:', workshopId); // تأكد أن workshopId موجودة ومتاحة هنا
+
   if (!name || !description || !price || !subcategory_id || !selectedCategory || !estimatedDuration) {
+    console.log('Validation failed: Missing fields.'); // سجل أن هناك حقول ناقصة
     return Alert.alert('⚠️ Missing Fields', 'Please fill all fields.');
   }
+  console.log('Validation passed: All fields are filled.');
+  console.log('------------------------------------');
+
+  // 2. سجل البيانات التي سيتم إرسالها بالضبط
+  const dataToSend = {
+    service_name: name,
+    service_description: description,
+    category_id: selectedCategory,
+    price: parseFloat(price), // تأكد أنها رقم صحيح
+    workshop_id: workshopId,
+    subcategory_id: selectedService, // تأكد من هذه القيمة
+    estimated_duration: parseInt(estimatedDuration, 10), // تأكد أنها رقم صحيح
+  };
+  console.log('Data to be sent to backend:', dataToSend);
+  console.log('------------------------------------');
 
   try {
-    const res = await api.post('/service/services', {
-      service_name: name,
-      service_description: description,
-      category_id: selectedCategory,
-      price: parseFloat(price),
-      workshop_id: workshopId,
-      subcategory_id: selectedService,
-      estimated_duration: parseInt(estimatedDuration, 10),
-    });
+    console.log('Attempting to send API request...'); // قبل إرسال الطلب
+    const res = await api.post('/service/services', dataToSend); // استخدم dataToSend هنا
 
+    console.log('API call successful!'); // إذا وصل إلى هنا، الطلب نجح
+    console.log('Response from backend:', res.data); // سجل استجابة الـ backend
     Alert.alert('✅ Success', res.data.message);
     navigation.goBack();
   } catch (err) {
-    console.error('Error submitting service:', err);
-    Alert.alert('Error', 'Could not create service.');
+    console.log('API call failed or encountered an error.'); // سجل إذا فشل الطلب
+    // 3. سجل الخطأ كاملاً للتشخيص
+    if (err.response) {
+      // إذا كان الخطأ من استجابة السيرفر (مثل 400, 401, 500)
+      console.error('Error response from backend:', err.response.data);
+      console.error('Error status:', err.response.status);
+      console.error('Error headers:', err.response.headers);
+      Alert.alert('Error', err.response.data.message || 'Could not create service. Server error.');
+    } else if (err.request) {
+      // الطلب تم إرساله ولكن لم يتم استلام أي رد (لا يوجد اتصال بالإنترنت، السيرفر لا يعمل)
+      console.error('No response received from backend (request made):', err.request);
+      Alert.alert('Error', 'Could not connect to the server. Please check your internet connection.');
+    } else {
+      // خطأ آخر حدث أثناء إعداد الطلب
+      console.error('Error setting up request:', err.message);
+      Alert.alert('Error', 'An unexpected error occurred.');
+    }
+    Alert.alert('Error', 'Could not create service.'); // رسالة عامة للمستخدم
   }
+  console.log('------------------------------------');
 };
-
 return (
   <KeyboardAvoidingView
     style={{ flex: 1 ,backgroundColor: Colors.white}}
     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
   >
-    {/* استخدمي View عامة للكل مع زبط ترتيب العناصر */}
     <View style={{ flex: 1 }}>
-      {/* الـ Dropdowns برا الـ ScrollView، ولازم تعطيهم padding ومارجن كويسين */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 20, zIndex: 3000,  backgroundColor: Colors.white }}>
+     
+      <View style={{ paddingHorizontal: 20, paddingTop: 20, zIndex: 1000, backgroundColor: Colors.white }}> {/* <--- تم تعديل zIndex هنا */}
         <Text style={styles.header}>Add New Service</Text>
 
         <DropDownPicker
@@ -120,12 +158,15 @@ return (
           placeholder="Select a Category"
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={3000}
+          zIndex={3000} // <--- هذا الـ zIndex لقائمة الـ DropDownPicker نفسها عند الفتح، يجب أن يكون عالياً
           zIndexInverse={1000}
         />
       </View>
 
-      <View style={{ paddingHorizontal: 20, marginTop: 10, zIndex: 2000 }}>
+      {/*
+        تم تعديل zIndex للـ service dropdown container إلى 900 ليكون أقل من زر الإرسال.
+      */}
+      <View style={{ paddingHorizontal: 20, marginTop: 10, zIndex: 900 }}> {/* <--- تم تعديل zIndex هنا */}
         <DropDownPicker
           open={serviceOpen}
           value={selectedService}
@@ -142,18 +183,18 @@ return (
           }
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={2000}
-          zIndexInverse={900}
+          zIndex={2500} // <--- هذا الـ zIndex لقائمة الـ DropDownPicker نفسها عند الفتح
+          zIndexInverse={800}
         />
       </View>
 
-      {/* باقي الفورم */}
+    
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.container, { paddingTop: 20 }]}
         enableOnAndroid={true}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ paddingHorizontal: 20 }}>
+        <View style={{ paddingHorizontal: 20, zIndex: 4000 }}> {/* <--- هنا أضفنا zIndex: 4000 */}
           <TextInput
             placeholder="Description"
             value={description}
@@ -182,6 +223,7 @@ return (
             placeholderTextColor={Colors.mediumGray}
           />
 
+          {/* الزر نفسه لا يحتاج لـ zIndex خاص به إذا كان الـ View الأب لديه zIndex عالي */}
           <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
             <Text style={styles.submitText}>Add Service</Text>
           </TouchableOpacity>
@@ -190,7 +232,6 @@ return (
     </View>
   </KeyboardAvoidingView>
 );
-
 
 };
 

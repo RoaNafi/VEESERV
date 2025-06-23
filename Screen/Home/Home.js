@@ -18,16 +18,13 @@ import axios from "axios";
 import Colors from "../../Components/Colors/Colors";
 
 import SearchResult from "./SearchResult";
-import Filter from "./ResultOperation/Filter";
-import Sort from "./ResultOperation/Sort";
-
-import { useFilterLogic } from "./ResultOperation/useFilterLogic";
-import { useSortLogic } from "./ResultOperation/useSortLogic";
-// import { CheckBox } from '@rneui/themed'; // or '@react-native-elements'
+import Filter from "../Book/ResultOperation/Filter";
+import Sort from "../Book/ResultOperation/Sort";
 import { ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import Subcategory from './Subcategory';
+import { useNavigation } from '@react-navigation/native';
+
 // this insted of add padding to the container
 const PADDING = 20;
 
@@ -61,7 +58,25 @@ const Home = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const searchAnim = useRef(new Animated.Value(0)).current;
+const [favoriteMechanics, setFavoriteMechanics] = useState([]);
+const [loadingFavorites, setLoadingFavorites] = useState(true);
 
+useEffect(() => {
+  const fetchFavorites = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const res = await axios.get('http://176.119.254.225:80/favourite/myfavorites', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFavoriteMechanics(res.data.favorites);
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    } finally {
+      setLoadingFavorites(false);
+    }
+  };
+  fetchFavorites();
+}, []);
   const getAnimatedValue = (id) => {
     if (!animatedValues[id]) {
       animatedValues[id] = new Animated.Value(0);
@@ -219,29 +234,33 @@ const Home = ({ navigation }) => {
     }
   };
 
-  const handleSearch = async (text) => {
-    setIsSearching(true);
-    setSearchTerm(text);
-    if (text.trim().length === 0) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const response = await axios.get(`${config.apiUrl}/search/subcategories/search`, {
-        params: { keyword: text },
-      });
-      setOriginalSearchResults(response.data);
-      setSearchResults(response.data);
-      console.log("Search results:", response.data);
-    } catch (error) {
-      console.error("Search error:", error);
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const handleSearch = async (text) => {
+  setIsSearching(true);
+  setSearchTerm(text);
+
+  if (text.trim().length === 0) {
+    setSearchResults([]);
+    setIsSearching(false);
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const response = await axios.get(`${config.apiUrl}/search/searchhome`, {
+      params: { keyword: text },
+    });
+const results = response.data.results || [];
+    setOriginalSearchResults(results);
+    setSearchResults(results);
+  } catch (error) {
+    console.error("Search error:", error);
+    setSearchResults([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const clearSearch = () => {
     setSearchTerm("");
@@ -251,28 +270,29 @@ const Home = ({ navigation }) => {
 
 
 
-  const { applySort, sortResults } = useSortLogic(
-    searchResults,
-    setSearchResults,
-    setSelectedSortOption
-  );
 
-  const {
-    selectedRating,
-    setSelectedRating,
-    selectedDistance,
-    setSelectedDistance,
-    mobileServiceOnly,
-    setMobileServiceOnly,
-    applyFilters,
-    resetFilters,
-  } = useFilterLogic(
-    originalSearchResults,
-    selectedSortOption,
-    setSearchResults,
-    setFilterModalVisible,
-    sortResults
-  );
+  // const { applySort, sortResults } = useSortLogic(
+  //   searchResults,
+  //   setSearchResults,
+  //   setSelectedSortOption
+  // );
+
+  // const {
+  //   selectedRating,
+  //   setSelectedRating,
+  //   selectedDistance,
+  //   setSelectedDistance,
+  //   mobileServiceOnly,
+  //   setMobileServiceOnly,
+  //   applyFilters,
+  //   resetFilters,
+  // } = useFilterLogic(
+  //   originalSearchResults,
+  //   selectedSortOption,
+  //   setSearchResults,
+  //   setFilterModalVisible,
+  //   sortResults
+  // );
 
   const handleAddToCart = async (serviceId) => {
     if (addedServices.includes(serviceId)) return;
@@ -347,18 +367,18 @@ const Home = ({ navigation }) => {
       >
         <View style={styles.searchInputContainer}>
           <Ionicons name="search" size={20} color={Colors.mediumGray} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search Anything..."
-            placeholderTextColor={Colors.mediumGray}
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            onSubmitEditing={() => {
-              handleSearch(searchTerm);
-              animateTransition(true);
-            }}
-            returnKeyType="search"
-          />
+         <TextInput
+  style={styles.searchInput}
+  placeholder="Search Anything..."
+  placeholderTextColor={Colors.mediumGray}
+  value={searchTerm}
+  onChangeText={(text) => setSearchTerm(text)} // بس تحدث القيمة
+  onSubmitEditing={() => {
+    handleSearch(searchTerm); // لما يضغط Enter نعمل بحث وتنقل
+    animateTransition(true); // أنيميشن لو في
+  }}
+  returnKeyType="search"
+/>
           {searchTerm.length > 0 && (
             <TouchableOpacity 
               onPress={clearSearch}
@@ -469,6 +489,33 @@ const Home = ({ navigation }) => {
                 </View>
               ))}
             </ScrollView>
+            {/* Favorite Mechanic Section */}
+{!loadingFavorites && favoriteMechanics.length > 0 && (
+  <>
+    <Text style={styles.sectionTitle}>Your Favorite Mechanic</Text>
+    <View style={styles.separator} />
+
+    {favoriteMechanics.map((mechanic) => (
+      <View key={mechanic.workshop_id} style={styles.favoriteMechanicCard}>
+<View style={[styles.favoriteMechanicHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+  <Ionicons name="person-circle-outline" size={40} color="#086189" />
+  <View style={{ flex: 1, marginLeft: 20 }}>
+            <Text style={styles.mechanicName}>{mechanic.workshop_name}</Text>
+            <Text style={styles.mechanicRating}>⭐ {mechanic.rate ? mechanic.rate.toFixed(1) : 'N/A'}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.bookNowButton}
+          onPress={() => navigation.navigate('Book', { mechanicId: mechanic.workshop_id })}
+        >
+          <Text style={styles.bookNowText}>Book Now</Text>
+        </TouchableOpacity>
+      </View>
+    ))}
+  </>
+)}
+
+
 
             {/* Categories Grid */}
             <Text style={styles.sectionTitle}>Categories</Text>
@@ -563,10 +610,10 @@ const Home = ({ navigation }) => {
       </Animated.View>
 
       {/* Modals */}
-      <Filter
+      {/* <Filter
         visible={filterModalVisible}
         setVisible={setFilterModalVisible}
-        applyFilters={applyFilters}
+        // applyFilters={applyFilters}
         resetFilters={resetFilters}
         selectedRating={selectedRating}
         selectedDistance={selectedDistance}
@@ -578,9 +625,9 @@ const Home = ({ navigation }) => {
       <Sort
         visible={sortModalVisible}
         setVisible={setSortModalVisible}
-        applySort={applySort}
+        // applySort={applySort}
         setSelectedSortOption={setSelectedSortOption}
-      />
+      /> */}
 
       {/* Floating Buttons */}
       {!isSearching && (

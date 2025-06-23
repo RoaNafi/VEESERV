@@ -33,7 +33,7 @@ const Cart = () => {
         });
         //console.log('=============== Cart Screen ============');
         //console.log('Cart API Response:', res.data);
-        //console.log('Cart items:', res.data.cart);
+        console.log('Cart items:', res.data.cart);
         setServices(res.data.cart);
       } else {
         console.error('No token found');
@@ -172,11 +172,17 @@ const Cart = () => {
             </View>
             
             <TouchableOpacity
-              style={styles.checkoutButton}
-              onPress={() => navigation.navigate('DateTimePickerScreen')}
-            >
-              <Text style={styles.checkoutButtonText}>Book Now</Text>
-            </TouchableOpacity>
+  style={styles.checkoutButton}
+  onPress={() => {
+    const subcategoryIds = services.map(s => s.subcategory_id);
+    navigation.navigate('DateTimePickerScreen', {
+      subcategoryIds,
+    });
+  }}
+>
+  <Text style={styles.checkoutButtonText}>Book Now</Text>
+</TouchableOpacity>
+
           </View>
         </>
       )}

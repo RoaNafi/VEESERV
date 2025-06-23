@@ -598,5 +598,53 @@ contentContainer: {
   flex: 1,
   position: 'relative',
 },
+favoriteMechanicCard: {
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 16,
+  marginVertical: 12,
+  marginHorizontal: 16,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  elevation: 3,
+},
+
+favoriteMechanicHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 12,
+},
+
+mechanicName: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#333',
+},
+
+mechanicSubtitle: {
+  fontSize: 14,
+  color: '#666',
+},
+
+mechanicRating: {
+  fontSize: 14,
+  color: '#f1c40f',
+},
+
+bookNowButton: {
+  backgroundColor: '#086189',
+  borderRadius: 8,
+  paddingVertical: 10,
+  alignItems: 'center',
+},
+
+bookNowText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 16,
+}
+
 });
 

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Colors from "../../Components/Colors/Colors";
+import axios from 'axios';
 
 const TimeSlots = [
   "08:00 AM",
@@ -25,14 +26,17 @@ const TimeSlots = [
   "07:00 PM",
 ];
 
-const DateTimePickerScreen = ({ navigation }) => {
+const DateTimePickerScreen = ({ navigation , route }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+const [subcategoryCheckResult, setSubcategoryCheckResult] = useState(null);
 
   const [selectedSlot, setSelectedSlot] = useState(null); // can be string like "10:00 AM" or time string from picker
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [disabledSlots, setDisabledSlots] = useState([]); // Add this state for disabled slots
-
+const { selectedServices, subcategoryIds } = route.params || {};
+console.log("Selected Services:", selectedServices);
+  console.log("Subcategory IDs:", subcategoryIds);
   // Format date as YYYY-MM-DD
   const selectedDateOnly =
     selectedDate.getFullYear() +
@@ -64,6 +68,23 @@ const DateTimePickerScreen = ({ navigation }) => {
 
     return true;
   };
+
+// Function to check subcategories
+const checkSubcategories = async (subcategoryIds) => {
+  try {
+    const res = await axios.post('http://176.119.254.225:80/ServiceCategories/check-subcategories', { subcategoryIds }, {
+    });
+    console.log('Result:', res.data.result);
+    setSubcategoryCheckResult(res.data.result); // same or different
+  } catch (error) {
+    console.error('Error checking subcategories', error);
+  }
+};
+
+// في useEffect أو مكان مناسب تناديها
+useEffect(() => {
+  checkSubcategories(subcategoryIds);
+}, [subcategoryIds]);
 
   // Update disabled slots whenever date changes
   useEffect(() => {
@@ -119,17 +140,36 @@ const DateTimePickerScreen = ({ navigation }) => {
   const hideDatePicker = () => {
     setDatePickerVisibility(false);
   };
+const goToNextStep = (skip = false) => {
+  navigation.navigate("AvailableMechanic", {
+    date:  selectedDateOnly,
+    timeSlots: selectedSlot ? [selectedSlot] : [],
+    subcategoryIds,
+  });
+};
 
-  const goToNextStep = () => {
-   navigation.navigate("AvailableMechanic", {
-  date: selectedDateOnly,
-  timeSlots: selectedSlot ? [selectedSlot] : [], // always an array
-});
-  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Pick a date</Text>
+      <View style={styles.headerRow}>
+  <Text style={styles.heading}>Pick a date</Text>
+
+   {subcategoryCheckResult !== 'different' && (
+      <TouchableOpacity
+        style={styles.skipBtn}
+        onPress={() => {
+          navigation.navigate("AvailableMechanic", {
+            date: null,
+            timeSlots: [],
+            subcategoryIds,
+          });
+        }}
+      >
+        <Text style={styles.skipText}>Skip</Text>
+      </TouchableOpacity>
+    )}
+
+</View>
 
       <TouchableOpacity style={styles.dateBtn} onPress={() => setDatePickerVisibility(true)}>
         <Text style={styles.dateText}>{selectedDate.toDateString()}</Text>
@@ -292,4 +332,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     fontStyle: 'italic',
   },
+  headerRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+  paddingHorizontal: 4,
+},
+
+skipText: {
+  color: '#999', // لون فاتح وناعم
+  fontSize: 14,
+  fontWeight: '500',
+  textDecorationLine: 'underline',
+},
+
 });

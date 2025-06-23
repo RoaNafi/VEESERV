@@ -1,29 +1,30 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  Alert,
+  ScrollView,
+  StyleSheet,
   ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Colors from '../../Components/Colors/Colors';
+import axios from 'axios';
+import { FontAwesome5 } from '@expo/vector-icons';
 
-const TIME_SLOTS = [
-  "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-  "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM",
-  "06:00 PM", "07:00 PM"
-];
-
-const TodaySchedule = ({ route, navigation }) => {
-  const { workshopId, appointments } = route.params;
+const TodaySchedule = ({ navigation, route }) => {
+  const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [bookedSlots, setBookedSlots] = useState([]);
-  const [blockedSlots, setBlockedSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
+
+    const { workshopId } = route.params;
+    
 
   useEffect(() => {
     fetchSchedule();
@@ -33,237 +34,262 @@ const TodaySchedule = ({ route, navigation }) => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
       const response = await axios.get(
-        `http://176.119.254.225:80/mechanic/schedule/${workshopId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        `http://176.119.254.225:80/mechanic/today/schedule?date=${today}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      // Process the schedule data
-      const booked = appointments.map(apt => apt.time);
-      const blocked = response.data.blockedSlots || [];
-      
-      setBookedSlots(booked);
-      setBlockedSlots(blocked);
-    } catch (error) {
-      console.error('Error fetching schedule:', error);
-      Alert.alert('Error', 'Failed to load schedule');
+
+      setSchedule(response.data.schedule);
+    } catch (err) {
+      console.error('Error fetching workshop schedule:', err);
+      Alert.alert('Error', 'Failed to fetch schedule.');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleSlotStatus = async (timeSlot) => {
+  // تحويل الوقت إلى دقائق
+  const timeToMinutes = (time) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // دالة لإضافة وقت مشغول عبر API
+  const markSlotBusy = async () => {
+    if (!selectedSlot) return;
     try {
       const token = await AsyncStorage.getItem('accessToken');
-      const isBlocked = blockedSlots.includes(timeSlot);
-      
-      const response = await axios.post(
-        `http://176.119.254.225:80/mechanic/schedule/${workshopId}/toggle-slot`,
+   console.log('Fetched workshopId:', workshopId); // تحقق من صحة workshopId
+      // نستخدم نفس الوقت كبداية ونهاية بـ 30 دقيقة (مثلا)
+      const date = today;
+      const time_start = `${selectedSlot}:00`;
+      const startMinutes = timeToMinutes(selectedSlot);
+      const endMinutes = startMinutes + 30;
+      const hours = String(Math.floor(endMinutes / 60)).padStart(2, '0');
+      const minutes = String(endMinutes % 60).padStart(2, '0');
+      const time_end = `${hours}:${minutes}:00`;
+
+      const res = await axios.post(
+        `http://176.119.254.225:80/mechanic/availability-exception`, 
         {
-          timeSlot,
-          action: isBlocked ? 'unblock' : 'block'
+          date,
+          time_start,
+          time_end,
+          status: 'unavailable', // أو 'closed' حسب اختيارك
+          workshop_id: workshopId
         },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+console.log('Sending availability exception:', {
+  date,
+  time_start,
+  time_end,
+  status: 'unavailable',
+  workshop_id: workshopId,
+});
 
-      if (response.data.success) {
-        setBlockedSlots(prev => 
-          isBlocked 
-            ? prev.filter(slot => slot !== timeSlot)
-            : [...prev, timeSlot]
-        );
-      }
-    } catch (error) {
-      console.error('Error toggling slot:', error);
-      Alert.alert('Error', 'Failed to update slot status');
-    }
-  };
-
-  const getSlotStatus = (timeSlot) => {
-    if (bookedSlots.includes(timeSlot)) return 'booked';
-    if (blockedSlots.includes(timeSlot)) return 'blocked';
-    return 'available';
-  };
-
-  const getSlotStyle = (status) => {
-    switch (status) {
-      case 'booked':
-        return styles.bookedSlot;
-      case 'blocked':
-        return styles.blockedSlot;
-      default:
-        return styles.availableSlot;
-    }
-  };
-
-  const getSlotTextStyle = (status) => {
-    switch (status) {
-      case 'booked':
-        return styles.bookedText;
-      case 'blocked':
-        return styles.blockedText;
-      default:
-        return styles.availableText;
+      Alert.alert('Success', 'Time slot marked as busy!');
+      setModalVisible(false);
+      setSelectedSlot(null);
+      fetchSchedule();
+    } catch (err) {
+      console.error('Error marking slot busy:', err);
+      Alert.alert('Error', 'Failed to mark slot as busy.');
     }
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.shineBlue} />
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#086189" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <FontAwesome5 name="arrow-left" size={20} color={Colors.shineBlue} />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <FontAwesome5 name="arrow-left" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Today's Schedule</Text>
+        <Text style={styles.headerText}>Today's Schedule</Text>
       </View>
 
-      <ScrollView style={styles.scheduleContainer}>
-        <View style={styles.legend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, styles.availableSlot]} />
-            <Text style={styles.legendText}>Available</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, styles.bookedSlot]} />
-            <Text style={styles.legendText}>Booked</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, styles.blockedSlot]} />
-            <Text style={styles.legendText}>Blocked</Text>
-          </View>
-        </View>
+      {/* Legend */}
+      <View style={styles.legend}>
+        <LegendItem color="#A4C8E1" label="Available" />
+        <LegendItem color="#A78BFA" label="Busy" />
+      </View>
 
-        <View style={styles.timeSlotsContainer}>
-          {TIME_SLOTS.map((timeSlot) => {
-            const status = getSlotStatus(timeSlot);
-            const isBooked = status === 'booked';
-
-            return (
-              <TouchableOpacity
-                key={timeSlot}
-                style={[styles.timeSlot, getSlotStyle(status)]}
-                onPress={() => !isBooked && toggleSlotStatus(timeSlot)}
-                disabled={isBooked}
-              >
-                <Text style={[styles.timeText, getSlotTextStyle(status)]}>
-                  {timeSlot}
-                </Text>
-                {isBooked && (
-                  <FontAwesome5 name="lock" size={14} color="#fff" />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+      {/* Slots */}
+      <ScrollView contentContainerStyle={styles.slotsContainer}>
+        {schedule.map(({ time, status }, index) => {
+          const isSelected = selectedSlot === time;
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.slotBox,
+                status === 'available' ? styles.availableSlot : styles.busySlot,
+                isSelected && styles.selectedSlot,
+              ]}
+              disabled={status === 'busy'}
+              onPress={() => {
+                if (status === 'available') {
+                  setSelectedSlot(time);
+                  setModalVisible(true);
+                }
+              }}
+            >
+              <Text style={status === 'available' ? styles.availableText : styles.busyText}>
+                {time}
+              </Text>
+              {status === 'busy' && <FontAwesome5 name="lock" size={16} color="#5B21B6" />}
+              {isSelected && <FontAwesome5 name="check-circle" size={20} color="#086189" />}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
+
+      {/* Modal لتأكيد وضع الوقت busy */}
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Mark {selectedSlot} as Busy?</Text>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalBtn} onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[styles.modalBtn, styles.modalConfirmBtn]} onPress={markSlotBusy}>
+                <Text style={[styles.modalBtnText, { color: '#fff' }]}>Confirm</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
+const LegendItem = ({ color, label }) => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
+    <View style={{ width: 20, height: 20, backgroundColor: color, marginRight: 6, borderRadius: 5, elevation: 3 }} />
+    <Text style={{ color: '#333', fontWeight: '600', fontSize: 14 }}>{label}</Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#f0f4f8' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    backgroundColor: '#086189',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colors.shineBlue,
-  },
-  scheduleContainer: {
-    flex: 1,
-    padding: 16,
-  },
+  backBtn: { marginRight: 15 },
+  headerText: { fontSize: 22, color: '#fff', fontWeight: '700' },
   legend: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    padding: 15,
+    borderBottomColor: '#ddd',
+    borderBottomWidth: 1,
+    backgroundColor: '#fff',
   },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  legendText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  timeSlotsContainer: {
+  slotsContainer: {
+    padding: 15,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  timeSlot: {
-    width: '48%',
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 8,
+  slotBox: {
+    width: '30%',
+    paddingVertical: 15,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 15,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
   availableSlot: {
-    backgroundColor: '#E8F5E9',
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
+    backgroundColor: '#A4C8E1',
+    borderColor: '#003B5C',
+    borderWidth: 1.5,
   },
-  bookedSlot: {
-    backgroundColor: '#2196F3',
+  busySlot: {
+    backgroundColor: '#D1C4E9',
+    borderColor: '#7E57C2',
+    borderWidth: 1.5,
   },
-  blockedSlot: {
-    backgroundColor: '#FFCDD2',
-    borderWidth: 1,
-    borderColor: '#EF9A9A',
-  },
-  timeText: {
-    fontSize: 16,
-    fontWeight: '500',
+  selectedSlot: {
+    borderColor: '#086189',
+    borderWidth: 2.5,
   },
   availableText: {
-    color: '#2E7D32',
+    color: '#003B5C',
+    fontWeight: '600',
+    fontSize: 16,
   },
-  bookedText: {
-    color: '#fff',
+  busyText: {
+    color: '#512DA8',
+    fontWeight: '600',
+    fontSize: 16,
   },
-  blockedText: {
-    color: '#C62828',
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 25,
+    elevation: 7,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 7,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    backgroundColor: '#ccc',
+  },
+  modalConfirmBtn: {
+    backgroundColor: '#086189',
+  },
+  modalBtnText: {
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
 
-export default TodaySchedule; 
+export default TodaySchedule;

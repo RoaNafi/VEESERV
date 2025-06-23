@@ -15,27 +15,30 @@ import WorkshopCard from "../../Components/WorkshopCard/WorkshopCard";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import Filter from "../Home/ResultOperation/Filter";
-import Sort from "../Home/ResultOperation/Sort";
+import Filter from "../Book/ResultOperation/Filter";
+import Sort from "../Book/ResultOperation/Sort";
 import Colors from "../../Components/Colors/Colors";
 
-// دالة لتحويل الوقت من AM/PM إلى 24 ساعة
 const convertTo24HourFormat = (time) => {
-  const [timeStr, modifier] = time.split(" "); // فصل الوقت عن AM/PM
-  let [hours, minutes] = timeStr.split(":"); // تقسيم الساعة والدقائق
-
-  if (modifier === "PM" && hours !== "12") {
-    hours = (parseInt(hours) + 12).toString(); // تحويل للـ 24 ساعة
-  } else if (modifier === "AM" && hours === "12") {
-    hours = "00"; // تحويل الساعة 12 AM إلى 00
+  if (typeof time !== "string" || !time.includes(" ")) {
+    return null; // لا وقت صالح، لا تحويل
   }
 
-  return `${hours}:${minutes}`; // إعادة الوقت في تنسيق 24 ساعة
+  const [timeStr, modifier] = time.split(" ");
+  let [hours, minutes] = timeStr.split(":");
+
+  if (modifier === "PM" && hours !== "12") {
+    hours = (parseInt(hours) + 12).toString();
+  } else if (modifier === "AM" && hours === "12") {
+    hours = "00";
+  }
+
+  return `${hours}:${minutes}`;
 };
 
 const AvailableMechanic = ({ route, navigation }) => {
-  const { date, timeSlots } = route.params;
-  console.log("date:", date, "time", timeSlots);
+const { date = null, timeSlots = [] , subcategoryIds } = route.params || {};
+  console.log("date:", date, "time", timeSlots , "subcategoryIds:", subcategoryIds);
 
   const [rawWorkshops, setRawWorkshops] = useState({
     perfectMatch: [],
@@ -61,14 +64,36 @@ const AvailableMechanic = ({ route, navigation }) => {
   const searchBarWidth = useRef(new Animated.Value(1)).current;
   const [selectedTab, setSelectedTab] = useState('available');
   const borderAnim = useRef(new Animated.Value(0)).current;
+const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّن الورش الجديدة
 
-  // تحويل الوقت إلى تنسيق 24 ساعة قبل الإرسال
-  const convertedTimeSlots = timeSlots.map((time) =>
-    convertTo24HourFormat(time)
-  );
+  // لو الوقت فاضي أو مش موجود خليه فاضي ما يحول ولا شي
+   // لو timeSlots مش موجودة أو مش مصفوفة نستخدم مصفوفة فاضية
+  const safeTimeSlots = Array.isArray(timeSlots) ? timeSlots : [];
+
+  // الفلترة والتحويل بأمان
+  const convertedTimeSlots = safeTimeSlots
+    .filter(t => typeof t === "string" && t.includes(" "))
+    .map(t => convertTo24HourFormat(t))
+    .filter(t => t !== null);
+
+  const formattedTimeSlots = convertedTimeSlots.length > 0
+    ? convertedTimeSlots.join(", ")
+    : "";
+
+  const [selectedTimeSlot, setSelectedTimeSlot] = React.useState(() => {
+    if (
+      safeTimeSlots.length > 0 &&
+      typeof safeTimeSlots[0] === "string" &&
+      safeTimeSlots[0].includes(" ")
+    ) {
+      const converted = convertTo24HourFormat(safeTimeSlots[0]);
+      return converted !== null ? converted : null;
+    }
+    return null;
+  });
+
   //console.log("Converted time slots:", convertedTimeSlots);
   // إذا كانت timeSlots تحتوي على عدة أوقات، سنحولها إلى سلسلة مفصولة بفواصل
-  const formattedTimeSlots = convertedTimeSlots.join(", "); // جعلها سلسلة نصية مفصولة بفواصل
   //console.log("Formatted time slots:", formattedTimeSlots);
   const transform = (list) => {
     //console.log("\n=== TRANSFORM INPUT ===");
@@ -81,8 +106,18 @@ const AvailableMechanic = ({ route, navigation }) => {
         workshop_name: item.workshop_name || "Workshop",
         rate: item.rate || item.rating || 0,
         workshop_id: item.workshop_id,
-        services: item.services || []
-      };
+        workshop_image: item.profile_picture || "",
+        distance: item.distance_km || 0,  
+        city : item.city || "Unknown City",
+        street: item.street || "Unknown Street",
+        mobileAssistance: item.mobile_assistance || false,
+
+ services: (item.services || []).map(s => ({
+        service_id: s.service_id || s.id,
+        name: s.service_name || s.name || "Service",
+        price: s.price || 0,
+      })),      };
+      console.log("serveices:", result.services);
       //console.log("Transformed result:", JSON.stringify(result, null, 2));
       return result;
     });
@@ -171,6 +206,50 @@ const AvailableMechanic = ({ route, navigation }) => {
       setLoading(false);
     }
   };
+const fetchWorkshopsWithoutDate = async () => {
+  setLoading(true);
+  try {
+    const token = await AsyncStorage.getItem("accessToken");
+
+    if (!subcategoryIds || subcategoryIds.length === 0) {
+      throw new Error("No subcategory IDs provided");
+    }
+
+    const formattedIds = Array.isArray(subcategoryIds) ? subcategoryIds.join(",") : subcategoryIds;
+
+    const response = await axios.get(
+      `http://176.119.254.225:80/search/workshops/search`,
+      {
+        params: { subcategoryIds: formattedIds },
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const workshops = response.data.workshops || [];
+    console.log("Fetched workshops:", workshops);
+
+    const transformedWorkshops = transform(workshops);
+    setFetchedWorkshops(transformedWorkshops);
+    console.log("Transformed workshops:", transformedWorkshops); // اطبع هنا بدل الحالة
+    
+
+    // تطبيق الفلترة إذا حابب
+    const filtered = transformedWorkshops.filter((w) => {
+      if (selectedRating && w.rate < selectedRating) return false;
+      if (selectedDistance && w.distanceKm > selectedDistance) return false;
+      return true;
+    });
+
+    // ممكن تحط setFilteredWorkshops هنا لو بدك تستخدمها
+
+  } catch (error) {
+    console.error("❌ Error fetching basic workshops:", error);
+    Alert.alert("Error", "Failed to fetch workshops without date.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Update sorting functions
   const sortWorkshops = (workshops, sortOption) => {
@@ -288,7 +367,7 @@ const AvailableMechanic = ({ route, navigation }) => {
     }
   }, [selectedRating, selectedDistance]);
 
-  const handleBookPress = (data) => {
+  const handleBookPress = (data  ,selectedTimeSlot) => {
     // Ensure services data is properly structured
     const formattedData = {
       ...data,
@@ -302,7 +381,7 @@ const AvailableMechanic = ({ route, navigation }) => {
     navigation.navigate("BookSummary", {
       data: formattedData,
       date,
-      timeSlots,
+      timeSlots: selectedTimeSlot,
     });
   };
 
@@ -314,16 +393,24 @@ const AvailableMechanic = ({ route, navigation }) => {
       workshop_name: data.workshop_name,
       rate: data.rate,
       image: data.image,
-      services: data.services || []
+      city: data.city || "Unknown City",
+      street: data.street || "Unknown Street",
+      services: data.services || [],
+       date,
+      timeSlots,
     };
     
     navigation.navigate("WorkshopDetails", { workshopData });
   };
 
-  
   useEffect(() => {
+  if (date && formattedTimeSlots.length > 0) {
     fetchAvailableWorkshops();
-  }, [selectedRating, selectedDistance]);
+  } else {
+    fetchWorkshopsWithoutDate();
+  }
+}, [selectedRating, selectedDistance, date, formattedTimeSlots]);
+
 
   const handleBookMultiple = (combo) => {
     navigation.navigate("SplitBookingPage", {
@@ -713,6 +800,23 @@ const AvailableMechanic = ({ route, navigation }) => {
           </Animated.View>
         </View>
       )}
+{/* التاب الخاص بالورش الجديدة */}
+{fetchedWorkshops.length > 0 && (
+  <View style={{ marginTop: 10 }}>
+   
+    <FlatList
+      data={fetchedWorkshops}
+      keyExtractor={item => item.workshop_id.toString()}
+      renderItem={({ item }) => (
+        <WorkshopCard workshop={item}
+        data={item} // تمرير البيانات الكاملة للورشة
+
+        onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
+        onShopPress={() => handleShopPress(data)} />
+      )}
+    />
+  </View>
+)}
 
       {/* --- WORKSHOP LIST OR SCHEDULED SERVICES --- */}
       {selectedTab === 'available' ? (
@@ -763,23 +867,29 @@ const AvailableMechanic = ({ route, navigation }) => {
           }}
           renderItem={({ item }) => {
             if (item.type === 'perfect') {
-              const service = item.item.service || item.item.services?.[0] || {};
+const service = item.item.service || item.item.services?.[0] || {};
               const data = {
                 image: item.item.workshop_image || "",
                 workshop_name: item.item.workshop_name || "unknow",
                 rate: item.item.rate || 0,
                 workshop_id: item.item.workshop_id,
-                services: item.item.services ? item.item.services.map(s => ({
-                  name: s.name,
-                  price: s.price,
-                  service_id: s.service_id || s.id
-                })) : []
+                city: item.item.city || "Unknown City",
+                street: item.item.street || "Unknown Street",
+           services: (item.item.services ||  []).map(s => ({
+  name: s.name,
+  price: s.price,
+  service_id: s.service_id || s.id
+}))
+
+
               };
 
               return (
                 <WorkshopCard
-                  data={data}
-                  onBookPress={() => handleBookPress(data)}
+                  data={data }
+                  date={date}
+                  timeSlots={timeSlots}
+  onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
                   onShopPress={() => handleShopPress(data)}
                 />
               );

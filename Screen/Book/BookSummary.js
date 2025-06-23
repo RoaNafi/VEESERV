@@ -35,6 +35,7 @@ const responsiveFontSize = width * 0.04; // 4% of screen width
 
 const Book = ({ route, navigation }) => {
   const { data, date, timeSlots } = route.params;
+
   const { service_name, workshop_name, price, service_id, workshop_id } = data;
   const [showConfirmation, setShowConfirmation] = useState(false);
 

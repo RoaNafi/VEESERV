@@ -43,8 +43,9 @@ import PindingRequests from "./Screen/WorkshopHome/PindingRequests";
 import Subcategory from "./Screen/Home/Subcategory";
 import CompanyLegal from "./Screen/Profile/CompanyLegal";
 import Appointments from "./Screen/WorkshopHome/Appointments";
-
-
+import SearchResult from "./Screen/Home/SearchResult";
+import GenerateReportScreen from "./Screen/WorkshopHome/GenerateReportScreen";
+import TodaySchedule from "./Screen/WorkshopHome/TodaySchedule";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -337,7 +338,24 @@ export default function App() {
               component={PindingRequests}
               options={{ headerShown: true, title: "Requests" }}
             />
-          </Stack.Navigator>
+          <Stack.Screen
+            name="SearchResult"
+            component={SearchResult}
+            options={{ headerShown: true, title: "Search Results" }}
+          />
+            <Stack.Screen
+              name="TodaySchedule"  
+              component={TodaySchedule}
+              options={{ headerShown: true, title: "Today's Schedule" }}
+            />
+            <Stack.Screen
+              name="GenerateReportScreen"
+              component={GenerateReportScreen}
+              options={{ headerShown: true, title: "Generate Report" }}
+            />
+            
+                    </Stack.Navigator>
+
         </NavigationContainer>
       </View>
     </ActionSheetProvider>

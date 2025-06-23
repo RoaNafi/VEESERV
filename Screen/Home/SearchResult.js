@@ -1,70 +1,128 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Animated } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Animated,FlatList , Image ,Modal , Alert  } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from '../../Components/Colors/Colors';
 import ServiceCard from '../../Components/ServiceCard/ServiceCard';
-import WorkshopCardSearch from '../../Components/WorkshopCardSearch/WorkshopCardSearch';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+const WorkshopCard = ({ item }) => {
+  const [fav, setFav] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+ const [serviceModalVisible, setServiceModalVisible] = useState(false);
+const [selectedServices, setSelectedServices] = useState([]);
+const handleFav = async () => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
 
-// Mockup data for testing
-const mockServices = [
-  {
-    service_id: 1,
-    service_name: "Basic Car Wash",
-    service_description: "Complete exterior wash and interior cleaning",
-    price: 50,
-    rating: 4.5,
-    distance: "2.5 km",
-    image: "https://example.com/carwash.jpg",
-    available: true
-  },
-  {
-    service_id: 2,
-    service_name: "Oil Change Service",
-    service_description: "Full synthetic oil change with filter replacement",
-    price: 120,
-    rating: 4.8,
-    distance: "1.8 km",
-    image: "https://example.com/oilchange.jpg",
-    available: true
-  },
-  {
-    service_id: 3,
-    service_name: "Tire Rotation",
-    service_description: "Tire rotation and balance service",
-    price: 80,
-    rating: 4.2,
-    distance: "3.2 km",
-    image: "https://example.com/tirerotation.jpg",
-    available: false
-  }
-];
+    if (!fav) {
+      await axios.post(
+        'http://176.119.254.225:80/favourite/favorite',
+        { workshop_id: item.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setFav(true);
+      Alert.alert('Added to Favorites ❤️', `${item.name} has been added to your favorites.`);
+    } else {
+      // إزالة من المفضلة
+      await axios.delete(
+        `http://176.119.254.225:80/favourite/favorite/${item.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setFav(false);
+      Alert.alert('Removed from Favorites 💔', `${item.name} has been removed from your favorites.`);
+    }
 
-const mockWorkshops = [
-  {
-    workshop_id: 1,
-    workshop_name: "AutoCare Center",
-    rate: 4.7,
-    address_id: "Tel Aviv, Allenby St. 123",
-    image: "",
-    services: ["Car Wash", "Oil Change", "Tire Service", "Brake Service"]
-  },
-  {
-    workshop_id: 2,
-    workshop_name: "Quick Fix Garage",
-    rate: 4.3,
-    address_id: "Jerusalem, Jaffa St. 45",
-    image: "",
-    services: ["Engine Repair", "Brake Service", "AC Service", "Paint Work"]
-  },
-  {
-    workshop_id: 3,
-    workshop_name: "Premium Auto Service",
-    rate: 4.9,
-    address_id: "Haifa, Herzl St. 78",
-    image: "",
-    services: ["Luxury Car Service", "Paint Work", "Detailing", "Engine Tuning"]
+  } catch (error) {
+    if (error.response && error.response.status === 409) {
+      setFav(true);
+      Alert.alert('Already in Favorites 🩷', `${item.name} is already in your favorites.`);
+    } else {
+      console.error('Error toggling favorite:', error);
+      Alert.alert('Error', 'Could not update favorites');
+    }
   }
-];
+};
+
+
+  return (
+    <View style={styles.card}>
+    <Image 
+  source={item.image 
+    ? { uri: item.image } 
+    : { uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s" }
+  } 
+  style={styles.image} 
+/>
+
+
+      <View style={styles.info}>
+        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.address}>{item.city || 'No city'}, {item.street || 'No street'}</Text>
+                 <View style={styles.ratingContainer}>
+  <Ionicons name="star" size={14} color="#FFD700" style={{ marginRight: 4 }} />
+  <Text style={styles.rate}>Rate: {item.rate ? item.rate.toFixed(1) : 'N/A'}</Text>
+</View>
+
+        <View style={styles.buttonsRow}>
+       <TouchableOpacity
+  style={styles.servicesBtn}
+  onPress={() => {
+    const list = item.services_list?.split(',').map(s => s.trim()) || [];
+    setSelectedServices(list);
+    setServiceModalVisible(true);
+  }}
+>
+  <Text style={styles.servicesBtnText}>See Services</Text>
+</TouchableOpacity>
+
+
+          <TouchableOpacity onPress={handleFav}>
+  <Ionicons 
+    name={fav ? 'heart' : 'heart-outline'} 
+    size={28} 
+    color={fav ? 'red' : 'gray'} 
+  />
+</TouchableOpacity>
+
+        </View>
+      </View>
+      
+      {/* مودال عرض الخدمات */}
+     <Modal
+  visible={serviceModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setServiceModalVisible(false)}
+>
+  <View style={{
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'
+  }}>
+    <View style={{
+      backgroundColor: 'white', padding: 20, borderRadius: 10, width: '85%', maxHeight: '70%'
+    }}>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Available Services</Text>
+
+      <ScrollView style={{ marginBottom: 20 }}>
+        {selectedServices.length > 0 ? selectedServices.map((s, idx) => (
+          <Text key={idx} style={{ marginBottom: 5, fontSize: 15 }}>• {s}</Text>
+        )) : (
+          <Text>No services listed</Text>
+        )}
+      </ScrollView>
+
+      <TouchableOpacity
+        onPress={() => setServiceModalVisible(false)}
+        style={{ backgroundColor: '#086189', padding: 12, borderRadius: 8, alignItems: 'center' }}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
+    </View>
+  );
+};
 
 const SearchResult = ({
   searchResults,
@@ -74,7 +132,6 @@ const SearchResult = ({
 }) => {
   const [selectedTab, setSelectedTab] = useState('services');
   const borderAnim = useRef(new Animated.Value(0)).current;
-
   const animateBorder = (toValue) => {
     Animated.spring(borderAnim, {
       toValue,
@@ -83,14 +140,22 @@ const SearchResult = ({
       friction: 7,
     }).start();
   };
+ const [serviceModalVisible, setServiceModalVisible] = useState(false);
+const [selectedServices, setSelectedServices] = useState([]);
+
+const handleSeeServices = (servicesString) => {
+  const servicesArray = servicesString ? servicesString.split(',').map(s => s.trim()) : [];
+  setSelectedServices(servicesArray);
+  setServiceModalVisible(true);
+};
 
   React.useEffect(() => {
     animateBorder(selectedTab === 'services' ? 0 : 1);
   }, [selectedTab]);
 
-  // Use mock data if searchResults is empty
-  const displayServices = searchResults?.services?.length > 0 ? searchResults.services : mockServices;
-  const displayWorkshops = searchResults?.workshops?.length > 0 ? searchResults.workshops : mockWorkshops;
+  const results = Array.isArray(searchResults) ? searchResults : [];
+const displayServices = results.filter(item => item.type === 'subcategory');
+const displayWorkshops = results.filter(item => item.type === 'workshop');
 
   return (
     <View style={styles.container}>
@@ -148,19 +213,32 @@ const SearchResult = ({
 
           <ScrollView style={styles.scroll}>
             {selectedTab === 'services' ? (
-              displayServices.map((result) => (
-                <ServiceCard
-                  key={`service-${result.service_id}`}
-                  data={result}
-                />
-              ))
+              displayServices.length > 0 ? (
+                displayServices.map((result) => (
+                  <ServiceCard
+                    key={`service-${result.id}`}
+                    data={result}
+                  />
+                ))
+              ) : (
+                <Text style={styles.noResultText}>No services found.</Text>
+              )
             ) : (
-              displayWorkshops.map((result) => (
-                <WorkshopCardSearch
-                  key={`workshop-${result.workshop_id}`}
-                  data={result}
-                />
-              ))
+              displayWorkshops.length > 0 ? (
+               displayWorkshops.map(result => (
+
+<WorkshopCard
+  key={`workshop-${result.id}`}
+  item={result}
+/>
+
+
+
+
+                ))
+              ) : (
+                <Text style={styles.noResultText}>No workshops found.</Text>
+              )
             )}
           </ScrollView>
         </>
@@ -168,6 +246,7 @@ const SearchResult = ({
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -200,6 +279,102 @@ const styles = StyleSheet.create({
   selectedTabText: {
     color: Colors.blue,
   },
+   card: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    elevation: 3, // ظل بسيط أندرويد
+    shadowColor: '#000', // ظل iOS
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    
+  minHeight: 150, // 👈 يعطيه شوي طول إضافي
+},
+
+ 
+  image: {
+    width: 100,
+    height: 100,
+  },
+  info: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  name: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  address: {
+    color: '#666',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  rate: {
+    color: '#444',
+    fontWeight: '600',
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  servicesBtn: {
+    backgroundColor: '#086189',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+  },
+  servicesBtnText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+    ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalContent: {
+  width: '85%',
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 20,
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 10,
+  textAlign: 'center',
+},
+serviceItem: {
+  fontSize: 15,
+  paddingVertical: 4,
+},
+closeBtn: {
+  backgroundColor: '#086189',
+  padding: 12,
+  borderRadius: 8,
+  marginTop: 15,
+  alignItems: 'center',
+},
+closeBtnText: {
+  color: '#fff',
+  fontWeight: 'bold',
+},
+rate: {
+  fontSize: 14,
+  color: '#444',
+},
 });
+
 
 export default SearchResult;

@@ -122,4 +122,111 @@ export default StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+ otherTimesButton: {
+  marginTop: 8,
+  paddingVertical: 8,
+  borderRadius: 15,
+  backgroundColor: '#003B5C', // لون بنفسجي كلاسيك مريح
+  alignItems: 'center',
+  justifyContent: 'center',
+  shadowColor: '#003B5C',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5, // للظل ع أندرويد
+},
+
+otherTimesText: {
+  color: 'white',
+  fontWeight: '600',
+  fontSize: 14,
+  letterSpacing: 0.5,
+  textAlign: 'center',
+  paddingHorizontal: 10, // padding horizontal for better touch area
+},
+
+ modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)', // خلفية شفافة سوداوية
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '70%',
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 15,
+    textAlign: 'center',
+        color: '#003B5C',
+
+  },
+  timeItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  timeText: {
+    fontSize: 16,
+    color: '#003B5C',
+    textAlign: 'center',
+  },
+  closeButton: {
+    marginTop: 15,
+    backgroundColor: '#003B5C',
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  noTimesText: {
+    textAlign: 'center',
+    color: '#555',
+    fontSize: 16,
+    marginVertical: 10,
+  },
+ 
+timeSlotText: {
+  fontSize: 14,
+  color: '#003B5C',
+},
+timeSlot: {
+  backgroundColor: '#E0F2FE',
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  borderRadius: 10,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderColor: '#38BDF8',
+  borderWidth: 1,
+  marginBottom: 10,
+  width: '30%',
+},
+
+timeSlotSelected: {
+  backgroundColor: '#0C4A6E', // لون مختار
+  borderColor: '#0C4A6E',
+},
+
+
+
+timeSlotTextSelected: {
+  color: 'white',
+},
+
 });

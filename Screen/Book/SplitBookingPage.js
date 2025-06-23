@@ -117,6 +117,7 @@ const SplitBookingPage = ({ route, navigation }) => {
         );
 
         setSelectedCar(res.data);
+        console.log("🚗 Default car fetched:", res.data);
       } catch (err) {
         console.error("Error fetching default car:", err);
       }
@@ -126,39 +127,42 @@ const SplitBookingPage = ({ route, navigation }) => {
   }, []);
 
   // دالة عرض اختيار السيارة
-  const handleOpenCarPicker = async () => {
-    try {
-      const userId = await AsyncStorage.getItem("userId");
-      const res = await axios.get(
-        `http://176.119.254.225:80/vehicle/vehicles/${userId}`
-      );
+const handleOpenCarPicker = async () => {
+  try {
+    const userId = await AsyncStorage.getItem("userId");
+    const res = await axios.get(`http://176.119.254.225:80/vehicle/vehicles/${userId}`);
 
-      setAllCars(res.data);
+    setAllCars(res.data);
 
-      const options = res.data.map(
-        (car) => `${car.make} ${car.model} (${car.year})`
-      );
-      options.push("Cancel");
+    const options = res.data.map(
+      (car) => `${car.make} ${car.model} (${car.year})`
+    );
+    options.push("Cancel");
 
-      showActionSheetWithOptions(
-        {
-          options,
-          cancelButtonIndex: options.length - 1,
-          title: "Select a Car",
-        },
-        (selectedIndex) => {
-          if (
-            selectedIndex !== undefined &&
-            selectedIndex !== options.length - 1
-          ) {
-            setSelectedCar(res.data[selectedIndex]);
-          }
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: options.length - 1,
+        title: "Select a Car",
+      },
+      (selectedIndex) => {
+        if (
+          selectedIndex !== undefined &&
+          selectedIndex !== options.length - 1
+        ) {
+          const selected = res.data[selectedIndex];
+          setSelectedCar({
+            ...selected,
+            vehicle_id: selected.vehicle_id || selected.id
+          });
         }
-      );
-    } catch (err) {
-      console.error("Error fetching all vehicles:", err);
-    }
-  };
+      }
+    );
+  } catch (err) {
+    console.error("Error fetching all vehicles:", err);
+  }
+};
+
 
   // دالة جلب الموقع الحالي والعنوان
   const handleGetLocation = async () => {
@@ -246,10 +250,10 @@ const SplitBookingPage = ({ route, navigation }) => {
         return;
       }
 
-      if (!address.street) {
-        Alert.alert("Please provide a location");
-        return;
-      }
+      // if (!address.street) {
+      //   Alert.alert("Please provide a location");
+      //   return;
+      // }
 
       const userId = await AsyncStorage.getItem("userId");
       const payload = {
@@ -257,7 +261,7 @@ const SplitBookingPage = ({ route, navigation }) => {
           workshop_id: item.workshop_id,
           scheduled_date: date,
           time: item.time || timeSlots[item.workshop_id],
-          vehicle_id: selectedCar?.vehicle_id,
+vehicle_id: selectedCar?.vehicle_id || selectedCar?.id,
           services: Array.isArray(item.services)
             ? item.services.map((service) => ({
                 service_id: service.id || service.service_id,
@@ -290,6 +294,7 @@ const SplitBookingPage = ({ route, navigation }) => {
       if (response.status === 201) {
         setShowConfirmation(true);
       }
+
     } catch (err) {
       console.error("❌ Booking failed:", err.response?.data || err.message);
       Alert.alert(
@@ -299,14 +304,32 @@ const SplitBookingPage = ({ route, navigation }) => {
     }
   };
 
-  const handleGoToHome = () => {
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs', state: { routes: [{ name: 'Home' }], index: 0 } }],
-      })
-    );
-  };
+ 
+  const handleGoToHome = async () => {
+    try {
+      // Clear the cart first
+      const token = await AsyncStorage.getItem('accessToken');
+      if (token) {
+        await axios.delete('http://176.119.254.225:80/cart/clear-cart', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+    }
+    
+        // Then navigate home
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs', state: { routes: [{ name: 'Home' }], index: 0 } }],
+          })
+        );
+      };
+  
+   
 
   return (
     <SafeAreaView style={styles.safeArea}>

@@ -23,6 +23,7 @@ const PindingRequests = () => {
         },
       });
       setBookings(res.data.bookings);
+      console.log('Fetched bookings:', res.data.bookings); // تحقق من البيانات المسترجعة      
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {
