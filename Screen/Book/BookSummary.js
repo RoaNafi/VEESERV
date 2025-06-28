@@ -34,14 +34,18 @@ const responsiveFontSize = width * 0.04; // 4% of screen width
 
 
 const Book = ({ route, navigation }) => {
-  const { data, date, timeSlots } = route.params;
+const { data, date,  timeSlots } = route.params;
+console.log("summary data:", data );
+console.log("summary date:", date );
+console.log("summary timeSlots:", timeSlots );
+
 
   const { service_name, workshop_name, price, service_id, workshop_id } = data;
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  //console.log("Workshop Data:", data);
-  //console.log("Date:", date);
-  //console.log("Time Slots:", timeSlots);
+  console.log("Workshop Data:", data);
+  console.log("Date:", date);
+  console.log("Time Slots:", timeSlots);
   console.log("Initial Car:", selectedCar);
 
   // Initialize with service from route params
@@ -477,6 +481,21 @@ const Book = ({ route, navigation }) => {
       }
     }, [allCars.length, selectedCar])
   );
+  const formatDate = (date) => {
+  if (!date) return 'No Date';
+  if (typeof date === 'string') {
+    try {
+      return new Date(date).toDateString();
+    } catch (e) {
+      return date;
+    }
+  }
+  if (date instanceof Date) {
+    return date.toDateString();
+  }
+  return 'Invalid Date';
+};
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -550,7 +569,7 @@ const Book = ({ route, navigation }) => {
             <View style={styles.bookingDetails}>
               <View style={styles.detailRow}>
                 <Ionicons name="calendar-outline" size={16} color="#086189" />
-                <Text style={styles.detailText}>{date}</Text>
+<Text>{formatDate(date)}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Ionicons name="time-outline" size={16} color="#086189" />

@@ -5,11 +5,13 @@ import styles from "./WorkshopCardStyle";
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import { isDate } from "moment/moment";
 
 const WorkshopCard = ({ data = {}, date, timeSlots, onBookPress, onShopPress, route }) => {
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-
+const actualDate = selectedDate || date;
+  console.log('Selected Date:', selectedDate);
   const [modalVisible, setModalVisible] = useState(false);
   const [availableHours, setAvailableHours] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,48 +44,57 @@ const WorkshopCard = ({ data = {}, date, timeSlots, onBookPress, onShopPress, ro
       ? services_list.split(',').map(s => s.trim())
       : [];
 
+const fetchAvailableHours = async (selectedDate) => {
+  const formattedDate = typeof selectedDate === 'string'
+    ? selectedDate
+    : selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  console.log('Fetching available hours for date:', formattedDate);
 
-  const fetchAvailableHours = async () => {
-    if (!workshop_id || !date) {
-      console.warn('Missing workshop_id or date');
-      return;
+  if (!workshop_id || !formattedDate) {
+    console.warn('Missing workshop_id or date');
+    return;
+  }
+  console.log('Workshop ID:', workshop_id);
+  console.log('Formatted Date:', formattedDate);
+  setLoading(true);
+  setError(null);
+
+  try {
+    const res = await axios.get(`http://176.119.254.225:80/mechanic/workshop/${workshop_id}/hours`, {
+      params: { date: formattedDate }
+    });
+
+    const allSlots = [];
+    for (const period of res.data.available_hours) {
+      const slots = generateTimeSlots(period.start_time, period.end_time);
+      allSlots.push(...slots);
     }
 
-    setLoading(true);
-    setError(null);
+    setAvailableHours(allSlots);
+  } catch (err) {
+    console.error(err);
+    setError('Failed to load hours');
+    setAvailableHours([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    try {
-      const res = await axios.get(`http://176.119.254.225:80/mechanic/workshop/${workshop_id}/hours`, {
-        params: { date }
-      });
 
-      console.log('Raw workshop hours:', res.data);
-
-      const allSlots = [];
-      for (const period of res.data.available_hours) {
-        const slots = generateTimeSlots(period.start_time, period.end_time);
-        allSlots.push(...slots);
-      }
-
-      console.log('Generated time slots:', allSlots);
-      setAvailableHours(allSlots);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to load hours');
-      setAvailableHours([]);
-    } finally {
-      setLoading(false);
-    }
-  };
   useEffect(() => {
-    if (modalVisible) {
-      if (!date) {
-        setDatePickerVisible(true);
-      } else {
-        fetchAvailableHours(date);
-      }
+  if (modalVisible) {
+    if (!selectedDate && !date) {
+      setDatePickerVisible(true);
+    } else {
+      const dateToFetch = selectedDate || date;
+      const formatted = typeof dateToFetch === 'string' 
+        ? dateToFetch 
+        : dateToFetch.toISOString().split('T')[0];
+      fetchAvailableHours(formatted);
     }
-  }, [modalVisible]);
+  }
+}, [modalVisible, selectedDate]);
+
   const generateTimeSlots = (start, end, intervalMinutes = 60) => {
     const slots = [];
     let [startHour, startMinute] = start.split(':').map(Number);
@@ -128,14 +139,17 @@ const WorkshopCard = ({ data = {}, date, timeSlots, onBookPress, onShopPress, ro
   }
 
   return (
-    <TouchableOpacity onPress={() => { 
-      if (onShopPress) {
-        // console.log('Pressed card data:-----------------------------------------------');
-        // console.log( data);
-        // console.log('----------------------------------------------');
-        onShopPress();
-      }
-    }} activeOpacity={0.7}>
+  <TouchableOpacity onPress={() => { 
+  if (onShopPress) {
+    onShopPress({
+      data,
+      selectedDate: selectedDate || date,
+      selectedTime: selectedTimeSlot,
+    });
+  }
+}} activeOpacity={0.7}>
+
+
       <View style={styles.card}>
         <Image
           source={
@@ -200,93 +214,107 @@ const WorkshopCard = ({ data = {}, date, timeSlots, onBookPress, onShopPress, ro
 
           <View style={styles.bottomInfo}>
             
+  {!date ? (
+    <>
+      <TouchableOpacity
+        style={styles.otherTimesButton}
+        onPress={() => {
+          setDatePickerVisible(true);
+          setModalVisible(true);
+        }}
+      >
+        <Text style={styles.otherTimesText}>Select Date</Text>
+      </TouchableOpacity>
+    </>
+  ) : (
+    <TouchableOpacity
+      style={styles.otherTimesButton}
+      onPress={onCheckOtherTimes}
+    >
+      <Text style={styles.otherTimesText}>Check Available Times</Text>
+    </TouchableOpacity>
+  )}
 
+<TouchableOpacity
+  style={[styles.bookButton, !actualDate && { opacity: 0.5 }]}
+  disabled={!actualDate}
+  onPress={(e) => {
+    e.stopPropagation();
+    if (onBookPress && actualDate) {
+      console.log("Selected date:", actualDate);
+    }
+    if (selectedTimeSlot && actualDate) {
+      onBookPress(selectedTimeSlot, actualDate);
+    } else {
+      alert("Please select a date before booking.");
+    }
+  }}
+>
 
-            <TouchableOpacity
-              style={styles.otherTimesButton}
-              onPress={onCheckOtherTimes}
-            >
-              <Text style={styles.otherTimesText}>Other Available Times</Text>
-            </TouchableOpacity>
+  <Text style={styles.bookButtonText}>Book</Text>
+</TouchableOpacity>
+ 
+           {/* المودال لاختيار التاريخ والوقت */}
+  <Modal
+    visible={modalVisible}
+    animationType="slide"
+    transparent={true}
+    onRequestClose={() => setModalVisible(false)}
+  >
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <Text style={styles.modalTitle}>Available Times & Date</Text>
 
-            <TouchableOpacity
-              style={styles.bookButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                if (onBookPress) onBookPress(selectedTimeSlot);
-              }}
-            >
-              <Text style={styles.bookButtonText}>Book</Text>
-            </TouchableOpacity>
-            
-            <Modal
-              visible={modalVisible}
-              animationType="slide"
-              transparent={true}
-              onRequestClose={() => setModalVisible(false)}
-            >
-              <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
-                  <Text style={styles.modalTitle}>Available Times & date</Text>
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={(selected) => {
+            setDatePickerVisible(false);
+            setSelectedDate(selected);
+                console.log("Selected date from picker:", selected);  // هان بتطبع التاريخ الفعلي
 
-                  <DateTimePickerModal
-                    isVisible={isDatePickerVisible}
-                    mode="date"
-                    onConfirm={(date) => {
-                      setDatePickerVisible(false);
-                      setSelectedDate(date);
-                      // ممكن تحدث هنا البيانات حسب التاريخ الجديد، مثلاً تجيب الأوقات المتاحة الجديدة
-                      fetchAvailableHours(date);
-                    }}
-                    onCancel={() => setDatePickerVisible(false)}
-                    minimumDate={new Date()}
-                    date={date || new Date()}
-                    themeVariant="light"
-                  />
+            const isoDate = selected.toISOString().split('T')[0]; // YYYY-MM-DD
+            fetchAvailableHours(isoDate);
+            setSelectedTimeSlot(null); // نرجع الاختيار
+          }}
+          onCancel={() => setDatePickerVisible(false)}
+          minimumDate={new Date()}
+          date={selectedDate || new Date()}
+          themeVariant="light"
+        />
 
+        {loading && <ActivityIndicator size="large" color="#4F46E5" />}
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
-                  {loading && <ActivityIndicator size="large" color="#4F46E5" />}
+        {!loading && !error && availableHours.length === 0 && (
+          <Text style={styles.noTimesText}>No available times for this date.</Text>
+        )}
 
-                  {error && <Text style={styles.errorText}>{error}</Text>}
-
-                  {!loading && !error && availableHours.length === 0 && (
-                    <Text style={styles.noTimesText}>No available times for this date.</Text>
-                  )}
-
-                  {!loading && !error && availableHours.length > 0 && (
-                    <FlatList
-                      data={availableHours}
-                      keyExtractor={(item, index) => index.toString()}
-                      numColumns={3}
-                      columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 10 }}
-                      contentContainerStyle={{ paddingHorizontal: 10 }}
-                      renderItem={({ item }) => {
-                        const isSelected = item === selectedTimeSlot;
-
-                        return (
-                          <TouchableOpacity
-                            style={[
-                              styles.timeSlot,
-                              isSelected && styles.timeSlotSelected
-                            ]}
-                            onPress={() => {
-                              setSelectedTimeSlot(item); // لما يختار وقت جديد
-                            }}
-                          >
-                            <Text style={[
-                              styles.timeSlotText,
-                              isSelected && styles.timeSlotTextSelected
-                            ]}>
-                              {item}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      }}
-                    />
-
-
-                  )}
-
+        {!loading && !error && availableHours.length > 0 && (
+          <FlatList
+            data={availableHours}
+            keyExtractor={(item, index) => index.toString()}
+            numColumns={3}
+            columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 10 }}
+            contentContainerStyle={{ paddingHorizontal: 10 }}
+            renderItem={({ item }) => {
+              const isSelected = item === selectedTimeSlot;
+              return (
+                <TouchableOpacity
+                  style={[styles.timeSlot, isSelected && styles.timeSlotSelected]}
+                  onPress={() => setSelectedTimeSlot(item)}
+                >
+                  <Text style={[
+                    styles.timeSlotText,
+                    isSelected && styles.timeSlotTextSelected
+                  ]}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
 
                   <TouchableOpacity
                     onPress={() => setModalVisible(false)}

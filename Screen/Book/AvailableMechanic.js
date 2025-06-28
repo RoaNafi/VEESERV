@@ -50,7 +50,7 @@ const { date = null, timeSlots = [], subcategoryIds } = route.params || {};
   const [selectedTab, setSelectedTab] = useState('available');
   const borderAnim = useRef(new Animated.Value(0)).current;
   const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّن الورش الجديدة
-
+ const[selectedDate, setSelectedDate] = useState(null); // لتخزين التاريخ المختار من الكارد
  const normalizeTimeString = (time) => {
   return time
     .replace(/\u202F/g, " ") // استبدل الـ Narrow No-Break Space بـ Space عادي
@@ -76,11 +76,10 @@ const formattedTimeSlots = safeTimeSlots.length > 0
     const transformed = list.map((item) => {
       //console.log("\nProcessing item:", JSON.stringify(item, null, 2));
       const result = {
-        image: item.workshop_image || "",
         workshop_name: item.workshop_name || "Workshop",
         rate: item.rate || item.rating || 0,
         workshop_id: item.workshop_id,
-        workshop_image: item.profile_picture || "",
+        image: item.profile_picture || "",
         distance: item.distance_km || 0,
         city: item.city || "Unknown City",
         street: item.street || "Unknown Street",
@@ -92,7 +91,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
           price: s.price || 0,
         })),
       };
-      console.log("serveices:", result.services);
+      console.log("services:", result.services);
       //console.log("Transformed result:", JSON.stringify(result, null, 2));
       return result;
     });
@@ -342,7 +341,8 @@ const formattedTimeSlots = safeTimeSlots.length > 0
     }
   }, [selectedRating, selectedDistance]);
 
-  const handleBookPress = (data, selectedTimeSlot) => {
+
+  const handleBookPress = (data, selectedTimeSlot , selectedDate) => {
     // Ensure services data is properly structured
     const formattedData = {
       ...data,
@@ -355,7 +355,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
 
     navigation.navigate("BookSummary", {
       data: formattedData,
-      date,
+      date: selectedDate || date,
       timeSlots: selectedTimeSlot,
     });
   };
@@ -367,7 +367,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
       workshop_id: data.workshop_id,
       workshop_name: data.workshop_name,
       rate: data.rate,
-      image: data.image,
+      image: data.profile_picture,
       city: data.city || "Unknown City",
       street: data.street || "Unknown Street",
       services: data.services || [],
@@ -779,17 +779,19 @@ const formattedTimeSlots = safeTimeSlots.length > 0
       {fetchedWorkshops.length > 0 && (
         <View style={{ marginTop: 10 }}>
 
-          <FlatList
-            data={fetchedWorkshops}
-            keyExtractor={item => item.workshop_id.toString()}
-            renderItem={({ item }) => (
-              <WorkshopCard 
-                workshop={item}
-                data={item} 
-                onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
-                onShopPress={() => handleShopPress(data)} />
-            )}
-          />
+        <FlatList
+  data={fetchedWorkshops}
+  keyExtractor={item => item.workshop_id.toString()}
+  renderItem={({ item }) => (
+    <WorkshopCard 
+      data={item} 
+      onBookPress={(time, actualDate) => handleBookPress(item, time, actualDate)}  // اضفت التاريخ هنا
+      onShopPress={() => handleShopPress(item)} 
+    />
+  )}
+/>
+
+
         </View>
       )}
 
@@ -850,6 +852,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
                 workshop_name: item.item.workshop_name || "unknow",
                 rate: item.item.rate || 0,
                 workshop_id: item.item.workshop_id,
+                profile_picture: item.item.profile_picture || "",
                 city: item.item.city || "Unknown City",
                 street: item.item.street || "Unknown Street",
                 services: (item.item.services || []).map(s => ({
@@ -868,8 +871,8 @@ const formattedTimeSlots = safeTimeSlots.length > 0
                   data={data}
                   date={date}
                   timeSlots={timeSlots}
-                  
-                  onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
+
+                  onBookPress={(time) => handleBookPress(data, time )} // تمرير الوقت المختار من الكارد
                   onShopPress={() => handleShopPress(data)}
                 />
               );
@@ -882,6 +885,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
                   acc[key] = {
                     workshop_id: item.workshop_id,
                     workshop_name: item.workshop_name,
+                    profile_picture: item.profile_picture || "",
                     rate: item.rating,
                     time: item.time,
                     services: [],
@@ -935,6 +939,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
                         }}
                       >
                         <Image
+
                           source={{
                             uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
                           }}

@@ -15,6 +15,10 @@ import {
   Button,
   Alert,
   Platform,
+  TextInput,
+
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,7 +31,9 @@ const MyBookingsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-
+const [isFeedbackModalVisible, setFeedbackModalVisible] = useState(false);
+const [rating, setRating] = useState(0);
+const [feedbackText, setFeedbackText] = useState('');
   const navigation = useNavigation();
  const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
@@ -111,6 +117,33 @@ const [newDate, setNewDate] = useState(new Date());
   }
 };
 
+// 🧠 FEEDBACK SUBMIT HANDLER
+const handleSubmitFeedback = async () => {
+  if (!selectedBooking || !rating || !feedbackText) {
+    alert("Please provide both a rating and a comment");
+    return;
+  }
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    const res = await axios.post('http://176.119.254.225:80/review/review', {
+      workshopId: selectedBooking.workshop_id,
+      serviceId: selectedBooking.services[0]?.service_id || selectedBooking.service_id,
+      rating,
+      comment: feedbackText,
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+     console.log('Feedback submitted:', res.data);
+    alert("Thank you for your feedback!");
+    setFeedbackModalVisible(false);
+    setFeedbackText('');
+    setRating(0);
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    alert("Failed to submit feedback");
+  }
+};
+
 const renderBooking = ({ item }) => (
   <View style={styles.card}>
     <Image source={book} style={styles.image} />
@@ -155,12 +188,27 @@ const renderBooking = ({ item }) => (
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(item)}>
-        <Text style={styles.editText}>Edit Booking</Text>
-      </TouchableOpacity>
+      {(item.booking_status === 'complete paid') && (
+        <TouchableOpacity
+          style={styles.feedbackButton}
+          onPress={() => {
+            setSelectedBooking(item);
+            setFeedbackModalVisible(true);
+          }}
+        >
+          <Text style={styles.feedbackText}>Leave Feedback</Text>
+        </TouchableOpacity>
+      )}
+      {(item.booking_status !== 'complete paid' || item.booking_status === 'pending' || item.status_name === 'not started') && (
+        <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(item)}>
+          <Text style={styles.editText}>Edit Booking</Text>
+        </TouchableOpacity>
+      )}
     </View>
   </View>
 );
+
+
 return (
   <SafeAreaView style={styles.container}>
     <Text style={styles.headerTitle}>My Bookings</Text>
@@ -172,323 +220,352 @@ return (
       contentContainerStyle={{ padding: 16 }}
     />
 
-    {/* Modal */}
-  <Modal visible={modalVisible} transparent animationType="slide">
-  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
-    <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
-      <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Edit Date & Time</Text>
+    <Modal visible={modalVisible} transparent animationType="slide">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Edit Date & Time</Text>
 
-      <TouchableOpacity
-        style={{
-          padding: 12,
-          backgroundColor: '#086189',
-          borderRadius: 8,
-          marginBottom: 10,
-          alignItems: 'center',
-        }}
-        onPress={() => setShowDatePicker(true)}
-      >
-        <Text style={{ color: 'white', fontWeight: '600' }}>Pick Date</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+            <Text style={styles.pickerButtonText}>Pick Date</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={{
-          padding: 12,
-          backgroundColor: '#086189',
-          borderRadius: 8,
-          marginBottom: 20,
-          alignItems: 'center',
-        }}
-        onPress={() => setShowTimePicker(true)}
-      >
-        <Text style={{ color: 'white', fontWeight: '600' }}>Pick Time</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+            <Text style={styles.pickerButtonText}>Pick Time</Text>
+          </TouchableOpacity>
 
-      <Text style={{ textAlign: 'center', marginBottom: 10, fontWeight: '500' }}>
-        Selected: {newDate.toLocaleString()}
-      </Text>
+          <Text style={styles.selectedDateText}>Selected: {newDate.toLocaleString()}</Text>
 
-      <DateTimePickerModal
-        isVisible={showDatePicker}
-        mode="date"
-        date={newDate}
-        onConfirm={(d) => {
-          const updatedDate = new Date(newDate);
-          updatedDate.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
-          setNewDate(updatedDate);
-          setShowDatePicker(false);
-        }}
-        onCancel={() => setShowDatePicker(false)}
-        themeVariant="light"
-      />
+          <DateTimePickerModal
+            isVisible={showDatePicker}
+            mode="date"
+            date={newDate}
+            onConfirm={(d) => {
+              const updatedDate = new Date(newDate);
+              updatedDate.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+              setNewDate(updatedDate);
+              setShowDatePicker(false);
+            }}
+            onCancel={() => setShowDatePicker(false)}
+            themeVariant="light"
+          />
 
-      <DateTimePickerModal
-        isVisible={showTimePicker}
-        mode="time"
-        is24Hour
-        date={newDate}
-        onConfirm={(t) => {
-          const updatedDate = new Date(newDate);
-          updatedDate.setHours(t.getHours(), t.getMinutes());
-          setNewDate(updatedDate);
-          setShowTimePicker(false);
-        }}
-        onCancel={() => setShowTimePicker(false)}
-        themeVariant="light"
-      />
-<View style={styles.modalButtonRow}>
-  <TouchableOpacity style={styles.saveButton} onPress={saveChanges}>
-    <Text style={styles.saveButtonText}>Save Changes</Text>
-  </TouchableOpacity>
+          <DateTimePickerModal
+            isVisible={showTimePicker}
+            mode="time"
+            is24Hour
+            date={newDate}
+            onConfirm={(t) => {
+              const updatedDate = new Date(newDate);
+              updatedDate.setHours(t.getHours(), t.getMinutes());
+              setNewDate(updatedDate);
+              setShowTimePicker(false);
+            }}
+            onCancel={() => setShowTimePicker(false)}
+            themeVariant="light"
+          />
 
-      <TouchableOpacity
-        onPress={() => setModalVisible(false)}
-        style={{
-          marginTop: 10,
-          padding: 12,
-          borderRadius: 8,
-          backgroundColor: '#ccc',
-          alignItems: 'center',
-        }}
-      >
-        <Text>Close</Text>
-      </TouchableOpacity>
+          <View style={styles.modalButtonRow}>
+            <TouchableOpacity style={styles.saveButton} onPress={saveChanges}>
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.cancelButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-    </View>
-  </View>
-</Modal>
+    </Modal>
 
+    <Modal
+      visible={isFeedbackModalVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setFeedbackModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Rate your Experience</Text>
+
+          <TextInput
+            placeholder="Write your feedback..."
+            style={styles.commentInput}
+            multiline
+            value={feedbackText}
+            onChangeText={setFeedbackText}
+          />
+
+          <View style={styles.starsRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                <Ionicons
+                  name={star <= rating ? 'star' : 'star-outline'}
+                  size={30}
+                  color={star <= rating ? '#FFD700' : '#aaa'}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmitFeedback}>
+            <Text style={styles.submitText}>Submit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setFeedbackModalVisible(false)}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   </SafeAreaView>
 );
-};
 
+}
 const styles = StyleSheet.create({
- 
-  
-  
-  serviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginVertical: 4,
-  },
-  serviceText: {
-    fontSize: 14,
-  },
-  editButton: {
-    marginTop: 10,
-    backgroundColor: '#086189',
-    paddingVertical: 8,
-    borderRadius: 5,
-  },
-  editText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '85%',
-  },
-   container: {
+  container: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
+    backgroundColor: '#f5f8fa', // خفيف وحلو للباكجراوند
   },
+
   headerTitle: {
     fontSize: 28,
     fontWeight: "700",
     color: "#086189",
     marginBottom: 12,
     paddingLeft: 8,
+    letterSpacing: 1, // راحة بالعين
   },
+
   headerDivider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#d1d9e6', // فاتح شوي أكتر عشان نظيف
     marginBottom: 20,
     width: '100%',
   },
+
   card: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 20,
-    marginBottom: 16,
-    padding: 16,
+    marginBottom: 18,
+    padding: 20,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#e2e8f0', // هادي وناعمة
   },
+
   image: {
-    width: 90,
-    height: 90,
-    borderRadius: 16,
-    marginRight: 16,
+    width: 95,
+    height: 95,
+    borderRadius: 18,
+    marginRight: 18,
     resizeMode: 'cover',
   },
+
   details: {
     flex: 1,
     justifyContent: 'center',
   },
+
   title: {
     fontWeight: '700',
-    fontSize: 20,
+    fontSize: 22,
     color: '#086189',
+    letterSpacing: 0.5,
   },
+
   car: {
-    color: '#333',
+    color: '#444',
     marginTop: 6,
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
+    opacity: 0.8,
   },
- 
+
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginVertical: 6,
+  },
+
   serviceText: {
     marginLeft: 8,
     color: '#555',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '400',
+    lineHeight: 20,
   },
+
   status: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#228B22',  // green for active or good vibes, can adjust dynamically
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#228B22',
+    letterSpacing: 0.3,
   },
+
   date: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#888',
+    marginTop: 6,
+    fontSize: 13,
+    color: '#777',
+    fontStyle: 'italic',
   },
-   emptyContainer: {
+
+  payNowButton: {
+    marginTop: 14,
+    backgroundColor: '#086189',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    shadowColor: '#086189',
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+
+  payNowText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 17,
+    letterSpacing: 0.8,
+  },
+
+  feedbackButton: {
+    marginTop: 12,
+    backgroundColor: '#086189',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#086189',
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+  },
+
+  feedbackText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+
+  editButton: {
+    marginTop: 14,
+    backgroundColor: '#086189',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#086189',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+  },
+
+  editText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '700',
+    fontSize: 15,
+    letterSpacing: 0.4,
+  },
+
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)', // أغمق شوي للتركيز
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    paddingTop: 100,
-  },
-  emptyText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#086189',
-  },
-  emptySubText: {
-    fontSize: 15,
-    color: '#666',
-    marginTop: 6,
-    textAlign: 'center',
     paddingHorizontal: 20,
   },
-  payNowButton: {
-  marginTop: 10,
-  backgroundColor: '#086189',
-  paddingVertical: 10,
-  borderRadius: 10,
-  alignItems: 'center',
-},
 
-payNowText: {
-  color: '#fff',
-  fontWeight: 'bold',
-  fontSize: 16,
-},
-saveButton : {
-  marginTop: 10,
-  backgroundColor: '#086189',
-  paddingVertical: 10,
-  borderRadius: 10,
-  alignItems: 'center',
-      width: '50%',
-
-},
-saveButtonText: {
-  color: '#fff',  
-  fontWeight: 'bold',
-  fontSize: 16,
-},
-  cancelButton: {
-    marginTop: 10,
-    backgroundColor: '#dc3545',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: '45%',
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  cancelButtonText: {
+
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 25,
+    textAlign: 'center',
+    color: '#086189',
+    letterSpacing: 0.6,
+  },
+
+  commentInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+    textAlignVertical: 'top',
+    minHeight: 90,
+    fontSize: 16,
+  },
+
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
+
+  submitButton: {
+    backgroundColor: '#086189',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#086189',
+    shadowOpacity: 0.5,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+  },
+
+  submitText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 17,
+    letterSpacing: 0.6,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  pickerButton: {
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 10,
+
+  cancelButton: {
+    backgroundColor: '#dc3545',
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
+    shadowColor: '#dc3545',
+    shadowOpacity: 0.5,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
   },
-  pickerButtonText: {
-    color: '#333',
-    fontSize: 16,
+
+  cancelText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 17,
+    letterSpacing: 0.6,
   },
-  selectedDateText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginVertical: 10,
-  },
-modalButtonRow : {
+
+  modalButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,    
-
-},
-dateText: {
-    color: "#086189",
-    fontWeight: "bold",
-    fontSize: 16,
+    marginTop: 20,
   },
-  timeRow: {
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  timeSlot: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#f9f9f9",
-    marginHorizontal: 4,
-    minWidth: 90,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  selectedSlot: {
+  pickerButton: {
     backgroundColor: "#086189",
-    borderColor: "#086189",
-  },
-  timeText: {
-    color: "#444",
-  },
-  selectedText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-pickerButton: {
-  backgroundColor: "#086189",
   paddingVertical: 10,
   paddingHorizontal: 20,
   borderRadius: 10,
@@ -500,7 +577,41 @@ pickerButtonText: {
   fontWeight: "600",
   fontSize: 16,
 },
-
+  selectedDateText: {
+    fontSize: 16,
+    color: "#333",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  saveButton: {
+    backgroundColor: "#28a745",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  cancelButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  cancelButton: {
+    backgroundColor: "#dc3545",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
 
 });
 

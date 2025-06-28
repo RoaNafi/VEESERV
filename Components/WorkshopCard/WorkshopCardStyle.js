@@ -223,5 +223,25 @@ timeSlotSelected: {
 timeSlotTextSelected: {
   color: 'white',
 },
-
+noDateText: {
+  fontSize: 14,
+  color: 'gray',
+  textAlign: 'center',
+  marginBottom: 8,
+},
+otherTimesText: {
+  color: '#003B5C',   
+  fontSize: 14,
+  textAlign: 'center',
+  fontWeight: '500',
+  marginTop: 10,
+  marginBottom: 10,
+  paddingHorizontal: 10, // padding horizontal for better touch area
+  letterSpacing: 0.5,
+  backgroundColor: '#E0F2FE', // لون خلفية خفيف
+  borderRadius: 10, // زوايا دائرية 
+  borderWidth: 1,
+  borderColor: '#38BDF8', // لون الحدود
+  paddingVertical: 6, // padding vertical for better touch area
+},
 });

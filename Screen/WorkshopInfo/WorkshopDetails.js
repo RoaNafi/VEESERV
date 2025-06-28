@@ -76,7 +76,7 @@ const WorkshopDetails = ({ route }) => {
         <Image
           source={{
             uri:
-              workshopData.image ||
+              workshopData.profile_picture ||
               "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
           }}
           style={styles.workshopImage}
