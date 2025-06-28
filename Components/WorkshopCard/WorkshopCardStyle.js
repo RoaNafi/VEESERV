@@ -9,8 +9,9 @@ export default StyleSheet.create({
     borderColor: Colors.lightGray,
     borderRadius: 10,
     marginBottom: 10,
-    marginHorizontal: 1,
+    marginHorizontal:10,
     backgroundColor: "#fff",
+    
     overflow: 'hidden',
     shadowColor: "#000",
     shadowOffset: {
@@ -112,37 +113,31 @@ export default StyleSheet.create({
   },
   bookButton: {
     borderWidth: 1,
-    borderColor: Colors.Gray,
+    borderColor: Colors.blue,
     borderRadius: 15,
     paddingVertical: 3,
     paddingHorizontal: 10,
+    backgroundColor: Colors.blue,
   },
   bookButtonText: {
-    color: Colors.black,
+    color: 'white',
     fontWeight: '600',
     fontSize: 14,
   },
  otherTimesButton: {
-  marginTop: 8,
-  paddingVertical: 8,
-  borderRadius: 15,
-  backgroundColor: '#003B5C', // لون بنفسجي كلاسيك مريح
-  alignItems: 'center',
-  justifyContent: 'center',
-  shadowColor: '#003B5C',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-  elevation: 5, // للظل ع أندرويد
+  paddingVertical: 3,
+  //paddingHorizontal: 10,
+  
 },
 
 otherTimesText: {
-  color: 'white',
-  fontWeight: '600',
-  fontSize: 14,
+  color: Colors.shineBlue,
+  fontWeight: '500',
+  fontSize: 12,
   letterSpacing: 0.5,
-  textAlign: 'center',
-  paddingHorizontal: 10, // padding horizontal for better touch area
+ // textAlign: 'center',
+//paddingHorizontal: 10, // padding horizontal for better touch area
+  textDecorationLine: 'underline',
 },
 
  modalOverlay: {

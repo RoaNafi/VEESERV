@@ -5,11 +5,6 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from "../../Components/Colors/Colors";
 
-// Static fallback notifications
-const notificationsData = [
-  { id: "3", title: "Mechanic Reply", description: "Your mechanic replied to your message.", read: false },
-];
-
 export default function NotificationsScreen() {
   const [apiNotifications, setApiNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,8 +26,8 @@ export default function NotificationsScreen() {
       // عدل على حسب شكل بياناتك الحقيقية
       const formatted = data.notifications.map(n => ({
         id: n.notification_id.toString(),
-        title: n.message.length > 30 ? n.message.slice(0, 30) + '...' : n.message,
-        description: n.message,
+        title: n.message,
+        description: '',
         read: n.status === 'read',
       }));
 
@@ -47,21 +42,35 @@ export default function NotificationsScreen() {
   fetchNotifications();
 }, []);
 
-  // دمج بيانات الـ API مع الـ static
-  const combinedNotifications = [...apiNotifications, ...notificationsData];
+  // Use only API notifications
+  const combinedNotifications = apiNotifications;
+
+  // Mark notification as read
+  const handlePressNotification = async (item) => {
+    if (!item.read) {
+      try {
+        const token = await AsyncStorage.getItem('accessToken');
+        await axios.patch(`http://176.119.254.225:80/notification/notifications/${item.id}/read`, {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (err) {
+        // Optionally handle error
+      }
+      setApiNotifications((prev) => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
+    }
+  };
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={[styles.notificationCard, item.read ? styles.read : styles.unread]}>
+    <TouchableOpacity style={[styles.notificationCard, item.read ? styles.read : styles.unread]} onPress={() => handlePressNotification(item)}>
       <View style={styles.iconContainer}>
         <Ionicons
           name={item.read ? "notifications-outline" : "notifications"}
-          size={24}
+          size={22}
           color={item.read ? "#888" : "#086189"}
         />
       </View>
       <View style={styles.textContainer}>
         <Text style={[styles.title, !item.read && styles.unreadTitle]}>{item.title}</Text>
-        <Text style={styles.description}>{item.description}</Text>
       </View>
       {!item.read && <View style={styles.dot} />}
     </TouchableOpacity>
@@ -101,45 +110,45 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "700",
     color: "#086189",
-    marginBottom: 12,
-    paddingLeft: 8,
+    marginBottom: 8,
+    paddingLeft: 4,
   },
   headerDivider: {
     height: 1,
     backgroundColor: '#e0e0e0',
-    marginBottom: 20,
+    marginBottom: 12,
     width: '100%',
   },
   notificationCard: {
     flexDirection: "row",
     backgroundColor: Colors.white,
-    padding: 16,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 12,
     marginBottom: 8,
     shadowColor: "#086189",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
     alignItems: "center",
-    marginHorizontal: 10,
+    marginHorizontal: 4,
   },
   iconContainer: {
-    marginRight: 16,
+    marginRight: 12,
   },
   textContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "500",
     color: "#333",
   },
   unreadTitle: {
@@ -151,9 +160,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: "#086189",
   },
   read: {

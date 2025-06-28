@@ -185,7 +185,7 @@ const WorkshopDetails = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    
   },
 
   workshopImage: {
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   },
 
   infoCard: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#fff",
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
 
   sectionCard: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#fff",
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,

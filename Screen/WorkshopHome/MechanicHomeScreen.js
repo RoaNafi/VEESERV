@@ -22,11 +22,19 @@ import { Alert } from 'react-native';
 import Colors from '../../Components/Colors/Colors';
 import api from '../../api'; // Adjust the import based on your project structure
 
+// Responsive values
+const { width, height } = Dimensions.get('window');
+const responsiveHorizontalPadding = width * 0.05;
+const responsiveVerticalPadding = height * 0.02;
+const responsiveMargin = width * 0.03;
+const responsiveButtonHeight = height * 0.06;
+const responsiveBottomPadding = height * 0.1;
+const responsiveFontSize = width * 0.04;
+
 const PRIMARY_COLOR = '#086189';
 
 const delayOptions = [5, 10, 15, 30, 35, 40, 45, 50, 55, 60]; // بالدقائق
 
-const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
 const ACTION_BUTTON_SIZE = width * 0.28;
 const STAT_CARD_WIDTH = width * 0.22;
@@ -657,36 +665,74 @@ const onAddService = async (booking) => {
 
         <Text style={styles.sectionTitle}>Actions</Text>
         <View style={styles.separator} />
-        <View style={styles.actionsRow}>
-          <QuickActionButton
-            icon="clock"
-            label="Pending Requests"
-            onPress={() => navigation.navigate('PindingRequests', { status: 'PENDING' })}
-          />
-
-          <QuickActionButton
-            icon="clipboard-list"
-            label="Appointments"
-            onPress={() => navigation.navigate('Appointments')}
-          />
-
-          <QuickActionButton
-            icon="calendar-alt"
-            label="Today's Schedule"
-            onPress={() => navigation.navigate('TodaySchedule', { 
-              workshopId: workshopData?.workshop_id 
-            })}
-          />
-        </View>
-
-        <View style={[styles.actionsRow, { justifyContent: 'flex-start' }]}>
-          <QuickActionButton
-            icon="plus"
-            label="Add Service"
-            onPress={() => navigation.push('Service', { 
-              workshopId: workshopData?.workshop_id 
-            })}
-          />
+        {/* Actions Grid */}
+        <View>
+          {(() => {
+            const actions = [
+              {
+                icon: 'clock',
+                label: 'Pending Requests',
+                onPress: () => navigation.navigate('PindingRequests', { status: 'PENDING' })
+              },
+              {
+                icon: 'clipboard-list',
+                label: 'Appointments',
+                onPress: () => navigation.navigate('Appointments')
+              },
+              {
+                icon: 'calendar-alt',
+                label: "Today's Schedule",
+                onPress: () => navigation.navigate('TodaySchedule', { workshopId: workshopData?.workshop_id })
+              },
+              {
+                icon: 'plus',
+                label: 'Add Service',
+                onPress: () => navigation.push('Service', { workshopId: workshopData?.workshop_id })
+              },
+            ];
+            const rows = [];
+            for (let i = 0; i < actions.length; i += 3) {
+              rows.push(actions.slice(i, i + 3));
+            }
+            return rows.map((row, idx) => (
+              <View style={styles.actionsGridRow} key={idx}>
+                {row.length === 1 && (
+                  <>
+                    <View style={{ flex: 1 }} />
+                    <QuickActionButton
+                      key={row[0].label}
+                      icon={row[0].icon}
+                      label={row[0].label}
+                      onPress={row[0].onPress}
+                    />
+                    <View style={{ flex: 1 }} />
+                  </>
+                )}
+                {row.length === 2 && (
+                  <>
+                    {row.map((action) => (
+                      <QuickActionButton
+                        key={action.label}
+                        icon={action.icon}
+                        label={action.label}
+                        onPress={action.onPress}
+                      />
+                    ))}
+                    <View style={{ flex: 1 }} />
+                  </>
+                )}
+                {row.length === 3 &&
+                  row.map((action) => (
+                    <QuickActionButton
+                      key={action.label}
+                      icon={action.icon}
+                      label={action.label}
+                      onPress={action.onPress}
+                    />
+                  ))}
+              </View>
+            ));
+          })()}
         </View>
 
         <View style={styles.sectionSeparator}>
@@ -763,7 +809,7 @@ const onAddService = async (booking) => {
 
 const QuickActionButton = ({ icon, label, onPress }) => (
   <TouchableOpacity 
-    style={[styles.actionButton, { width: ACTION_BUTTON_SIZE, height: ACTION_BUTTON_SIZE }]} 
+    style={styles.actionButton}
     onPress={onPress}
   >
     <FontAwesome5 name={icon} size={width * 0.06} color={PRIMARY_COLOR} />
@@ -808,14 +854,14 @@ const styles = StyleSheet.create({
     paddingTop: height * 0.15, // Adjust this value based on your header height
   },
   contentContainer: {
-    padding: width * 0.01,
-    paddingBottom: height * 0.1,
+    padding: responsiveHorizontalPadding * 0.2,
+    paddingBottom: responsiveBottomPadding,
   },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: width * 0.04,
+    paddingHorizontal: responsiveHorizontalPadding * 0.8,
   },
   greeting: {
     fontSize: width * 0.055,
@@ -837,28 +883,28 @@ const styles = StyleSheet.create({
     borderColor: '#e9ecef',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize * 1.1,
     fontWeight: 'bold',
     color: Colors.black,
     marginBottom: 10,
     marginHorizontal: 20,
   },
   separator: {
-    height: 1,             // Thin line
-    backgroundColor: 'black',  // Black color
-    marginBottom: 10, 
-    marginHorizontal: 20,  // Adds space to the left and right of the line
-        // Spacing after the line (you can adjust this)
+    height: 1,
+    backgroundColor: 'black',
+    marginBottom: 10,
+    marginHorizontal: 20,
   },
   appointmentsContainer: {
-    paddingLeft: width * 0.04,
-    paddingBottom: height * 0.01,
-    paddingTop: height * 0.01,
+    paddingLeft: responsiveHorizontalPadding * 0.8,
+    paddingBottom: responsiveVerticalPadding * 0.5,
+    paddingTop: responsiveVerticalPadding * 0.5,
   },
   appointmentCard: {
+    flex:1,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: width * 0.035,
+    borderRadius: width * 0.03,
+    padding: responsiveHorizontalPadding * 0.7,
     marginRight: width * 0.03,
     marginBottom: 20,
     shadowColor: '#000',
@@ -867,17 +913,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  actionsRow: {
+  actionsGridRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: height * 0.02,
-    paddingHorizontal: width * 0.04,
+    alignItems: 'center',
+    marginBottom: responsiveVerticalPadding * 0.5,
     gap: width * 0.02,
   },
   actionButton: {
+    flex: 1,
+    maxWidth: ACTION_BUTTON_SIZE,
+    aspectRatio: 1,
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    padding: width * 0.04,
+    padding: responsiveHorizontalPadding * 0.8,
     borderRadius: 16,
     justifyContent: 'center',
     marginHorizontal: width * 0.01,
@@ -889,12 +938,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
     position: 'relative',
-    width: ACTION_BUTTON_SIZE,
-    height: ACTION_BUTTON_SIZE,
   },
   actionLabel: {
-    fontSize: width * 0.032,
-    marginTop: height * 0.01,
+    fontSize: responsiveFontSize * 0.8,
+    marginTop: responsiveVerticalPadding * 0.5,
     textAlign: 'center',
     color: '#333',
     fontWeight: '500',
@@ -903,23 +950,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: height * 0.01,
+    marginVertical: responsiveVerticalPadding * 0.5,
     gap: width * 0.02,
   },
   statCard: {
     alignItems: 'center',
-    padding: width * 0.02,
+    padding: responsiveHorizontalPadding * 0.4,
     justifyContent: 'center',
   },
   statValue: {
-    fontSize: width * 0.035,
+    fontSize: responsiveFontSize * 0.9,
     fontWeight: '700',
     color: Colors.mediumGray,
-    marginTop: height * 0.005,
+    marginTop: responsiveVerticalPadding * 0.2,
   },
   statLabel: {
-    fontSize: width * 0.028,
-    marginTop: height * 0.002,
+    fontSize: responsiveFontSize * 0.7,
+    marginTop: responsiveVerticalPadding * 0.08,
     textAlign: 'center',
     color: Colors.mediumGray,
     fontWeight: '500',
@@ -929,19 +976,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: width * 0.02,
     paddingHorizontal: width * 0.02,
+    marginTop: 8,
   },
   cancelButton: {
     backgroundColor: '#FF5252',
-    paddingVertical: height * 0.01,
-    paddingHorizontal: width * 0.04,
+    paddingVertical: responsiveVerticalPadding * 0.7,
+    paddingHorizontal: responsiveHorizontalPadding * 0.7,
     borderRadius: 20,
     flex: 0.48,
     alignItems: 'center',
   },
   delayButton: {
     backgroundColor: '#2196F3',
-    paddingVertical: height * 0.01,
-    paddingHorizontal: width * 0.04,
+    paddingVertical: responsiveVerticalPadding * 0.7,
+    paddingHorizontal: responsiveHorizontalPadding * 0.7,
     borderRadius: 20,
     flex: 0.48,
     alignItems: 'center',
@@ -949,7 +997,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: width * 0.032,
+    fontSize: responsiveFontSize * 0.9,
   },
   cardContent: {
     flexDirection: 'column',
@@ -982,7 +1030,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: height * 0.012,
+    marginBottom: responsiveVerticalPadding * 0.6,
   },
   headerRight: {
     flexDirection: 'row',
@@ -990,16 +1038,16 @@ const styles = StyleSheet.create({
     gap: width * 0.02,
   },
   appointmentDetails: {
-    gap: height * 0.004,
-    marginBottom: height * 0.008,
+    gap: responsiveVerticalPadding * 0.2,
+    marginBottom: responsiveVerticalPadding * 0.4,
   },
   appointmentTime: {
-    fontSize: width * 0.038,
+    fontSize: responsiveFontSize * 0.95,
     fontWeight: '600',
     color: '#2196F3',
   },
   appointmentText: {
-    fontSize: width * 0.035,
+    fontSize: responsiveFontSize * 0.9,
     color: '#333',
     fontWeight: '500',
   },
@@ -1007,11 +1055,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
-    fontSize: width * 0.03,
+    fontSize: responsiveFontSize * 0.8,
     fontWeight: '600',
   },
   expandedContent: {
-    paddingTop: height * 0.015,
+    paddingTop: responsiveVerticalPadding * 0.7,
   },
   floatingButton: {
     position: 'absolute',
@@ -1040,7 +1088,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize * 1.1,
     fontWeight: 'bold',
     marginBottom: 16,
     textAlign: 'center',
@@ -1062,7 +1110,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   delayOptionText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize * 0.8,
     color: '#00796B',
   },
   cancelButton1: {
@@ -1074,7 +1122,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText1: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: responsiveFontSize * 0.9,
     fontWeight: 'bold',
   },
   shopInfo: {
@@ -1083,7 +1131,7 @@ const styles = StyleSheet.create({
   shopName: {
     fontSize: width * 0.06,
     fontWeight: '700',
-    color: '#086189',
+    color: PRIMARY_COLOR,
     marginBottom: height * 0.005,
   },
   locationContainer: {
@@ -1092,25 +1140,25 @@ const styles = StyleSheet.create({
     gap: width * 0.01,
   },
   locationText: {
-    fontSize: width * 0.035,
+    fontSize: responsiveFontSize,
     color: '#666',
     fontWeight: '500',
   },
   statusIndicator: {
-    paddingHorizontal: width * 0.03,
-    paddingVertical: height * 0.006,
+    paddingHorizontal: responsiveHorizontalPadding * 0.6,
+    paddingVertical: responsiveVerticalPadding * 0.3,
     borderRadius: 20,
     marginLeft: width * 0.02,
   },
   statusText: {
-    fontSize: width * 0.032,
+    fontSize: responsiveFontSize * 0.8,
     fontWeight: '600',
   },
   sectionSeparator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: height * 0.02,
-    paddingHorizontal: width * 0.04,
+    marginVertical: responsiveVerticalPadding,
+    paddingHorizontal: responsiveHorizontalPadding * 0.8,
   },
   horizontalLine: {
     height: 1,
@@ -1119,123 +1167,34 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   detailText: {
-  fontSize: 13,
-  color: '#444',
-  marginBottom: 4,
-},
-
-buttonRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginTop: 10,
-},
-
-editButton: {
-  backgroundColor: '#FFF9C4',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-
-addButton: {
-  backgroundColor: '#C8E6C9',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-
-reportButton: {
-  backgroundColor: '#BBDEFB',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-detailText: {
-  fontSize: 13,
-  color: '#444',
-  marginBottom: 4,
-},
-
-buttonContainer: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginTop: 8,
-},
-
-
-
-editButton: {
-  backgroundColor: '#FFF9C4',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-
-addButton: {
-  backgroundColor: '#C8E6C9',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-
-reportButton: {
-  backgroundColor: '#BBDEFB',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-
-cancelButton: {
-  backgroundColor: '#FFCDD2',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-
-delayButton: {
-  backgroundColor: '#FFE0B2',
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 6,
-},
-
-buttonText: {
-  fontWeight: '600',
-  fontSize: 13,
-  color: '#333',
-},
-
-
-actionButton2: {
-  paddingVertical: 8,
-  paddingHorizontal: 12,
-  borderRadius: 8,
-  marginRight: 8,
-  minWidth: 120,
-  alignItems: 'center',
-},
-
-updateBooking: {
-  backgroundColor: '#1976D2', // أزرق
-},
-
-updateService: {
-  backgroundColor: '#0288D1', // أزرق أفتح
-},
-
-addService: {
-  backgroundColor: '#388E3C', // أخضر
-},
-
-viewReport: {
-  backgroundColor: '#F57C00', // برتقالي
-},
-
-buttonText: {
-  color: '#fff',
-  fontWeight: '600',
-  fontSize: 14,
-},
-
+    fontSize: responsiveFontSize * 0.8,
+    color: '#444',
+    marginBottom: 4,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  actionButton2: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginRight: 8,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  updateBooking: {
+    backgroundColor: '#1976D2', // أزرق
+  },
+  updateService: {
+    backgroundColor: '#0288D1', // أزرق أفتح
+  },
+  addService: {
+    backgroundColor: '#388E3C', // أخضر
+  },
+  viewReport: {
+    backgroundColor: '#F57C00', // برتقالي
+  },
 });
 

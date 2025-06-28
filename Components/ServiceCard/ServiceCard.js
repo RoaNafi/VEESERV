@@ -16,17 +16,7 @@ const ServiceCard = ({ data }) => {
     );
   };
 
-  const handleBookPress = () => {
-    Alert.alert(
-      "Book Service",
-      `Would you like to book ${name}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Book Now", onPress: () => Alert.alert("Success", "Service booked successfully!") }
-      ]
-    );
-  };
-
+  
   return (
     <View style={styles.card}>
       <View style={styles.info}>
@@ -37,12 +27,6 @@ const ServiceCard = ({ data }) => {
        
 
         <View style={styles.bottomInfo}>
-          <TouchableOpacity 
-            style={styles.bookButton} 
-            onPress={handleBookPress}
-          >
-            <Text style={styles.bookButtonText}>Book Now</Text>
-          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.addToCartButton}
             onPress={handleAddToCart}

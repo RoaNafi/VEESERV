@@ -23,7 +23,7 @@ import Sort from "../Book/ResultOperation/Sort";
 import { ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 // this insted of add padding to the container
 const PADDING = 20;
@@ -53,30 +53,61 @@ const Home = ({ navigation }) => {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [categories, setCategories] = useState([]);
   const [addedServices, setAddedServices] = useState([]);
+  const [showAllFavorites, setShowAllFavorites] = useState(false);
+  const [pressedCard, setPressedCard] = useState(null);
 
   const animatedValues = useRef({}).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const searchAnim = useRef(new Animated.Value(0)).current;
-const [favoriteMechanics, setFavoriteMechanics] = useState([]);
-const [loadingFavorites, setLoadingFavorites] = useState(true);
+  const [favoriteMechanics, setFavoriteMechanics] = useState([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
 
-useEffect(() => {
-  const fetchFavorites = async () => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      const res = await axios.get('http://176.119.254.225:80/favourite/myfavorites', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setFavoriteMechanics(res.data.favorites);
-    } catch (error) {
-      console.error('Error fetching favorites:', error);
-    } finally {
-      setLoadingFavorites(false);
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      const fetchFavorites = async () => {
+        try {
+          const token = await AsyncStorage.getItem('accessToken');
+          const res = await axios.get('http://176.119.254.225:80/favourite/myfavorites', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (isActive) setFavoriteMechanics(res.data.favorites);
+        } catch (error) {
+          if (isActive) setFavoriteMechanics([]);
+          console.error('Error fetching favorites:', error);
+        } finally {
+          if (isActive) setLoadingFavorites(false);
+        }
+      };
+      setLoadingFavorites(true);
+      fetchFavorites();
+      return () => { isActive = false; };
+    }, [])
+  );
+
+  useEffect(() => {
+    if (!isSearching) {
+      // Only refetch when returning to main home view
+      const fetchFavorites = async () => {
+        try {
+          const token = await AsyncStorage.getItem('accessToken');
+          const res = await axios.get('http://176.119.254.225:80/favourite/myfavorites', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setFavoriteMechanics(res.data.favorites);
+        } catch (error) {
+          setFavoriteMechanics([]);
+          console.error('Error fetching favorites:', error);
+        } finally {
+          setLoadingFavorites(false);
+        }
+      };
+      setLoadingFavorites(true);
+      fetchFavorites();
     }
-  };
-  fetchFavorites();
-}, []);
+  }, [isSearching]);
+
   const getAnimatedValue = (id) => {
     if (!animatedValues[id]) {
       animatedValues[id] = new Animated.Value(0);
@@ -108,7 +139,7 @@ useEffect(() => {
         setFrequentServices(response.data);
       } catch (error) {
         console.error("Failed to fetch frequent services:", error);
-        
+
       }
     };
     fetchFrequentServices();
@@ -234,32 +265,32 @@ useEffect(() => {
     }
   };
 
-const handleSearch = async (text) => {
-  setIsSearching(true);
-  setSearchTerm(text);
+  const handleSearch = async (text) => {
+    setIsSearching(true);
+    setSearchTerm(text);
 
-  if (text.trim().length === 0) {
-    setSearchResults([]);
-    setIsSearching(false);
-    return;
-  }
+    if (text.trim().length === 0) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
 
-  setIsLoading(true);
+    setIsLoading(true);
 
-  try {
-    const response = await axios.get(`${config.apiUrl}/search/searchhome`, {
-      params: { keyword: text },
-    });
-const results = response.data.results || [];
-    setOriginalSearchResults(results);
-    setSearchResults(results);
-  } catch (error) {
-    console.error("Search error:", error);
-    setSearchResults([]);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      const response = await axios.get(`${config.apiUrl}/search/searchhome`, {
+        params: { keyword: text },
+      });
+      const results = response.data.results || [];
+      setOriginalSearchResults(results);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 
   const clearSearch = () => {
@@ -352,7 +383,7 @@ const results = response.data.results || [];
   return (
     <View style={styles.container}>
       {/* Search Bar with Filter/Sort */}
-      <Animated.View 
+      <Animated.View
         style={[
           styles.searchContainer,
           {
@@ -367,20 +398,20 @@ const results = response.data.results || [];
       >
         <View style={styles.searchInputContainer}>
           <Ionicons name="search" size={20} color={Colors.mediumGray} style={styles.searchIcon} />
-         <TextInput
-  style={styles.searchInput}
-  placeholder="Search Anything..."
-  placeholderTextColor={Colors.mediumGray}
-  value={searchTerm}
-  onChangeText={(text) => setSearchTerm(text)} // بس تحدث القيمة
-  onSubmitEditing={() => {
-    handleSearch(searchTerm); // لما يضغط Enter نعمل بحث وتنقل
-    animateTransition(true); // أنيميشن لو في
-  }}
-  returnKeyType="search"
-/>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Anything..."
+            placeholderTextColor={Colors.mediumGray}
+            value={searchTerm}
+            onChangeText={(text) => setSearchTerm(text)} // بس تحدث القيمة
+            onSubmitEditing={() => {
+              handleSearch(searchTerm); // لما يضغط Enter نعمل بحث وتنقل
+              animateTransition(true); // أنيميشن لو في
+            }}
+            returnKeyType="search"
+          />
           {searchTerm.length > 0 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={clearSearch}
               style={{ padding: 4 }}
             >
@@ -390,7 +421,7 @@ const results = response.data.results || [];
         </View>
 
         {isSearching && (
-          <Animated.View 
+          <Animated.View
             style={[
               styles.searchActions,
               {
@@ -404,16 +435,16 @@ const results = response.data.results || [];
               }
             ]}
           >
-            <TouchableOpacity 
-              style={styles.searchActionButton} 
+            <TouchableOpacity
+              style={styles.searchActionButton}
               onPress={() => setSortModalVisible(true)}
               activeOpacity={0.7}
             >
               <Ionicons name="swap-vertical" size={24} color={Colors.green} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.searchActionButton} 
+            <TouchableOpacity
+              style={styles.searchActionButton}
               onPress={() => setFilterModalVisible(true)}
               activeOpacity={0.7}
             >
@@ -423,7 +454,7 @@ const results = response.data.results || [];
         )}
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={[
           styles.contentContainer,
           {
@@ -432,7 +463,7 @@ const results = response.data.results || [];
           }
         ]}
       >
-        {!isSearching ? (
+        {(!isSearching || searchTerm.trim().length === 0) ? (
           <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {/* Banners */}
             <ScrollView
@@ -474,10 +505,10 @@ const results = response.data.results || [];
                         <ActivityIndicator size="small" color="#fff" />
                       ) : (
                         <>
-                          <Ionicons 
-                            name={addedServices.includes(service.id) ? "checkmark-circle" : "cart-outline"} 
-                            size={width * 0.045} 
-                            color="#086189" 
+                          <Ionicons
+                            name={addedServices.includes(service.id) ? "checkmark-circle" : "cart-outline"}
+                            size={width * 0.045}
+                            color="#086189"
                           />
                           <Text style={styles.buttonText}>
                             {addedServices.includes(service.id) ? 'Added' : 'Add to Cart'}
@@ -489,43 +520,16 @@ const results = response.data.results || [];
                 </View>
               ))}
             </ScrollView>
-            {/* Favorite Mechanic Section */}
-{!loadingFavorites && favoriteMechanics.length > 0 && (
-  <>
-    <Text style={styles.sectionTitle}>Your Favorite Mechanic</Text>
-    <View style={styles.separator} />
-
-    {favoriteMechanics.map((mechanic) => (
-      <View key={mechanic.workshop_id} style={styles.favoriteMechanicCard}>
-<View style={[styles.favoriteMechanicHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-  <Ionicons name="person-circle-outline" size={40} color="#086189" />
-  <View style={{ flex: 1, marginLeft: 20 }}>
-            <Text style={styles.mechanicName}>{mechanic.workshop_name}</Text>
-            <Text style={styles.mechanicRating}>⭐ {mechanic.rate ? mechanic.rate.toFixed(1) : 'N/A'}</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.bookNowButton}
-          onPress={() => navigation.navigate('Book', { mechanicId: mechanic.workshop_id })}
-        >
-          <Text style={styles.bookNowText}>Book Now</Text>
-        </TouchableOpacity>
-      </View>
-    ))}
-  </>
-)}
-
-
 
             {/* Categories Grid */}
             <Text style={styles.sectionTitle}>Categories</Text>
             <View style={styles.separator} />
-            
+
             <View style={styles.categoryGridContainer}>
               <View style={styles.categoryGrid}>
                 {(showAllCategories ? categories : categories.slice(0, 6)).map((item) => {
                   const animatedValue = getAnimatedValue(item.category_id);
-                  
+
                   const circleScale = animatedValue.interpolate({
                     inputRange: [0, 1],
                     outputRange: [1, 4]
@@ -552,28 +556,27 @@ const results = response.data.results || [];
                     >
                       <View style={styles.categoryContent}>
                         <View style={styles.iconWrapper}>
-                          <Animated.View 
+                          <Animated.View
                             style={[
-                              styles.categoryIconContainer, 
-                              { 
+                              styles.categoryIconContainer,
+                              {
                                 backgroundColor: item.color,
                                 transform: [{ scale: circleScale }],
                                 opacity: circleOpacity,
-                                
                               }
                             ]}
                           />
                           <View style={styles.iconContainer}>
-                            <Ionicons 
-                              name={getCategoryIcon(item.category_name)} 
-                              size={24} 
-                              color="#fff" 
+                            <Ionicons
+                              name={getCategoryIcon(item.category_name)}
+                              size={24}
+                              color="#fff"
                             />
                           </View>
                         </View>
-                        <Text 
+                        <Text
                           style={styles.categoryGridText}
-                            numberOfLines={1}
+                          numberOfLines={1}
                         >
                           {item.category_name}
                         </Text>
@@ -584,20 +587,19 @@ const results = response.data.results || [];
               </View>
             </View>
 
-            
-              <TouchableOpacity
-                style={styles.showMoreButton}
-                onPress={() => setShowAllCategories(!showAllCategories)}
-              >
-                <Text style={styles.showMoreText}>
-                  {showAllCategories ? 'SHOW LESS' : 'SHOW MORE'}
-                </Text>
-                <Ionicons
-                  name={showAllCategories ? 'chevron-up' : 'chevron-down'}
-                  style={styles.showMoreIcon}
-                />
-              </TouchableOpacity>
-            
+            <TouchableOpacity
+              style={styles.showMoreButton}
+              onPress={() => setShowAllCategories(!showAllCategories)}
+            >
+              <Text style={styles.showMoreText}>
+                {showAllCategories ? 'SHOW LESS' : 'SHOW MORE'}
+              </Text>
+              <Ionicons
+                name={showAllCategories ? 'chevron-up' : 'chevron-down'}
+                style={styles.showMoreIcon}
+              />
+            </TouchableOpacity>
+
           </ScrollView>
         ) : (
           <SearchResult

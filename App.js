@@ -46,6 +46,7 @@ import Appointments from "./Screen/WorkshopHome/Appointments";
 import SearchResult from "./Screen/Home/SearchResult";
 import GenerateReportScreen from "./Screen/WorkshopHome/GenerateReportScreen";
 import TodaySchedule from "./Screen/WorkshopHome/TodaySchedule";
+import FavoriteWorkshops from "./Screen/Profile/FavoriteWorkshops";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -67,9 +68,11 @@ function IntroNavigator() {
 
 function BottomTabs({ route }) {
   const { role } = route.params || {};
+  const initialRoute = role === "Mechanic" ? "My Shop" : "Home";
 
   return (
     <Tab.Navigator
+      initialRouteName={initialRoute}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: "#086189",
@@ -232,6 +235,11 @@ function ProfileNavigator() {
         name="CompanyLegal"
         component={CompanyLegal}
         options={{ title: "Company & Legal" }}
+      />
+      <Stack.Screen
+        name="FavoriteWorkshops"
+        component={FavoriteWorkshops}
+        options={{ title: "Favorite Workshops" }}
       />
     </Stack.Navigator>
   );

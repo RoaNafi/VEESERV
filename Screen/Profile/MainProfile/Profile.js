@@ -68,8 +68,12 @@ const Profile = ({ navigation }) => {
 
   const handleLogout = async () => {
     try {
+      // remove token and clear stack after logout
       await AsyncStorage.removeItem('accessToken');
-      navigation.navigate("RegNavigator", { screen: "Login" });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'RegNavigator', params: { screen: 'Login' } }],
+      });
       Alert.alert('Logged out', 'You have been logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
@@ -105,8 +109,7 @@ Alert.alert("Success", "Congratulations! Your account is now a company 🏢✨")
         { icon: 'car', label: 'Garage', action: () => navigation.navigate('Garage') },
       ],
     },
-    { icon: 'construct' , label:  'Service' , action: () => navigation.navigate('Service' ) },
-
+    { icon: 'star', label: 'Favorite Workshops', action: () => navigation.navigate('FavoriteWorkshops') },
     { icon: 'time', label: 'History', action: () => navigation.navigate('HistoryScreen', { userId: user?.id }) },
     { icon: 'globe', label: 'Language', action: () => navigation.navigate('Language') },
     { icon: 'business', label: 'Company & Legal', action: () => navigation.navigate('CompanyLegal') },

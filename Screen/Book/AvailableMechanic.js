@@ -37,8 +37,8 @@ const convertTo24HourFormat = (time) => {
 };
 
 const AvailableMechanic = ({ route, navigation }) => {
-const { date = null, timeSlots = [] , subcategoryIds } = route.params || {};
-  console.log("date:", date, "time", timeSlots , "subcategoryIds:", subcategoryIds);
+  const { date = null, timeSlots = [], subcategoryIds } = route.params || {};
+  console.log("date:", date, "time", timeSlots, "subcategoryIds:", subcategoryIds);
 
   const [rawWorkshops, setRawWorkshops] = useState({
     perfectMatch: [],
@@ -64,10 +64,10 @@ const { date = null, timeSlots = [] , subcategoryIds } = route.params || {};
   const searchBarWidth = useRef(new Animated.Value(1)).current;
   const [selectedTab, setSelectedTab] = useState('available');
   const borderAnim = useRef(new Animated.Value(0)).current;
-const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّن الورش الجديدة
+  const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّن الورش الجديدة
 
   // لو الوقت فاضي أو مش موجود خليه فاضي ما يحول ولا شي
-   // لو timeSlots مش موجودة أو مش مصفوفة نستخدم مصفوفة فاضية
+  // لو timeSlots مش موجودة أو مش مصفوفة نستخدم مصفوفة فاضية
   const safeTimeSlots = Array.isArray(timeSlots) ? timeSlots : [];
 
   // الفلترة والتحويل بأمان
@@ -98,7 +98,7 @@ const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّ�
   const transform = (list) => {
     //console.log("\n=== TRANSFORM INPUT ===");
     //console.log("Input list:", JSON.stringify(list, null, 2));
-    
+
     const transformed = list.map((item) => {
       //console.log("\nProcessing item:", JSON.stringify(item, null, 2));
       const result = {
@@ -107,16 +107,17 @@ const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّ�
         rate: item.rate || item.rating || 0,
         workshop_id: item.workshop_id,
         workshop_image: item.profile_picture || "",
-        distance: item.distance_km || 0,  
-        city : item.city || "Unknown City",
+        distance: item.distance_km || 0,
+        city: item.city || "Unknown City",
         street: item.street || "Unknown Street",
         mobileAssistance: item.mobile_assistance || false,
 
- services: (item.services || []).map(s => ({
-        service_id: s.service_id || s.id,
-        name: s.service_name || s.name || "Service",
-        price: s.price || 0,
-      })),      };
+        services: (item.services || []).map(s => ({
+          service_id: s.service_id || s.id,
+          name: s.service_name || s.name || "Service",
+          price: s.price || 0,
+        })),
+      };
       console.log("serveices:", result.services);
       //console.log("Transformed result:", JSON.stringify(result, null, 2));
       return result;
@@ -184,10 +185,10 @@ const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّ�
       const filteredPartialMatch = filterWorkshops(partialMatch);
       const filteredSplitMatch = splitMatch.map(group => filterWorkshops(group));
 
-      setRawWorkshops({ 
-        perfectMatch: filteredPerfectMatch, 
-        partialMatch: filteredPartialMatch, 
-        splitMatch: filteredSplitMatch 
+      setRawWorkshops({
+        perfectMatch: filteredPerfectMatch,
+        partialMatch: filteredPartialMatch,
+        splitMatch: filteredSplitMatch
       });
 
       setWorkshops({
@@ -206,49 +207,49 @@ const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّ�
       setLoading(false);
     }
   };
-const fetchWorkshopsWithoutDate = async () => {
-  setLoading(true);
-  try {
-    const token = await AsyncStorage.getItem("accessToken");
+  const fetchWorkshopsWithoutDate = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
 
-    if (!subcategoryIds || subcategoryIds.length === 0) {
-      throw new Error("No subcategory IDs provided");
-    }
-
-    const formattedIds = Array.isArray(subcategoryIds) ? subcategoryIds.join(",") : subcategoryIds;
-
-    const response = await axios.get(
-      `http://176.119.254.225:80/search/workshops/search`,
-      {
-        params: { subcategoryIds: formattedIds },
-        headers: { Authorization: `Bearer ${token}` },
+      if (!subcategoryIds || subcategoryIds.length === 0) {
+        throw new Error("No subcategory IDs provided");
       }
-    );
 
-    const workshops = response.data.workshops || [];
-    console.log("Fetched workshops:", workshops);
+      const formattedIds = Array.isArray(subcategoryIds) ? subcategoryIds.join(",") : subcategoryIds;
 
-    const transformedWorkshops = transform(workshops);
-    setFetchedWorkshops(transformedWorkshops);
-    console.log("Transformed workshops:", transformedWorkshops); // اطبع هنا بدل الحالة
-    
+      const response = await axios.get(
+        `http://176.119.254.225:80/search/workshops/search`,
+        {
+          params: { subcategoryIds: formattedIds },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    // تطبيق الفلترة إذا حابب
-    const filtered = transformedWorkshops.filter((w) => {
-      if (selectedRating && w.rate < selectedRating) return false;
-      if (selectedDistance && w.distanceKm > selectedDistance) return false;
-      return true;
-    });
+      const workshops = response.data.workshops || [];
+      console.log("Fetched workshops:", workshops);
 
-    // ممكن تحط setFilteredWorkshops هنا لو بدك تستخدمها
+      const transformedWorkshops = transform(workshops);
+      setFetchedWorkshops(transformedWorkshops);
+      console.log("Transformed workshops:", transformedWorkshops); // اطبع هنا بدل الحالة
 
-  } catch (error) {
-    console.error("❌ Error fetching basic workshops:", error);
-    Alert.alert("Error", "Failed to fetch workshops without date.");
-  } finally {
-    setLoading(false);
-  }
-};
+
+      // تطبيق الفلترة إذا حابب
+      const filtered = transformedWorkshops.filter((w) => {
+        if (selectedRating && w.rate < selectedRating) return false;
+        if (selectedDistance && w.distanceKm > selectedDistance) return false;
+        return true;
+      });
+
+      // ممكن تحط setFilteredWorkshops هنا لو بدك تستخدمها
+
+    } catch (error) {
+      console.error("❌ Error fetching basic workshops:", error);
+      Alert.alert("Error", "Failed to fetch workshops without date.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   // Update sorting functions
@@ -260,28 +261,28 @@ const fetchWorkshopsWithoutDate = async () => {
 
     switch (category) {
       case 'rating':
-        return direction === 'high' 
+        return direction === 'high'
           ? sortedWorkshops.sort((a, b) => (b.rate || 0) - (a.rate || 0))
           : sortedWorkshops.sort((a, b) => (a.rate || 0) - (b.rate || 0));
-      
+
       case 'distance':
         return direction === 'high'
           ? sortedWorkshops.sort((a, b) => (b.distance || 0) - (a.distance || 0))
           : sortedWorkshops.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-      
+
       case 'price':
         return direction === 'high'
           ? sortedWorkshops.sort((a, b) => {
-              const totalPriceB = b.services?.reduce((sum, service) => sum + (service.price || 0), 0) || 0;
-              const totalPriceA = a.services?.reduce((sum, service) => sum + (service.price || 0), 0) || 0;
-              return totalPriceB - totalPriceA;
-            })
+            const totalPriceB = b.services?.reduce((sum, service) => sum + (service.price || 0), 0) || 0;
+            const totalPriceA = a.services?.reduce((sum, service) => sum + (service.price || 0), 0) || 0;
+            return totalPriceB - totalPriceA;
+          })
           : sortedWorkshops.sort((a, b) => {
-              const totalPriceA = a.services?.reduce((sum, service) => sum + (service.price || 0), 0) || Infinity;
-              const totalPriceB = b.services?.reduce((sum, service) => sum + (service.price || 0), 0) || Infinity;
-              return totalPriceA - totalPriceB;
-            });
-      
+            const totalPriceA = a.services?.reduce((sum, service) => sum + (service.price || 0), 0) || Infinity;
+            const totalPriceB = b.services?.reduce((sum, service) => sum + (service.price || 0), 0) || Infinity;
+            return totalPriceA - totalPriceB;
+          });
+
       default:
         return workshops;
     }
@@ -293,7 +294,7 @@ const fetchWorkshopsWithoutDate = async () => {
     const sortedWorkshops = {
       perfectMatch: sortWorkshops(workshops.perfectMatch, selectedSortOption),
       partialMatch: sortWorkshops(workshops.partialMatch, selectedSortOption),
-      splitMatch: workshops.splitMatch.map(group => 
+      splitMatch: workshops.splitMatch.map(group =>
         sortWorkshops(group, selectedSortOption)
       )
     };
@@ -310,7 +311,7 @@ const fetchWorkshopsWithoutDate = async () => {
 
   const applyFilters = () => {
     setShowAllResults(false); // Reset to show only first 3 results
-    
+
     // Filter the workshops based on selected criteria
     const filterWorkshops = (workshops) => {
       return workshops.filter(workshop => {
@@ -348,14 +349,14 @@ const fetchWorkshopsWithoutDate = async () => {
     setSelectedRating(null);
     setSelectedDistance(null);
     setShowAllResults(false);
-    
+
     // Reset to original data
     setWorkshops({
       perfectMatch: transform(rawWorkshops.perfectMatch),
       partialMatch: transform(rawWorkshops.partialMatch),
       splitMatch: rawWorkshops.splitMatch.map(group => transform(group)),
     });
-    
+
     // Reset filtered perfect match for search
     setFilteredPerfectMatch(transform(rawWorkshops.perfectMatch));
   };
@@ -367,7 +368,7 @@ const fetchWorkshopsWithoutDate = async () => {
     }
   }, [selectedRating, selectedDistance]);
 
-  const handleBookPress = (data  ,selectedTimeSlot) => {
+  const handleBookPress = (data, selectedTimeSlot) => {
     // Ensure services data is properly structured
     const formattedData = {
       ...data,
@@ -377,7 +378,7 @@ const fetchWorkshopsWithoutDate = async () => {
         price: service.price
       }))
     };
-    
+
     navigation.navigate("BookSummary", {
       data: formattedData,
       date,
@@ -396,20 +397,20 @@ const fetchWorkshopsWithoutDate = async () => {
       city: data.city || "Unknown City",
       street: data.street || "Unknown Street",
       services: data.services || [],
-       date,
+      date,
       timeSlots,
     };
-    
+
     navigation.navigate("WorkshopDetails", { workshopData });
   };
 
   useEffect(() => {
-  if (date && formattedTimeSlots.length > 0) {
-    fetchAvailableWorkshops();
-  } else {
-    fetchWorkshopsWithoutDate();
-  }
-}, [selectedRating, selectedDistance, date, formattedTimeSlots]);
+    if (date && formattedTimeSlots.length > 0) {
+      fetchAvailableWorkshops();
+    } else {
+      fetchWorkshopsWithoutDate();
+    }
+  }, [selectedRating, selectedDistance, date, formattedTimeSlots]);
 
 
   const handleBookMultiple = (combo) => {
@@ -510,7 +511,7 @@ const fetchWorkshopsWithoutDate = async () => {
       return;
     }
 
-    const filtered = workshops.perfectMatch.filter(workshop => 
+    const filtered = workshops.perfectMatch.filter(workshop =>
       workshop.workshop_name.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredPerfectMatch(filtered);
@@ -556,7 +557,7 @@ const fetchWorkshopsWithoutDate = async () => {
   return (
     <View style={{ flex: 1 }}>
       {renderLoading()}
-      
+
       {/* --- FILTER & SORT MODALS --- */}
       <Filter
         visible={filterModalVisible}
@@ -615,10 +616,10 @@ const fetchWorkshopsWithoutDate = async () => {
               shadowRadius: 2,
               elevation: 2,
             }}>
-              <Ionicons 
-                name="search-outline" 
-                size={20} 
-                color={Colors.darkGray} 
+              <Ionicons
+                name="search-outline"
+                size={20}
+                color={Colors.darkGray}
               />
               <TextInput
                 style={{
@@ -642,9 +643,9 @@ const fetchWorkshopsWithoutDate = async () => {
             </View>
           </Animated.View>
         ) : (
-          <Text style={{ 
-            fontSize: 18, 
-            fontWeight: "600", 
+          <Text style={{
+            fontSize: 18,
+            fontWeight: "600",
             color: Colors.darkGray,
             letterSpacing: 0.3,
           }}>
@@ -800,23 +801,23 @@ const fetchWorkshopsWithoutDate = async () => {
           </Animated.View>
         </View>
       )}
-{/* التاب الخاص بالورش الجديدة */}
-{fetchedWorkshops.length > 0 && (
-  <View style={{ marginTop: 10 }}>
-   
-    <FlatList
-      data={fetchedWorkshops}
-      keyExtractor={item => item.workshop_id.toString()}
-      renderItem={({ item }) => (
-        <WorkshopCard workshop={item}
-        data={item} // تمرير البيانات الكاملة للورشة
+      {/* التاب الخاص بالورش الجديدة */}
+      {fetchedWorkshops.length > 0 && (
+        <View style={{ marginTop: 10 }}>
 
-        onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
-        onShopPress={() => handleShopPress(data)} />
+          <FlatList
+            data={fetchedWorkshops}
+            keyExtractor={item => item.workshop_id.toString()}
+            renderItem={({ item }) => (
+              <WorkshopCard 
+                workshop={item}
+                data={item} 
+                onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
+                onShopPress={() => handleShopPress(data)} />
+            )}
+          />
+        </View>
       )}
-    />
-  </View>
-)}
 
       {/* --- WORKSHOP LIST OR SCHEDULED SERVICES --- */}
       {selectedTab === 'available' ? (
@@ -847,16 +848,16 @@ const fetchWorkshopsWithoutDate = async () => {
                     marginTop: 5,
                   }}
                 >
-                  <Text style={{ 
+                  <Text style={{
                     color: Colors.blue,
                     fontSize: 15,
                     fontWeight: '500',
                   }}>
                     {showAllResults ? 'Show Less' : `View ${totalResults - 3} more results`}
                   </Text>
-                  <Ionicons 
-                    name={showAllResults ? "chevron-up" : "chevron-down"} 
-                    size={16} 
+                  <Ionicons
+                    name={showAllResults ? "chevron-up" : "chevron-down"}
+                    size={16}
                     color={Colors.blue}
                     style={{ marginLeft: 4 }}
                   />
@@ -867,29 +868,33 @@ const fetchWorkshopsWithoutDate = async () => {
           }}
           renderItem={({ item }) => {
             if (item.type === 'perfect') {
-const service = item.item.service || item.item.services?.[0] || {};
+              const service = item.item.service || item.item.services?.[0] || {};
               const data = {
-                image: item.item.workshop_image || "",
+                image: item.item.image
+                  ? item.item.image
+                  : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTndajZaCUGn5HCQrAQIS6QBUNU9OZjAgXzDw&s",
                 workshop_name: item.item.workshop_name || "unknow",
                 rate: item.item.rate || 0,
                 workshop_id: item.item.workshop_id,
                 city: item.item.city || "Unknown City",
                 street: item.item.street || "Unknown Street",
-           services: (item.item.services ||  []).map(s => ({
-  name: s.name,
-  price: s.price,
-  service_id: s.service_id || s.id
-}))
-
-
+                services: (item.item.services || []).map(s => ({
+                  name: s.name,
+                  price: s.price,
+                  service_id: s.service_id || s.id
+                }))
               };
+              console.log('++++++++++++++++++++++++++++++++++++++++++++++++');
+
+              console.log('Perfect workshop services:', data.services);
+              console.log('++++++++++++++++++++++++++++++++++++++++++++++++');
 
               return (
                 <WorkshopCard
-                  data={data }
+                  data={data}
                   date={date}
                   timeSlots={timeSlots}
-  onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
+                  onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
                   onShopPress={() => handleShopPress(data)}
                 />
               );
@@ -1054,16 +1059,16 @@ const service = item.item.service || item.item.services?.[0] || {};
         />
       ) : (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ 
-            fontSize: 16, 
+          <Text style={{
+            fontSize: 16,
             color: Colors.darkGray,
             textAlign: 'center',
             marginBottom: 10
           }}>
             Not Available workshops will be shown here
           </Text>
-          <Text style={{ 
-            fontSize: 14, 
+          <Text style={{
+            fontSize: 14,
             color: Colors.mediumGray,
             textAlign: 'center'
           }}>

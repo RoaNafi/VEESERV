@@ -81,12 +81,7 @@ const Service = () => {
   };
   return (
     <View style={styles.container}>
-      <View style={styles.headerBar}>
-        <Text style={styles.header}>My Services</Text>
-        <TouchableOpacity onPress={handleAddService} style={styles.addBtn}>
-          <Text style={styles.addBtnText}>＋</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Removed headerBar and 'My Services' title */}
   
       {services.length === 0 ? (
         <View style={styles.emptyState}>
@@ -119,6 +114,10 @@ const Service = () => {
           ))}
         </ScrollView>
       )}
+      {/* Floating Add Button */}
+      <TouchableOpacity onPress={handleAddService} style={styles.fab}>
+        <Text style={styles.addBtnText}>＋</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -129,24 +128,12 @@ const styles = StyleSheet.create({
       paddingHorizontal: 20,
       paddingTop: 20,
     },
-    headerBar: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 15,
-    },
-    header: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: Colors.blue,
-      letterSpacing: 0.5,
-    },
     scrollContainer: {
       paddingBottom: 100,
     },
     card: {
       flexDirection: 'row',
-      backgroundColor: '#F7FBFD',
+      backgroundColor: '#fff',
       borderRadius: 16,
       padding: 16,
       marginBottom: 16,
@@ -250,6 +237,23 @@ const styles = StyleSheet.create({
         height: 160,
         resizeMode: 'contain',
         marginBottom: 10,
+      },
+      fab: {
+        position: 'absolute',
+        right: 24,
+        bottom: 32,
+        backgroundColor: Colors.blue,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 10,
+        shadowColor: Colors.black,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        zIndex: 100,
       },
     });
   

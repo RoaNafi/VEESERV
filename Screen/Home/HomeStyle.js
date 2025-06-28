@@ -644,7 +644,66 @@ bookNowText: {
   color: '#fff',
   fontWeight: '600',
   fontSize: 16,
-}
+},
+
+favoriteWorkshopCard: {
+  width: width * 0.36,
+  backgroundColor: '#fff',
+  borderRadius: 14,
+  marginRight: 10,
+  marginBottom: 10,
+  borderWidth: 1,
+  borderColor: '#E0E7EF',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.08,
+  shadowRadius: 5,
+  elevation: 2,
+  overflow: 'hidden',
+  position: 'relative',
+  minHeight: width * 0.26,
+  paddingBottom: 4,
+},
+favoriteWorkshopImage: {
+  width: '100%',
+  height: width * 0.16,
+  borderTopLeftRadius: 14,
+  borderTopRightRadius: 14,
+  backgroundColor: '#F3F6FA',
+},
+favoriteWorkshopInfo: {
+  padding: 8,
+},
+favoriteWorkshopName: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: '#1A202C',
+  marginBottom: 1,
+},
+favoriteWorkshopAddress: {
+  color: '#6B7280',
+  fontSize: 11,
+  marginBottom: 2,
+},
+favoriteWorkshopRatingRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+favoriteWorkshopRate: {
+  color: '#444',
+  fontWeight: '600',
+  fontSize: 11,
+},
+favoriteHeartIcon: {
+  position: 'absolute',
+  top: 7,
+  right: 7,
+  zIndex: 2,
+},
+favoriteWorkshopCardPressed: {
+  transform: [{ scale: 0.97 }],
+  shadowOpacity: 0.13,
+},
 
 });
 

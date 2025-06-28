@@ -76,7 +76,7 @@ const handleSubmit = async () => {
   console.log('handleSubmit called! Button pressed.'); // تأكيد أن الدالة بدأت
   console.log('------------------------------------');
 
-  const name = selectedService || customServiceName;
+  const name = customServiceName || (serviceOptions.find(opt => opt.value === selectedService)?.label ?? '');
 
   // 1. تحقق من قيم الحقول قبل الإرسال
   console.log('Checking form fields...');
@@ -88,8 +88,8 @@ const handleSubmit = async () => {
   console.log('estimatedDuration:', estimatedDuration);
   console.log('workshopId:', workshopId); // تأكد أن workshopId موجودة ومتاحة هنا
 
-  if (!name || !description || !price || !subcategory_id || !selectedCategory || !estimatedDuration) {
-    console.log('Validation failed: Missing fields.'); // سجل أن هناك حقول ناقصة
+  if (!name || !description || !price || !selectedService || !selectedCategory || !estimatedDuration) {
+    console.log('Validation failed: Missing fields.');
     return Alert.alert('⚠️ Missing Fields', 'Please fill all fields.');
   }
   console.log('Validation passed: All fields are filled.');
@@ -100,10 +100,10 @@ const handleSubmit = async () => {
     service_name: name,
     service_description: description,
     category_id: selectedCategory,
-    price: parseFloat(price), // تأكد أنها رقم صحيح
+    price: parseFloat(price),
     workshop_id: workshopId,
-    subcategory_id: selectedService, // تأكد من هذه القيمة
-    estimated_duration: parseInt(estimatedDuration, 10), // تأكد أنها رقم صحيح
+    subcategory_id: selectedService,
+    estimated_duration: parseInt(estimatedDuration, 10),
   };
   console.log('Data to be sent to backend:', dataToSend);
   console.log('------------------------------------');
@@ -145,7 +145,7 @@ return (
   >
     <View style={{ flex: 1 }}>
      
-      <View style={{ paddingHorizontal: 20, paddingTop: 20, zIndex: 1000, backgroundColor: Colors.white }}> {/* <--- تم تعديل zIndex هنا */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 20, zIndex: 1000, backgroundColor: Colors.white }}>
         <Text style={styles.header}>Add New Service</Text>
 
         <DropDownPicker
@@ -158,15 +158,13 @@ return (
           placeholder="Select a Category"
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={3000} // <--- هذا الـ zIndex لقائمة الـ DropDownPicker نفسها عند الفتح، يجب أن يكون عالياً
+          zIndex={3000}
           zIndexInverse={1000}
         />
       </View>
 
-      {/*
-        تم تعديل zIndex للـ service dropdown container إلى 900 ليكون أقل من زر الإرسال.
-      */}
-      <View style={{ paddingHorizontal: 20, marginTop: 10, zIndex: 900 }}> {/* <--- تم تعديل zIndex هنا */}
+      {/* Service dropdown and custom name input */}
+      <View style={{ paddingHorizontal: 20, marginTop: 10, zIndex: 900 }}>
         <DropDownPicker
           open={serviceOpen}
           value={selectedService}
@@ -183,9 +181,19 @@ return (
           }
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={2500} // <--- هذا الـ zIndex لقائمة الـ DropDownPicker نفسها عند الفتح
+          zIndex={2500}
           zIndexInverse={800}
         />
+        {/* Show custom service name input if no service is selected */}
+        {(!selectedService || serviceOptions.length === 0) && (
+          <TextInput
+            placeholder="Custom Service Name"
+            value={customServiceName}
+            onChangeText={setCustomServiceName}
+            style={styles.input}
+            placeholderTextColor={Colors.mediumGray}
+          />
+        )}
       </View>
 
     
@@ -194,7 +202,7 @@ return (
         enableOnAndroid={true}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ paddingHorizontal: 20, zIndex: 4000 }}> {/* <--- هنا أضفنا zIndex: 4000 */}
+        <View style={{ paddingHorizontal: 20, zIndex: 4000 }}>
           <TextInput
             placeholder="Description"
             value={description}
@@ -223,7 +231,6 @@ return (
             placeholderTextColor={Colors.mediumGray}
           />
 
-          {/* الزر نفسه لا يحتاج لـ zIndex خاص به إذا كان الـ View الأب لديه zIndex عالي */}
           <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
             <Text style={styles.submitText}>Add Service</Text>
           </TouchableOpacity>
