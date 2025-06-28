@@ -108,29 +108,31 @@ useEffect(() => {
 
   // When user picks time from modal, format it nicely and save as selected slot
   const handleTimeConfirm = (time) => {
-    const formattedTime = time.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    
-    // Create a new date object for comparison
-    const selectedTime = new Date(selectedDate);
-    selectedTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
-    
-    const now = new Date();
-    const bufferTime = new Date(now.getTime() + 30 * 60000);
+  const formattedTime = time.toLocaleTimeString('en-US', {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 
-    if (selectedDate.toDateString() === now.toDateString()) {
-      if (selectedTime > bufferTime) {
-        setSelectedSlot(formattedTime);
-      } else {
-        Alert.alert("Invalid Time", "Please select a time at least 30 minutes in the future.");
-      }
-    } else {
+  const selectedTime = new Date(selectedDate);
+  selectedTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+
+  const now = new Date();
+  const bufferTime = new Date(now.getTime() + 30 * 60000);
+
+  if (selectedDate.toDateString() === now.toDateString()) {
+    if (selectedTime > bufferTime) {
       setSelectedSlot(formattedTime);
+    } else {
+      Alert.alert("Invalid Time", "Please select a time at least 30 minutes in the future.");
     }
-    hideTimePicker();
-  };
+  } else {
+    setSelectedSlot(formattedTime);
+  }
+
+  hideTimePicker();
+};
+
 
   const handleConfirm = (date) => {
     setSelectedDate(date);

@@ -19,25 +19,10 @@ import Filter from "../Book/ResultOperation/Filter";
 import Sort from "../Book/ResultOperation/Sort";
 import Colors from "../../Components/Colors/Colors";
 
-const convertTo24HourFormat = (time) => {
-  if (typeof time !== "string" || !time.includes(" ")) {
-    return null; // لا وقت صالح، لا تحويل
-  }
 
-  const [timeStr, modifier] = time.split(" ");
-  let [hours, minutes] = timeStr.split(":");
-
-  if (modifier === "PM" && hours !== "12") {
-    hours = (parseInt(hours) + 12).toString();
-  } else if (modifier === "AM" && hours === "12") {
-    hours = "00";
-  }
-
-  return `${hours}:${minutes}`;
-};
 
 const AvailableMechanic = ({ route, navigation }) => {
-  const { date = null, timeSlots = [], subcategoryIds } = route.params || {};
+const { date = null, timeSlots = [], subcategoryIds } = route.params || {};
   console.log("date:", date, "time", timeSlots, "subcategoryIds:", subcategoryIds);
 
   const [rawWorkshops, setRawWorkshops] = useState({
@@ -66,35 +51,24 @@ const AvailableMechanic = ({ route, navigation }) => {
   const borderAnim = useRef(new Animated.Value(0)).current;
   const [fetchedWorkshops, setFetchedWorkshops] = useState([]);  // هنا خزّن الورش الجديدة
 
-  // لو الوقت فاضي أو مش موجود خليه فاضي ما يحول ولا شي
-  // لو timeSlots مش موجودة أو مش مصفوفة نستخدم مصفوفة فاضية
-  const safeTimeSlots = Array.isArray(timeSlots) ? timeSlots : [];
+ const normalizeTimeString = (time) => {
+  return time
+    .replace(/\u202F/g, " ") // استبدل الـ Narrow No-Break Space بـ Space عادي
+    .replace(/^(\d):/, "0$1:") // أضف 0 للبداية لو الساعة رقم واحد
+    .trim();
+};
+
 
   // الفلترة والتحويل بأمان
-  const convertedTimeSlots = safeTimeSlots
-    .filter(t => typeof t === "string" && t.includes(" "))
-    .map(t => convertTo24HourFormat(t))
-    .filter(t => t !== null);
+const safeTimeSlots = Array.isArray(timeSlots) ? timeSlots.map(normalizeTimeString) : [];
 
-  const formattedTimeSlots = convertedTimeSlots.length > 0
-    ? convertedTimeSlots.join(", ")
-    : "";
+const formattedTimeSlots = safeTimeSlots.length > 0
+  ? safeTimeSlots.join(", ")
+  : "";
+  console.log("Safe time slots:", safeTimeSlots);
 
-  const [selectedTimeSlot, setSelectedTimeSlot] = React.useState(() => {
-    if (
-      safeTimeSlots.length > 0 &&
-      typeof safeTimeSlots[0] === "string" &&
-      safeTimeSlots[0].includes(" ")
-    ) {
-      const converted = convertTo24HourFormat(safeTimeSlots[0]);
-      return converted !== null ? converted : null;
-    }
-    return null;
-  });
+  console.log("Formatted time slots:", formattedTimeSlots);
 
-  //console.log("Converted time slots:", convertedTimeSlots);
-  // إذا كانت timeSlots تحتوي على عدة أوقات، سنحولها إلى سلسلة مفصولة بفواصل
-  //console.log("Formatted time slots:", formattedTimeSlots);
   const transform = (list) => {
     //console.log("\n=== TRANSFORM INPUT ===");
     //console.log("Input list:", JSON.stringify(list, null, 2));
@@ -227,11 +201,11 @@ const AvailableMechanic = ({ route, navigation }) => {
       );
 
       const workshops = response.data.workshops || [];
-      console.log("Fetched workshops:", workshops);
+      console.log("Fetched workshops without date:", workshops);
 
       const transformedWorkshops = transform(workshops);
       setFetchedWorkshops(transformedWorkshops);
-      console.log("Transformed workshops:", transformedWorkshops); // اطبع هنا بدل الحالة
+      console.log("Transformed workshops without date:", transformedWorkshops); // اطبع هنا بدل الحالة
 
 
       // تطبيق الفلترة إذا حابب
@@ -397,7 +371,7 @@ const AvailableMechanic = ({ route, navigation }) => {
       city: data.city || "Unknown City",
       street: data.street || "Unknown Street",
       services: data.services || [],
-      date,
+      date : date || null,
       timeSlots,
     };
 
@@ -894,6 +868,7 @@ const AvailableMechanic = ({ route, navigation }) => {
                   data={data}
                   date={date}
                   timeSlots={timeSlots}
+                  
                   onBookPress={(time) => handleBookPress(data, time)} // تمرير الوقت المختار من الكارد
                   onShopPress={() => handleShopPress(data)}
                 />

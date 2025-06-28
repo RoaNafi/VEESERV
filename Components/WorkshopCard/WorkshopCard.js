@@ -1,4 +1,4 @@
-import { View, Text, Image, TouchableOpacity, Modal, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, Image, TouchableOpacity, Modal, FlatList, ActivityIndicator, StyleSheet, Button } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from "../Colors/Colors";
 import styles from "./WorkshopCardStyle";
@@ -34,7 +34,8 @@ const WorkshopCard = ({ data = {}, date, timeSlots, onBookPress, onShopPress, ro
   console.log('WorkshopCard City:', city);
   console.log('WorkshopCard Street:', street);
   console.log(services)
-  console.log('WorkshopCard Date:', date);
+  console.log("WorkshopCard Date:", date);
+  console.log("WorkshopCard timeSlots:", timeSlots);
   const service = Array.isArray(services)
     ? services
     : typeof services === 'string'
@@ -79,7 +80,7 @@ const WorkshopCard = ({ data = {}, date, timeSlots, onBookPress, onShopPress, ro
       if (!date) {
         setDatePickerVisible(true);
       } else {
-        fetchAvailableHoursForDate(date);
+        fetchAvailableHours(date);
       }
     }
   }, [modalVisible]);
