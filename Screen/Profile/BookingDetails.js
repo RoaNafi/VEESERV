@@ -23,11 +23,11 @@ ScrollView,
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const BookingDetailsScreen = ({ route, navigation }) => {
+const BookingDetailsScreen = ({ route, navigation , visible }) => {
   const { booking } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
 const [newDate, setNewDate] = useState(new Date());
@@ -47,7 +47,60 @@ const [showTimePicker, setShowTimePicker] = useState(false);
 const [cancelModalVisible, setCancelModalVisible] = useState(false);
 const [cancelReason, setCancelReason] = useState('');
 const [bookingToCancel, setBookingToCancel] = useState(null);
+const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
 
+const [totalBookingPrice, setTotalBookingPrice] = useState(0); // لحفظ السعر الكلي للحجز
+
+const handlePayment = (booking, services) => {
+  const totalBookingPrice = services.reduce((sum, svc) => sum + svc.price, 0);
+  setSelectedBooking(booking);
+  setTotalBookingPrice(totalBookingPrice);  // تمرير السعر الكلي
+  setPaymentModalVisible(true);
+};
+
+
+
+const handlePayPartial = async (amount) => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    await axios.post('http://176.119.254.225:80/payment/payments', {
+      booking_id: selectedBooking.booking_id,
+      income_value: amount,
+      percent_to_admin: 0.1,          // نسبتك انت - حطها صح حسب عملك
+      percent_to_workshop: 0.9,       // الورشة
+      type: selectedMethod,          // استخدم اختيار المستخدم هنا
+      payment_status: 'partial',
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    alert(`You paid partial amount: ₪${amount}`);
+    setPaymentModalVisible(false);
+  } catch (error) {
+    alert('Payment failed!');
+    console.error(error);
+  }
+};
+
+const handlePayFull = async (amount) => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    await axios.post('http://176.119.254.225:80/payment/payments', {
+      booking_id: selectedBooking.booking_id,
+      income_value: amount,
+      percent_to_admin: 0.1,
+      percent_to_workshop: 0.9,
+      type: selectedMethod,          // استخدم اختيار المستخدم هنا
+      payment_status: 'final',
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    alert(`You paid full amount: ₪${amount}`);
+    setPaymentModalVisible(false);
+  } catch (error) {
+    alert('Payment failed!');
+    console.error(error);
+  }
+};
 const handleCancelPress = (booking) => {
   setBookingToCancel(booking);
   setCancelModalVisible(true);
@@ -101,6 +154,13 @@ const getStatusColor = (status) => {
       return '#888'; // رمادي
   }
 };
+  const [selectedMethod, setSelectedMethod] = useState(null);
+
+  const methods = [
+    { id: 'card', label: 'Pay with Card', color: '#86cce8' },
+    { id: 'cash', label: 'Pay with Cash', color: '#50FA7B' },
+    { id: 'online', label: 'Pay Online', color: '#6272A4' },
+  ];
 
   const saveChanges = async () => {
   try {
@@ -211,6 +271,9 @@ const getStatusStyle = (status) => {
       return { bg: '#e2e3e5', color: '#383d41' };
   }
 };
+// حساب نسبة الدفع الجزئي حسب السعر
+  const partialPercent = booking.price < 50 ? 0.20 : booking.price <= 200 ? 0.30 : 0.40;
+  const partialAmount = Math.round(booking.price * partialPercent);
 
 return (
   <SafeAreaView style={styles.container}>
@@ -252,7 +315,7 @@ return (
     </View>
 
     {booking.booking_status === 'accepted' && (
-      <TouchableOpacity style={styles.primaryButton} onPress={() => handlePayment(booking)}>
+      <TouchableOpacity style={styles.primaryButton} onPress={() => handlePayment(booking, booking.services)}>
         <Text style={styles.primaryButtonText}>Pay Partial</Text>
       </TouchableOpacity>
     )}
@@ -262,7 +325,7 @@ return (
         <TouchableOpacity style={styles.secondaryButton} onPress={() => handleReportReview(booking)}>
           <Text style={styles.secondaryButtonText}>Review Report</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => handlePayment(booking)}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => handlePayment(booking , booking.services)}>
           <Text style={styles.primaryButtonText}>Pay Remaining</Text>
         </TouchableOpacity>
       </View>
@@ -445,6 +508,81 @@ return (
     </View>
   </View>
 </Modal>
+  <Modal visible={isPaymentModalVisible} transparent animationType="slide">
+  <View style={styles.overlay}>
+    <View style={styles.modal}>
+      <Text style={styles.title}>Payment Details</Text>
+
+      {/* اعرض كل الخدمات */}
+      <View style={styles.serviceInfo}>
+        {booking.services.map((svc, i) => (
+          <View key={i} style={styles.serviceLine}>
+            <Text style={styles.serviceName}>{svc.service_name}</Text>
+            <Text style={styles.price}>Price: ₪{svc.price}</Text>
+          </View>
+        ))}
+
+        {/* احسب السعر الكلي */}
+        <Text style={{ marginTop: 10, fontWeight: 'bold' }}>
+          Total Price: ₪{booking.services.reduce((sum, svc) => sum + svc.price, 0)}
+        </Text>
+
+        {/* نسب الدفع الجزئي */}
+        <Text style={styles.partial}>
+          Partial Payment: ₪{partialAmount} ({partialPercent * 100}%)
+        </Text>
+      </View>
+
+      {/* طرق الدفع */}
+      <View style={styles.paymentMethods}>
+  {['card',  'online'].map((method) => (
+    <TouchableOpacity
+      key={method}
+      style={[
+        styles.paymentOption,
+        selectedMethod === method && styles.paymentOptionSelected,
+      ]}
+     onPress={() => setSelectedMethod(method)}
+      activeOpacity={0.8}
+    >
+<Ionicons 
+  name={method === 'card' ? 'card-outline' : method === 'online' ? 'cloud-upload-outline' : 'cash-outline'} 
+  size={24} 
+  color="#000" 
+  style={styles.paymentIcon} 
+/>
+      <Text style={styles.paymentLabel}>
+        {method === 'card' ? 'Credit/Debit Card' : method === 'cash' ? 'Cash' : 'Online Payment'}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
+
+      {/* أزرار الدفع */}
+      <View style={styles.buttonsRow}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.partialPay]}
+          onPress={() => handlePayPartial(partialAmount)}
+        >
+          <Text style={styles.actionText}>Pay Partial ₪{partialAmount}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.fullPay]}
+          onPress={() => handlePayFull(booking.services.reduce((sum, svc) => sum + svc.price, 0))}
+        >
+          <Text style={styles.actionText}>Pay Full ₪{booking.services.reduce((sum, svc) => sum + svc.price, 0)}</Text>
+        </TouchableOpacity>
+      </View>
+
+     <TouchableOpacity style={styles.cancelButton} onPress={() => setPaymentModalVisible(false)}>
+          <Text style={styles.cancelText}>Close</Text>
+        </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
   </SafeAreaView>
 );
 };
@@ -971,6 +1109,156 @@ closeText: {
   color: '#888',
   fontSize: 14,
 },
+overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)', // خفيف عشان ما يضغط على العين
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modal: {
+    backgroundColor: '#e0f7fa', // نفس اللون اللي طلبتيه فاتح وهادي
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#86cce8', // ظل أزرق فاتح وحيوي
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#086189', // أزرق غامق يطلع حلو على الفاتح
+    marginBottom: 24,
+    textAlign: 'center',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  serviceInfo: {
+    marginBottom: 20,
+  },
+  serviceLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomColor: '#b2ebf2', // خط فاصل أزرق فاتح
+    borderBottomWidth: 1,
+  },
+  serviceName: {
+    color: '#003B5C', // أزرق غامق جداً
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: 'Poppins-Regular',
+  },
+  price: {
+    color: '#A4C8EF', // وردي ناعم يعطي تباين حلو
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  partial: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#A4C8EF', // أخضر نيون، مميز وجذاب
+    fontWeight: '700',
+    textAlign: 'right',
+    fontFamily: 'Poppins-Medium',
+  },
+  
+  paymentButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    shadowColor: '#86cce8', // ظل أزرق فاتح ناعم
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  cardButton: {
+    backgroundColor: '#86cce8', // ازرق فاتح قريب للون المودال
+  },
+  cashButton: {
+    backgroundColor: '#50FA7B', // أخضر نيون
+  },
+  onlineButton: {
+    backgroundColor: '#6272A4', // أزرق بنفسجي هادي
+  },
+  paymentText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 24,
+    marginHorizontal: 8,
+    alignItems: 'center',
+    shadowColor: '#86cce8',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  partialPay: {
+  backgroundColor: '#086189', // وردي هادي وناعم (أحمر فاتح)
+},
+fullPay: {
+  backgroundColor: '#086189', // أخضر مائي فاتح ومنعش
+},
 
+  actionText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+  },
+paymentMethods: {
+  flexDirection: 'row',
+  marginVertical: 18,
+},
+
+paymentOption: {
+  flex: 1,
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#fff',
+  borderRadius: 20,
+  paddingVertical: 14,
+  paddingHorizontal: 10,
+  marginHorizontal: 4,
+  shadowColor: '#000',
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  elevation: 3,
+  borderWidth: 1,
+  borderColor: '#eee',
+  transitionDuration: '200ms', // مش في RN بس لو ويب
+  width: '80%', // خليها تأخذ 30% من العرض (ممكن تعدل النسبة حسب ما تحب)
+  justifyContent: 'center', // عشان المحتوى يكون بالمنتصف عرضياً
+},
+
+paymentOptionSelected: {
+  borderColor: '#6272A4', // لون مميز عند الاختيار
+  backgroundColor: '#e6e9f8',
+  shadowOpacity: 0.2,
+},
+
+paymentIcon: {
+  width: 28,
+  height: 28,
+  marginRight: 4,
+},
+
+paymentLabel: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#333',
+},
 
 });
