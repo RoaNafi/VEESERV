@@ -508,6 +508,7 @@ return (
     </View>
   </View>
 </Modal>
+
   <Modal visible={isPaymentModalVisible} transparent animationType="slide">
   <View style={styles.overlay}>
     <View style={styles.modal}>

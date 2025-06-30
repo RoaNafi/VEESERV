@@ -147,16 +147,16 @@ if (!grouped[id].services.some(s => s.name === item.service_name)) {
     setLoading(false);
   }
 };
-
- const onCancel = async (bookingId) => {
+const onCancel = async (bookingId, cancellationReason = '') => {
   try {
-     const token = await AsyncStorage.getItem('accessToken');
-    const response = await fetch(`http://176.119.254.225:80/booking/mechanic/bookings/${bookingId}`, {
-      method: 'DELETE',
+    const token = await AsyncStorage.getItem('accessToken');
+    const response = await fetch(`http://176.119.254.225:80/booking/mechanic/bookings/${bookingId}/cancel`, {
+      method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${token}`, // لازم تمرر التوكن
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ cancellation_reason: cancellationReason }),
     });
 
     if (response.ok) {
@@ -171,6 +171,7 @@ if (!grouped[id].services.some(s => s.name === item.service_name)) {
     alert('An error occurred while cancelling the booking.');
   }
 };
+
 useEffect(() => {
     fetchTodayBookings();
   }, []);
