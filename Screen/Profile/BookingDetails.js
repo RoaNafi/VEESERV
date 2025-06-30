@@ -44,6 +44,36 @@ const [selectedBooking, setSelectedBooking] = useState(booking);
   const [disabledSlots, setDisabledSlots] = useState([]); // Add this state for disabled slots
 const [showDatePicker, setShowDatePicker] = useState(false);
 const [showTimePicker, setShowTimePicker] = useState(false);
+const [cancelModalVisible, setCancelModalVisible] = useState(false);
+const [cancelReason, setCancelReason] = useState('');
+const [bookingToCancel, setBookingToCancel] = useState(null);
+
+const handleCancelPress = (booking) => {
+  setBookingToCancel(booking);
+  setCancelModalVisible(true);
+  setCancelReason('');
+};
+const confirmCancel = async () => {
+  if (!cancelReason.trim()) {
+    alert("Please provide a reason for cancellation.");
+    return;
+  }
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    await axios.patch(`http://176.119.254.225:80/booking/user/cancel/${bookingToCancel.booking_id}`, {
+      cancellation_reason: cancelReason  // هنا غيرت reason لـ cancellation_reason
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    alert('Booking canceled successfully.');
+    setCancelModalVisible(false);
+    // هنا فعل تحديث البيانات أو إعادة جلب الحجز
+  } catch (error) {
+    alert('Failed to cancel booking.');
+    console.error(error);
+  }
+};
+
 
  const handleEdit = (booking) => {
     const datetime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
@@ -249,6 +279,11 @@ return (
         <Text style={styles.editText}>Edit Booking</Text>
       </TouchableOpacity>
     )}
+   {booking.status_name?.toLowerCase() === 'not started' && (
+  <TouchableOpacity style={styles.editButton} onPress={() => handleCancelPress(booking)}>
+    <Text style={styles.editText}>Cancel Booking</Text>
+  </TouchableOpacity>
+)}
   </ScrollView>
 
  
@@ -383,6 +418,33 @@ return (
         </View>
       </View>
     </Modal>
+    
+<Modal visible={cancelModalVisible} transparent animationType="slide">
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalCard}>
+      <Text style={styles.modalTitle}>Cancellation Reason</Text>
+      <Text>Please tell us why you want to cancel your booking.</Text>
+
+      <TextInput
+        style={styles.textInput}
+        multiline
+        placeholder="Type your reason here..."
+        value={cancelReason}
+        onChangeText={setCancelReason}
+      />
+
+      <View style={styles.modalButtonRow}>
+        <TouchableOpacity style={styles.confirmButton} onPress={confirmCancel}>
+          <Text style={styles.confirmText}>Confirm </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.cancelButton} onPress={() => setCancelModalVisible(false)}>
+          <Text style={styles.cancelText}>Close</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
   </SafeAreaView>
 );
 };
@@ -623,23 +685,55 @@ pickerButtonText: {
     letterSpacing: 0.6,
   },
 
-  cancelButton: {
-    backgroundColor: '#dc3545',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    shadowColor: '#dc3545',
-    shadowOpacity: 0.5,
+confirmButton: {
+backgroundColor: '#d4edda', // أخضر فاتح
+  borderWidth: 1,
+  borderColor: '#28a745',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 10,
+  alignItems: 'center',    // لمحاذاة أفقي
+  justifyContent: 'center', // لمحاذاة عمودي
+  shadowOpacity: 0.5,
     shadowRadius: 7,
-    shadowOffset: { width: 0, height: 4 },
-  },
 
-  cancelText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 17,
-    letterSpacing: 0.6,
-  },
+  width: '48%',
+},
+
+cancelButton: {
+backgroundColor: '#f8d7da', // وردي فاتح
+  borderWidth: 1,
+  borderColor: '#dc3545',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 10,
+  alignItems: 'center',    // لمحاذاة أفقي
+  justifyContent: 'center', // لمحاذاة عمودي
+  shadowOpacity: 0.5,
+  shadowRadius: 7,
+  width: '48%',
+},
+
+textInput: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 10,
+  padding: 12,
+  marginVertical: 16,
+  minHeight: 80,
+  textAlignVertical: 'top', // عشان يظل النص فوق لما يكتب
+  backgroundColor: '#fff',
+},
+cancelText: {
+  color: '#dc3545',
+  fontWeight: '700',
+  fontSize: 16,
+},
+confirmText: {
+  color: '#28a745',
+  fontWeight: '700',
+  fontSize: 16,
+},
 
   modalButtonRow: {
     flexDirection: 'row',
@@ -722,7 +816,6 @@ modalContent: {
   padding: 20,
   maxHeight: '80%',
 },
-
 
 
 
