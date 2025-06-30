@@ -70,6 +70,8 @@ const handlePayPartial = async (amount) => {
       percent_to_workshop: 0.9,       // الورشة
       type: selectedMethod,          // استخدم اختيار المستخدم هنا
       payment_status: 'partial',
+      total_price: totalBookingPrice, // أضف السعر الكلي هنا
+
     }, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -91,6 +93,7 @@ const handlePayFull = async (amount) => {
       percent_to_workshop: 0.9,
       type: selectedMethod,          // استخدم اختيار المستخدم هنا
       payment_status: 'final',
+        total_price: totalBookingPrice, // أضف السعر الكلي هنا
     }, {
       headers: { Authorization: `Bearer ${token}` }
     });
