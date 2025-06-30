@@ -244,4 +244,19 @@ otherTimesText: {
   borderColor: '#38BDF8', // لون الحدود
   paddingVertical: 6, // padding vertical for better touch area
 },
+mobileFeeContainer: {
+  marginTop: 8,
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  backgroundColor: '#e0f7fa', // لون هادي يريح العين
+  borderRadius: 12,
+  alignSelf: 'flex-start',
+},
+
+mobileFeeLabel: {
+  color: '#007a9c', // لون أزرق فاتح كذا جذاب
+  fontWeight: '600',
+  fontSize: 14,
+},
+
 });

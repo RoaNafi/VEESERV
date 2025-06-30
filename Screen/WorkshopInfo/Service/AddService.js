@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
+   Switch,
   Platform
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -33,6 +34,8 @@ const [price, setPrice] = useState('');
 const [estimatedDuration, setEstimatedDuration] = useState('');
 const [customServiceName, setCustomServiceName] = useState('');
 
+const [isMobile, setIsMobile] = useState(false);
+const [mobileFee, setMobileFee] = useState('');
 
   useEffect(() => {
   fetchCategories();
@@ -72,8 +75,9 @@ const fetchSubCategories = async (categoryId) => {
     console.error('Error fetching subcategories:', err);
   }
 };
+
 const handleSubmit = async () => {
-  console.log('handleSubmit called! Button pressed.'); // تأكيد أن الدالة بدأت
+  console.log('handleSubmit called! Button pressed.');
   console.log('------------------------------------');
 
   const name = customServiceName || (serviceOptions.find(opt => opt.value === selectedService)?.label ?? '');
@@ -83,14 +87,25 @@ const handleSubmit = async () => {
   console.log('name:', name);
   console.log('description:', description);
   console.log('price:', price);
-  console.log('subcategory_id (selectedService):', selectedService); // تأكد أن subcategory_id هي نفسها selectedService
+  console.log('subcategory_id (selectedService):', selectedService);
   console.log('selectedCategory (category_id):', selectedCategory);
   console.log('estimatedDuration:', estimatedDuration);
-  console.log('workshopId:', workshopId); // تأكد أن workshopId موجودة ومتاحة هنا
+  console.log('workshopId:', workshopId);
+  console.log('isMobile:', isMobile);          // تأكد من وجود isMobile في الstate أو props
+  console.log('mobileFee:', mobileFee);        // تأكد من وجود mobileFee في الstate أو props
 
-  if (!name || !description || !price || !selectedService || !selectedCategory || !estimatedDuration) {
-    console.log('Validation failed: Missing fields.');
-    return Alert.alert('⚠️ Missing Fields', 'Please fill all fields.');
+  // Validation مع إضافة isMobile و mobileFee
+  if (
+    !name ||
+    !description ||
+    !price ||
+    !selectedService ||
+    !selectedCategory ||
+    !estimatedDuration ||
+    (isMobile && (!mobileFee || isNaN(mobileFee))) // لو الخدمة موبايل، لازم يكون في mobileFee صحيح
+  ) {
+    console.log('Validation failed: Missing or invalid fields.');
+    return Alert.alert('⚠️ Missing Fields', 'Please fill all required fields correctly.');
   }
   console.log('Validation passed: All fields are filled.');
   console.log('------------------------------------');
@@ -104,40 +119,39 @@ const handleSubmit = async () => {
     workshop_id: workshopId,
     subcategory_id: selectedService,
     estimated_duration: parseInt(estimatedDuration, 10),
+    is_mobile: isMobile || false,                 // افتراضي false لو ما موجود
+    mobile_fee: isMobile ? parseInt(mobileFee, 10) : 0,  // لو موبايل حط الفيزا وإلا 0
   };
   console.log('Data to be sent to backend:', dataToSend);
   console.log('------------------------------------');
 
   try {
-    console.log('Attempting to send API request...'); // قبل إرسال الطلب
-    const res = await api.post('/service/services', dataToSend); // استخدم dataToSend هنا
+    console.log('Attempting to send API request...');
+    const res = await api.post('/service/services', dataToSend);
 
-    console.log('API call successful!'); // إذا وصل إلى هنا، الطلب نجح
-    console.log('Response from backend:', res.data); // سجل استجابة الـ backend
+    console.log('API call successful!');
+    console.log('Response from backend:', res.data);
     Alert.alert('✅ Success', res.data.message);
     navigation.goBack();
   } catch (err) {
-    console.log('API call failed or encountered an error.'); // سجل إذا فشل الطلب
-    // 3. سجل الخطأ كاملاً للتشخيص
+    console.log('API call failed or encountered an error.');
     if (err.response) {
-      // إذا كان الخطأ من استجابة السيرفر (مثل 400, 401, 500)
       console.error('Error response from backend:', err.response.data);
       console.error('Error status:', err.response.status);
       console.error('Error headers:', err.response.headers);
       Alert.alert('Error', err.response.data.message || 'Could not create service. Server error.');
     } else if (err.request) {
-      // الطلب تم إرساله ولكن لم يتم استلام أي رد (لا يوجد اتصال بالإنترنت، السيرفر لا يعمل)
       console.error('No response received from backend (request made):', err.request);
       Alert.alert('Error', 'Could not connect to the server. Please check your internet connection.');
     } else {
-      // خطأ آخر حدث أثناء إعداد الطلب
       console.error('Error setting up request:', err.message);
       Alert.alert('Error', 'An unexpected error occurred.');
     }
-    Alert.alert('Error', 'Could not create service.'); // رسالة عامة للمستخدم
+    Alert.alert('Error', 'Could not create service.');
   }
   console.log('------------------------------------');
 };
+
 return (
   <KeyboardAvoidingView
     style={{ flex: 1 ,backgroundColor: Colors.white}}
@@ -230,7 +244,30 @@ return (
             style={styles.input}
             placeholderTextColor={Colors.mediumGray}
           />
+ {/* هنا زر تبديل isMobile */}
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
+      <Text style={{ flex: 1, fontSize: 16, color: '#086189', fontWeight: '600' }}>
+        Mobile Service?
+      </Text>
+      <Switch
+        value={isMobile}
+        onValueChange={setIsMobile}
+        trackColor={{ false: '#ccc', true: '#086189' }}
+        thumbColor={isMobile ? '#0b79d0' : '#f4f3f4'}
+      />
+    </View>
 
+    {/* لو isMobile مفعل، خلي المستخدم يدخل رسوم الموبايل */}
+    {isMobile && (
+      <TextInput
+        placeholder="Mobile Fee (e.g., 20)"
+        value={mobileFee}
+        onChangeText={setMobileFee}
+        keyboardType="numeric"
+        style={styles.input}
+        placeholderTextColor={Colors.mediumGray}
+      />
+    )}
           <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
             <Text style={styles.submitText}>Add Service</Text>
           </TouchableOpacity>

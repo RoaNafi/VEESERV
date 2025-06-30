@@ -89,6 +89,8 @@ const formattedTimeSlots = safeTimeSlots.length > 0
           service_id: s.service_id || s.id,
           name: s.service_name || s.name || "Service",
           price: s.price || 0,
+          is_mobile: s.is_mobile || false,
+          mobile_fee: s.mobile_fee || 0,
         })),
       };
       console.log("services:", result.services);
@@ -111,6 +113,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
         preferred_date: date,
         preferred_time: formattedTimeSlots,
       };
+      console.log ("Filter parameters:", filterParams);
 
       // Add rating filter if selected
       if (selectedRating) {
@@ -349,6 +352,8 @@ const formattedTimeSlots = safeTimeSlots.length > 0
       services: data.services.map(service => ({
         service_id: service.service_id,
         service_name: service.name,
+        is_mobile: service.is_mobile || false,
+        mobile_fee: service.mobile_fee || 0,
         price: service.price
       }))
     };
@@ -858,7 +863,9 @@ const formattedTimeSlots = safeTimeSlots.length > 0
                 services: (item.item.services || []).map(s => ({
                   name: s.name,
                   price: s.price,
-                  service_id: s.service_id || s.id
+                  service_id: s.service_id || s.id,
+                  is_mobile: s.is_mobile || false,
+                  mobile_fee: s.mobile_fee || 0
                 }))
               };
               console.log('++++++++++++++++++++++++++++++++++++++++++++++++');

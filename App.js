@@ -47,6 +47,7 @@ import SearchResult from "./Screen/Home/SearchResult";
 import GenerateReportScreen from "./Screen/WorkshopHome/GenerateReportScreen";
 import TodaySchedule from "./Screen/WorkshopHome/TodaySchedule";
 import FavoriteWorkshops from "./Screen/Profile/FavoriteWorkshops";
+import BookingDetails from "./Screen/Profile/BookingDetails";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -360,6 +361,11 @@ export default function App() {
               name="GenerateReportScreen"
               component={GenerateReportScreen}
               options={{ headerShown: true, title: "Generate Report" }}
+            />
+            <Stack.Screen
+              name="BookingDetails"
+              component={BookingDetails}
+              options={{ headerShown: true, title: "Booking Details" }}
             />
             
                     </Stack.Navigator>

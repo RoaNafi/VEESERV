@@ -12,6 +12,7 @@ import {
   Modal,
   Animated,
   Easing,
+  Switch,
 } from 'react-native';
 import Colors from '../../Components/Colors/Colors';
 import * as Location from 'expo-location'; // Import Location API
@@ -40,23 +41,29 @@ console.log("summary date:", date );
 console.log("summary timeSlots:", timeSlots );
 
 
-  const { service_name, workshop_name, price, service_id, workshop_id } = data;
+  const { service_name, workshop_name, price, service_id, workshop_id , is_mobile, mobile_fee } = data;
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   console.log("Workshop Data:", data);
   console.log("Date:", date);
   console.log("Time Slots:", timeSlots);
   console.log("Initial Car:", selectedCar);
+// لاحظي: نستخدم data.services (مصفوفة)
+  const [selectedServices, setSelectedServices] = useState(
+    (data.services || []).map(service => ({
+      id: service.service_id,
+      service_id: service.service_id,
+      name: service.service_name || service.name,
+      price: service.price,
+      is_mobile: service.is_mobile || false,
+      mobile_fee: service.mobile_fee || 0,
+      is_mobile_selected: false,
+    }))
+  );
 
-  // Initialize with service from route params
-  const [selectedServices, setSelectedServices] = useState([
-    { 
-      id: service_id,
-      service_id: service_id,
-      name: service_name,
-      price: price
-    }
-  ]);
+  console.log("Selected Services:", selectedServices);
+
+
   const { showActionSheetWithOptions } = useActionSheet();
 
   const [scheduledDate, setScheduledDate] = useState(new Date(date));
@@ -78,6 +85,7 @@ console.log("summary timeSlots:", timeSlots );
   const [loadingLocation, setLoadingLocation] = useState(false);
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const totalMobileFee = selectedServices.reduce((sum, s) => sum + (s.is_mobile ? s.mobile_fee : 0), 0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -368,6 +376,8 @@ console.log("summary timeSlots:", timeSlots );
         name: service.service_name,
         price: service.price,
         service_id: service.service_id
+        , is_mobile: service.is_mobile || false, // هل الخدمة mobile متاحة أصلاً
+        mobile_fee: service.mobile_fee || 0, // الرسوم الإضافية للخدمة المتنقلة 
       }]);
     }
     setModalVisible(false);
@@ -389,61 +399,73 @@ console.log("summary timeSlots:", timeSlots );
   const serviceDisplayData = selectedServices.map(s => ({
     name: s.service_name || s.name, // تأكد إنك تقدر تجيب الاسم من أي مفتاح موجود
     price: s.price,
+    is_mobile: s.is_mobile || false,
+    mobile_fee: s.mobile_fee || 0,
   }));
-  const handleConfirmBooking = async () => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
 
-      if (!selectedCar) {
-        return;
-      }
+ const handleConfirmBooking = async () => {
+  try {
+    const token = await AsyncStorage.getItem("accessToken");
 
-      // if (!address.street) {
-      //   Alert.alert("Please provide a location");
-      //   return;
-      // }
-
-      const payload = {
-        bookings: [{
-          workshop_id: data.workshop_id,
-          scheduled_date: date,
-          time: timeSlots,
-          vehicle_id: selectedCar?.vehicle_id,
-          services: data.services.map(service => ({
-            service_id: service.service_id,
-            price: service.price
-          }))
-        }],
-        totalPrice: totalPrice,
-        address: {
-          address_id: address?.address_id,
-          street: address?.street,
-          city: address?.city,
-        },
-        temporary: true,
-      };
-
-      console.log('📦 Booking Payload:', JSON.stringify(payload, null, 2));
-
-      const response = await axios.post(
-        "http://176.119.254.225:80/booking/multiple",
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.status === 201) {
-        setShowConfirmation(true);
-      }
-    } catch (err) {
-      console.error("❌ Booking failed:", err.response?.data || err.message);
-      Alert.alert(
-        "Booking failed",
-        err.response?.data?.error || "Unknown error"
-      );
+    if (!selectedCar) {
+      Alert.alert("Please select a vehicle first.");
+      return;
     }
-  };
+
+    // تحقق إذا في خدمة موبايل مختارة
+    const isMobileSelected = selectedServices.some(s => s.is_mobile_selected);
+
+    // لو موبايل مختارة، لازم تتأكد من وجود العنوان
+    if (isMobileSelected && (!address?.street || !address?.city)) {
+      Alert.alert("⚠️ Please provide a valid address for the mobile service.");
+      return;
+    }
+
+    const payload = {
+  bookings: [{
+    workshop_id: data.workshop_id,
+    scheduled_date: date,
+    time: timeSlots,
+    vehicle_id: selectedCar?.vehicle_id,
+    services: selectedServices.map(service => ({
+      service_id: service.service_id,
+      price: service.price,
+      is_mobile: service.is_mobile_selected,
+      mobile_fee: service.mobile_fee,
+    })),
+    is_mobile_service: selectedServices.some(s => s.is_mobile_selected), // <--- هنا ترسلها
+  }],
+  totalPrice: totalPrice,
+  address: {
+    address_id: address?.address_id,
+    street: address?.street,
+    city: address?.city,
+  },
+  temporary: true,
+};
+
+
+    console.log('📦 Booking Payload:', JSON.stringify(payload, null, 2));
+
+    const response = await axios.post(
+      "http://176.119.254.225:80/booking/multiple",
+      payload,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (response.status === 201) {
+      setShowConfirmation(true);
+    }
+  } catch (err) {
+    console.error("❌ Booking failed:", err.response?.data || err.message);
+    Alert.alert(
+      "Booking failed",
+      err.response?.data?.error || "Unknown error"
+    );
+  }
+};
 
   const handleGoToHome = async () => {
     try {
@@ -547,18 +569,37 @@ console.log("summary timeSlots:", timeSlots );
                 <Text style={styles.summaryLabel}>Service</Text>
               </View>
             </View>
-            {data.services && data.services.map((service, index) => (
-              <View key={index} style={styles.serviceDetailsRow}>
-                <View style={styles.serviceNameCell}>
-                  <Text style={styles.serviceNameText}>
-                    {service.service_name || service.name}
-                  </Text>
-                </View>
-                <View style={styles.servicePriceCell}>
-                  <Text style={styles.servicePrice}>{service.price}₪</Text>
-                </View>
-              </View>
-            ))}
+         {selectedServices.map((service, index) => (
+  <View key={index} style={styles.serviceDetailsRow}>
+    <View style={styles.serviceNameCell}>
+      <Text style={styles.serviceNameText}>{service.service_name || service.name}</Text>
+      
+      {service.is_mobile && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+          <Text style={{ color: '#555', fontStyle: 'italic', marginRight: 8 }}>
+            Do you want it mobile? (+{service.mobile_fee}₪)
+          </Text>
+          <Switch
+            value={service.is_mobile_selected}
+            onValueChange={(value) => {
+              const updatedServices = [...selectedServices];
+              updatedServices[index].is_mobile_selected = value;
+              setSelectedServices(updatedServices);
+            }}
+          />
+        </View>
+      )}
+    </View>
+
+    <View style={styles.servicePriceCell}>
+      <Text style={styles.servicePrice}>
+        {service.price + (service.is_mobile_selected ? service.mobile_fee : 0)}₪
+      </Text>
+    </View>
+  </View>
+))}
+
+
 
             <View style={styles.summaryRow}>
               <View style={styles.summaryLabelContainer}>

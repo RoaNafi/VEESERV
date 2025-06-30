@@ -16,7 +16,7 @@ import {
   Alert,
   Platform,
   TextInput,
-
+ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const MyBookingsScreen = () => {
   const [bookings, setBookings] = useState([]);
@@ -44,6 +45,11 @@ const [feedbackText, setFeedbackText] = useState('');
 const [showDatePicker, setShowDatePicker] = useState(false);
 const [showTimePicker, setShowTimePicker] = useState(false);
 const [newDate, setNewDate] = useState(new Date());
+const [selectedService, setSelectedService] = useState(null);
+const [reviewModalVisible, setReviewModalVisible] = useState(false);
+const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+const [serviceToReview, setServiceToReview] = useState(null); // الخدمة اللي براجعها
+const [modalView, setModalView] = useState('details'); // 'details' أو 'review' أو 'feedback'
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -63,150 +69,89 @@ const [newDate, setNewDate] = useState(new Date());
 
     fetchBookings();
   }, []);
-
-  const groupedBookings = bookings.reduce((acc, booking) => {
-    const key = `${booking.vehicle_id}-${booking.scheduled_date}-${booking.workshop_name}`;
-    if (!acc[key]) {
-      acc[key] = {
-        ...booking,
-        services: [{
-          service_name: booking.service_name,
-          price: booking.price,
-          scheduled_time: booking.scheduled_time
-        }],
-      };
-    } else {
-      acc[key].services.push({
+  
+const groupedBookings = bookings.reduce((acc, booking) => {
+  const key = `${booking.vehicle_id}-${booking.scheduled_date}-${booking.workshop_name}`;
+  if (!acc[key]) {
+    acc[key] = {
+      ...booking,
+      services: [{
         service_name: booking.service_name,
         price: booking.price,
-        scheduled_time: booking.scheduled_time
-      });
-    }
-    return acc;
-  }, {});
+        scheduled_time: booking.scheduled_time,
+        service_status: booking.service_status,
+        service_id: booking.service_id,
+      }],
+    };
+  } else {
+    acc[key].services.push({
+      service_name: booking.service_name,
+      price: booking.price,
+      scheduled_time: booking.scheduled_time,
+      service_status: booking.service_status,
+      service_id: booking.service_id,
+    });
+  }
+  return acc;
+}, {});
+
+const formatDate = (isoDate) => {
+  const date = new Date(isoDate);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth()+1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
   const bookingsArray = Object.values(groupedBookings);
-
-  const handleEdit = (booking) => {
-    const datetime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
-    const now = new Date();
-    const diffHours = (datetime - now) / (1000 * 60 * 60);
-    if (diffHours <= 12) {
-      Alert.alert('Cannot edit', 'You can only edit bookings 12+ hours in advance.');
-      return;
-    }
-    setSelectedBooking(booking);
-    setNewDate(datetime);
-    setModalVisible(true);
-  };
-
-  const saveChanges = async () => {
-  try {
-    const token = await AsyncStorage.getItem('accessToken');
-    await axios.patch(`http://176.119.254.225:80/booking/update/${selectedBooking.booking_id}`, {
-      scheduled_date: newDate.toISOString().split('T')[0],
-      scheduled_time: newDate.toTimeString().split(' ')[0].slice(0, 5) + ':00'
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setModalVisible(false);
-    Alert.alert('Success', 'Booking updated successfully.');
-  } catch (err) {
-    console.error(err);
-    Alert.alert('Error', 'Failed to update booking.');
-  }
-};
-
-// 🧠 FEEDBACK SUBMIT HANDLER
-const handleSubmitFeedback = async () => {
-  if (!selectedBooking || !rating || !feedbackText) {
-    alert("Please provide both a rating and a comment");
-    return;
-  }
-  try {
-    const token = await AsyncStorage.getItem('accessToken');
-    const res = await axios.post('http://176.119.254.225:80/review/review', {
-      workshopId: selectedBooking.workshop_id,
-      serviceId: selectedBooking.services[0]?.service_id || selectedBooking.service_id,
-      rating,
-      comment: feedbackText,
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-     console.log('Feedback submitted:', res.data);
-    alert("Thank you for your feedback!");
-    setFeedbackModalVisible(false);
-    setFeedbackText('');
-    setRating(0);
-  } catch (error) {
-    console.error('Error submitting feedback:', error);
-    alert("Failed to submit feedback");
-  }
-};
-
 const renderBooking = ({ item }) => (
-  <View style={styles.card}>
-    <Image source={book} style={styles.image} />
-    <View style={styles.details}>
-      <Text style={styles.title}>{item.workshop_name}</Text>
-      <Text style={styles.car}>{item.make} {item.model} ({item.year})</Text>
+  <TouchableOpacity onPress={() => navigation.navigate('BookingDetails', { booking: item })}>
+    <LinearGradient
+      colors={['#ffffff', '#f2f6f9']}
+      style={styles.card}
+    >
+              <Image source={book} style={styles.image} />
 
-      {item.services.map((service, index) => (
-        <View key={index} style={styles.serviceRow}>
-          <Ionicons name="checkmark-circle-outline" size={14} color="#086189" />
-          <Text style={styles.serviceText}>
-            {service.service_name} - {service.price}₪ at {service.scheduled_time}
-          </Text>
+      <View style={styles.details}>
+
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>{item.workshop_name}</Text>
+
+          {item.services && item.services.length > 0 ? (
+            <Text style={styles.cardService}>
+              {item.services[0].service_name} - {item.services[0].price}₪
+              {item.services.length > 1 && (
+                <Text style={styles.cardExtra}>  +{item.services.length - 1} more</Text>
+              )}
+            </Text>
+          ) : (
+            <Text style={styles.cardService}>No services</Text>
+          )}
         </View>
-      ))}
-
-      <Text style={styles.status}>Status: {item.booking_status}</Text>
-      <Text style={styles.date}>Scheduled: {item.scheduled_date}</Text>
-
-      {item.booking_status === 'accepted' && (
-        <TouchableOpacity
-          style={styles.payNowButton}
-          onPress={() => {
-            navigation.navigate('Payment', {
-              workshop_name: item.workshop_name,
-              bookingId: item.booking_id,
-              bookings: item.services,
-              totalPrice: item.services.reduce((total, s) => total + s.price, 0),
-              address: item.address,
-              selectedCar: {
-                make: item.make,
-                model: item.model,
-                year: item.year,
-                vehicle_id: item.vehicle_id,
-              },
-              date: item.scheduled_date,
-              timeSlots: item.services.map(s => s.scheduled_time),
-            });
-          }}
-        >
-          <Text style={styles.payNowText}>Pay Now</Text>
-        </TouchableOpacity>
-      )}
-
-      {(item.booking_status === 'complete paid') && (
-        <TouchableOpacity
-          style={styles.feedbackButton}
-          onPress={() => {
-            setSelectedBooking(item);
-            setFeedbackModalVisible(true);
-          }}
-        >
-          <Text style={styles.feedbackText}>Leave Feedback</Text>
-        </TouchableOpacity>
-      )}
-      {(item.booking_status !== 'complete paid' || item.booking_status === 'pending' || item.status_name === 'not started') && (
-        <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(item)}>
-          <Text style={styles.editText}>Edit Booking</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  </View>
+        <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Scheduled Time : </Text>
+              <Text style={styles.sectionValue}>
+                {formatDate(item.scheduled_date)} at {item.scheduled_time}
+              </Text>
+            </View>
+            
+            <View style={{ 
+              backgroundColor: '#e0f7fa', 
+              paddingVertical: 4, 
+              paddingHorizontal: 10, 
+              borderRadius: 10, 
+              alignSelf: 'flex-start',
+              marginTop: 10 
+            }}>
+              <Text style={{ fontSize: 13, color: '#086189', fontWeight: '700' }}>
+                {item.booking_status.toUpperCase()}
+              </Text>
+            </View>
+      </View>
+    </LinearGradient>
+  </TouchableOpacity>
 );
+
 
 
 return (
@@ -220,106 +165,8 @@ return (
       contentContainerStyle={{ padding: 16 }}
     />
 
-    <Modal visible={modalVisible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Edit Date & Time</Text>
-
-          <TouchableOpacity style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.pickerButtonText}>Pick Date</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
-            <Text style={styles.pickerButtonText}>Pick Time</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.selectedDateText}>Selected: {newDate.toLocaleString()}</Text>
-
-          <DateTimePickerModal
-            isVisible={showDatePicker}
-            mode="date"
-            date={newDate}
-            onConfirm={(d) => {
-              const updatedDate = new Date(newDate);
-              updatedDate.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
-              setNewDate(updatedDate);
-              setShowDatePicker(false);
-            }}
-            onCancel={() => setShowDatePicker(false)}
-            themeVariant="light"
-          />
-
-          <DateTimePickerModal
-            isVisible={showTimePicker}
-            mode="time"
-            is24Hour
-            date={newDate}
-            onConfirm={(t) => {
-              const updatedDate = new Date(newDate);
-              updatedDate.setHours(t.getHours(), t.getMinutes());
-              setNewDate(updatedDate);
-              setShowTimePicker(false);
-            }}
-            onCancel={() => setShowTimePicker(false)}
-            themeVariant="light"
-          />
-
-          <View style={styles.modalButtonRow}>
-            <TouchableOpacity style={styles.saveButton} onPress={saveChanges}>
-              <Text style={styles.saveButtonText}>Save Changes</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-
-    <Modal
-      visible={isFeedbackModalVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setFeedbackModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Rate your Experience</Text>
-
-          <TextInput
-            placeholder="Write your feedback..."
-            style={styles.commentInput}
-            multiline
-            value={feedbackText}
-            onChangeText={setFeedbackText}
-          />
-
-          <View style={styles.starsRow}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                <Ionicons
-                  name={star <= rating ? 'star' : 'star-outline'}
-                  size={30}
-                  color={star <= rating ? '#FFD700' : '#aaa'}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmitFeedback}>
-            <Text style={styles.submitText}>Submit</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setFeedbackModalVisible(false)}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
   </SafeAreaView>
 );
-
 }
 const styles = StyleSheet.create({
   container: {
@@ -345,20 +192,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    marginBottom: 18,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0', // هادي وناعمة
-  },
+card: {
+  flexDirection: 'row',
+  backgroundColor: '#fdfdfd',
+  borderRadius: 20,
+  marginBottom: 18,
+  padding: 20,
+  shadowColor: '#000',
+  shadowOpacity: 0.12,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 8,
+  borderWidth: 1,
+  borderColor: '#e2e8f0',
+  // جديد:
+  backgroundColor: 'linear-gradient(135deg, #ffffff, #f0f4f8)', // إذا كنت تستخدم مكتبة دعم للتدرجات مثل react-native-linear-gradient
+},
 
   image: {
     width: 95,
@@ -368,11 +217,11 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
 
+  
   details: {
     flex: 1,
     justifyContent: 'center',
   },
-
   title: {
     fontWeight: '700',
     fontSize: 22,
@@ -437,17 +286,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  feedbackButton: {
-    marginTop: 12,
-    backgroundColor: '#086189',
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#086189',
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 3 },
-  },
+ feedbackButton: {
+  marginTop: 12,
+  backgroundColor: '#086189',
+  paddingVertical: 10,
+  borderRadius: 12,
+  alignItems: 'center',
+  shadowColor: '#086189',
+  shadowOpacity: 0.2,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 2 },
+},
 
   feedbackText: {
     color: '#fff',
@@ -456,17 +305,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  editButton: {
-    marginTop: 14,
-    backgroundColor: '#086189',
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#086189',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 3 },
-  },
 
   editText: {
     color: '#fff',
@@ -496,14 +334,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 25,
-    textAlign: 'center',
-    color: '#086189',
-    letterSpacing: 0.6,
-  },
+ 
 
   commentInput: {
     borderWidth: 1,
@@ -600,18 +431,209 @@ pickerButtonText: {
     fontWeight: "600",
     fontSize: 16,
   },
-  cancelButton: {
-    backgroundColor: "#dc3545",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: "center",
+ 
+  
+modalText: {
+  fontSize: 16,
+  marginVertical: 8,
+  textAlign: 'center',
+},
+modalTextBold: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 12,
+  textAlign: 'center',
+},
+actionButton: {
+  padding: 10,
+  borderRadius: 8,
+  marginHorizontal: 10,
+  flex: 1,
+  alignItems: 'center',
+},
+actionText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 16,
+},
+
+modalContainer: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+modalContent: {
+  backgroundColor: '#fff',
+  width: '90%',
+  borderRadius: 16,
+  padding: 20,
+  maxHeight: '80%',
+},
+
+textContainer: {
+  flex: 1,
+  justifyContent: 'center',
+},
+
+
+
+
+
+
+
+statusTag: {
+  backgroundColor: '#e0f7fa',  // لون هادي وأنيق (سماوي فاتح)
+  paddingHorizontal: 12,
+  paddingVertical: 4,
+  borderRadius: 20,
+  alignSelf: 'flex-start',
+  marginTop: 6,
+},
+
+statusText: {
+  color: '#007B8A',  // أزرق أخضر غامق
+  fontWeight: 'bold',
+  fontSize: 13,
+  letterSpacing: 0.5,
+},
+
+
+ 
+
+  modalDate: {
+    fontSize: 14,
+    color: '#777',
+    marginTop: 10,
   },
-  modalButtonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
+  modalTitle: {
+  fontSize: 20,
+  fontWeight: 'bold',
+  color: '#086189',
+  marginBottom: 5,
+},
+
+modalCar: {
+  fontSize: 16,
+  color: '#666',
+  marginBottom: 10,
+},
+
+section: {
+  marginBottom: 15,
+},
+
+sectionTitle: {
+  fontSize: 15,
+  fontWeight: '600',
+  color: '#086189',
+  marginBottom: 5,
+},
+
+sectionValue: {
+  fontSize: 14,
+  color: '#333',
+},
+
+serviceLine: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingVertical: 6,
+  borderBottomWidth: 0.5,
+  borderColor: '#ddd',
+},
+
+serviceText: {
+  fontSize: 14,
+  flex: 2,
+  color: '#333',
+},
+
+servicePrice: {
+  fontSize: 14,
+  flex: 1,
+  textAlign: 'right',
+  color: '#444',
+},
+
+serviceStatus: {
+  fontSize: 13,
+  flex: 1,
+  textAlign: 'right',
+  fontWeight: '600',
+},
+
+requestTag: {
+  backgroundColor: '#ffeeba',
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+  borderRadius: 12,
+  marginLeft: 10,
+},
+
+requestTagText: {
+  fontSize: 12,
+  color: '#856404',
+  fontWeight: '600',
+},
+
+primaryButton: {
+  backgroundColor: '#086189',
+  padding: 10,
+  borderRadius: 10,
+  marginTop: 15,
+  alignItems: 'center',
+},
+
+primaryButtonText: {
+  color: '#fff',
+  fontWeight: 'bold',
+},
+
+secondaryButton: {
+  backgroundColor: '#e0f7fa',
+  padding: 10,
+  borderRadius: 10,
+  marginTop: 10,
+  alignItems: 'center',
+},
+
+secondaryButtonText: {
+  color: '#086189',
+  fontWeight: '600',
+},
+
+buttonGroup: {
+  marginTop: 10,
+  gap: 10,
+},
+
+editButton: {
+  marginTop: 10,
+  padding: 10,
+  borderRadius: 10,
+  borderColor: '#086189',
+  borderWidth: 1,
+  alignItems: 'center',
+},
+
+editText: {
+  color: '#086189',
+  fontWeight: '600',
+},
+
+closeModal: {
+  marginTop: 20,
+  alignItems: 'center',
+},
+
+closeText: {
+  color: '#888',
+  fontSize: 14,
+},
+
 
 });
 

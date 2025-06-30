@@ -38,11 +38,14 @@ const actualDate = selectedDate || date;
   console.log(services)
   console.log("WorkshopCard Date:", date);
   console.log("WorkshopCard timeSlots:", timeSlots);
-  const service = Array.isArray(services)
-    ? services
-    : typeof services === 'string'
-      ? services_list.split(',').map(s => s.trim())
-      : [];
+const service = Array.isArray(services)
+  ? services
+  : typeof services === 'string'
+    ? services_list.split(',').map(s => s.trim())
+    : [];
+
+const isAnyMobile = service.some(s => s.is_mobile);
+const totalMobileFee = service.reduce((acc, s) => acc + (s.is_mobile ? s.mobile_fee : 0), 0);
 
 const fetchAvailableHours = async (selectedDate) => {
   const formattedDate = typeof selectedDate === 'string'
@@ -206,6 +209,14 @@ const fetchAvailableHours = async (selectedDate) => {
                     Total: {service.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0)}₪
                   </Text>
                 )}
+             <View style={styles.mobileFeeContainer}>
+      <Text style={styles.mobileFeeLabel}>
+        {isAnyMobile
+          ? `Mobile available (+₪${totalMobileFee || 50} added)`
+          : 'Mobile service not available'}
+      </Text>
+    </View>
+
               </>
             ) : (
               <Text>No services found</Text>

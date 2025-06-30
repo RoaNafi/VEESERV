@@ -102,6 +102,11 @@ const Service = () => {
                 <Text style={styles.description}>{service.service_description}</Text>
                 <View style={styles.bottomRow}>
                   <Text style={styles.price}>${service.price}</Text>
+                   <Text style={styles.description}> is mobile : </Text>
+                  <Text style={styles.price}>{service.is_mobile ? 'Yes' : 'No'}</Text>
+                  <Text style={styles.description}>Mobile Fee: </Text>
+                  <Text style={styles.mobileFee}>{service.mobile_fee ? `$${service.mobile_fee}` : 'no fee'}</Text>
+
                   <TouchableOpacity 
                     style={styles.deleteBtn} 
                     onPress={() => confirmDelete(service)}
@@ -254,6 +259,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 6,
         zIndex: 100,
+      },
+      mobileFee: {
+        fontSize: 14,
+        color: Colors.darkGray,
+        marginLeft: 10,
       },
     });
   
