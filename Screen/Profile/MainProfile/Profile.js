@@ -121,10 +121,8 @@ Alert.alert("Success", "Congratulations! Your account is now a company 🏢✨")
       action: handleConvertToCompany,
     }] : []),
 
-    ...(isMechanic ? [
-      { icon: 'medal', label: 'Certification', action: () => navigation.navigate('CertificationScreen') },
-      { icon: 'star', label: 'Specialization', action: () => navigation.navigate('WorkshopSpecializations', { userId: user?.id }) },
-    ] : []),
+    // if need to show any icone for Mechanic only 
+    ...(isMechanic ? [] : []),
 
     { icon: 'key', label: 'Change Password', action: () => navigation.navigate('ChangePassword', { userId: user?.id }) },
     { icon: 'log-out', label: 'Log out', action: handleLogout, isLogout: true },

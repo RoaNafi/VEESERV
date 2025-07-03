@@ -5,10 +5,13 @@ import { Chip, Button } from 'react-native-paper';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from "../../config";
+import { useRoute } from '@react-navigation/native';
 
 const PRIMARY_COLOR = '#086189';
 
 export default function WorkshopSpecializations() {
+  const route = useRoute();
+  const userIdFromParams = route.params?.userId;
   const [currentSpecs, setCurrentSpecs] = useState([]);
   const [open, setOpen] = useState(false);
   const [selectedSpecs, setSelectedSpecs] = useState([]);
@@ -28,14 +31,17 @@ export default function WorkshopSpecializations() {
         setItems(allSpecs);
 
         // Fetch current specializations for logged-in user's workshop
-        const userId = await AsyncStorage.getItem('userId');
+        let userId = userIdFromParams;
+        if (!userId) {
+          userId = await AsyncStorage.getItem('userId');
+        }
 
         const token = await AsyncStorage.getItem('accessToken');
         if (!token || !userId) {
-      console.warn('No token or userId found');
-      return;
-    }
-    console.log('userId:', userId);
+          console.warn('No token or userId found');
+          return;
+        }
+        console.log('userId:', userId);
         console.log('token:', token);
 
         const resCurrent = await axios.get(

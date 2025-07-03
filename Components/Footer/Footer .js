@@ -52,7 +52,7 @@ const Footer = () => {
       {/* Developers Credits */}
       <View style={styles.developersSection}>
         <Text style={styles.devHeader}>
-          Made with <Text style={styles.heartIcon}>❤</Text> by
+          Made by
         </Text>
         <View style={styles.devNames}>
           <Text style={styles.devName}>Ro'a</Text>

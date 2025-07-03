@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import Colors from '../../Components/Colors/Colors';
 import api from '../../api'; // Adjust the import based on your project structure
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Responsive values
 const { width, height } = Dimensions.get('window');
@@ -487,11 +488,7 @@ const onAddService = async (booking) => {
   </View>
 </Modal>
 
-      <ScrollView 
-        style={styles.scrollContainer} 
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={{ backgroundColor: '#f7fafd' }} contentContainerStyle={styles.scrollContentContainer}>
         <Text style={styles.sectionTitle}>Today's Appointments</Text>
         <View style={styles.separator} />
         <FlatList
@@ -519,11 +516,6 @@ const onAddService = async (booking) => {
             }
 
             const animatedValue = getAnimatedValue(item.id);
-           const height = animatedValue.interpolate({
-  inputRange: [0, 1],
-  outputRange: [0, 220], // كبرّي الرقم لو في محتوى أكتر
-});
-
 
             return (
               <TouchableOpacity 
@@ -572,91 +564,85 @@ const onAddService = async (booking) => {
                   <View style={styles.appointmentDetails}>
                     <Text style={styles.appointmentText}>{item.customer}</Text>
                     <Text style={styles.appointmentText}>{item.car}</Text>
-
                  </View>
-<Animated.View style={[
-  styles.expandedContent,
-  {
-    height,
-    opacity: animatedValue,
-    overflow: 'hidden',
-    padding: 10,
-    backgroundColor: '#F9F9F9',
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    borderRadius: 8,
-    
-  }
-]}>
-  {/* التفاصيل الأساسية */}
-  <Text style={styles.detailText}>📍 Location: {item.city} {item.street}  no address </Text>
 
-<Text style={styles.detailText}>💰 Total: {item.price} NIS</Text> 
- <Text style={styles.detailText}>📋 Notes: {item.notes || 'No additional notes'}</Text>
-<View style={{ marginTop: 5 }}>
-  <Text style={styles.appointmentText}>Services:</Text>
-  {item.services.length > 0 ? (
-    item.services.map((service, index) => (
-      <Text key={index} style={[styles.appointmentText, { marginLeft: 10 }]}>
-        • {service.name} 
-        <Text style={{ color: getStatusColor(service.status) }}>
-          {` (${service.status})`}
-        </Text>
-      </Text>
-    ))
-  ) : (
-    <Text style={[styles.appointmentText, { marginLeft: 10 }]}>
-      No services listed
-    </Text>
-  )}
-</View>
+                {/* Expanded content always visible, no animated height */}
+                {expandedCard === item.id && (
+                  <View style={[
+                    styles.expandedContent,
+                    {
+                      opacity: 1,
+                      overflow: 'visible',
+                      padding: 10,
+                      backgroundColor: '#F9F9F9',
+                      borderTopWidth: 1,
+                      borderTopColor: '#EEE',
+                      borderRadius: 8,
+                    }
+                  ]}>
+                    {/* التفاصيل الأساسية */}
+                    <Text style={styles.detailText}>📍 Location: {item.city} {item.street}  no address </Text>
+                    <Text style={styles.detailText}>💰 Total: {item.price} NIS</Text> 
+                    <Text style={styles.detailText}>📋 Notes: {item.notes || 'No additional notes'}</Text>
+                    <View style={{ marginTop: 5 }}>
+                      <Text style={styles.appointmentText}>Services:</Text>
+                      {item.services.length > 0 ? (
+                        item.services.map((service, index) => (
+                          <Text key={index} style={[styles.appointmentText, { marginLeft: 10 }]}> 
+                            • {service.name} 
+                            <Text style={{ color: getStatusColor(service.status) }}>
+                              {` (${service.status})`}
+                            </Text>
+                          </Text>
+                        ))
+                      ) : (
+                        <Text style={[styles.appointmentText, { marginLeft: 10 }]}> 
+                          No services listed
+                        </Text>
+                      )}
+                    </View>
 
-  {/* زرّين أوليين */}
-  <View style={styles.buttonContainer}>
-    <TouchableOpacity 
-      style={styles.cancelButton}
-      onPress={() => onCancel(item.booking_id)}
-    >
-      <Text style={styles.buttonText}>Cancel</Text>
-    </TouchableOpacity>
-    <TouchableOpacity
-      style={styles.delayButton}
-      onPress={() => onDelay(item)}
-    >
-      <Text style={styles.buttonText}>Delay</Text>
-    </TouchableOpacity>
-  </View>
+                    {/* زرّين أوليين */}
+                    <View style={styles.buttonContainer}>
+                      <TouchableOpacity 
+                        style={styles.cancelButton}
+                        onPress={() => onCancel(item.booking_id)}
+                      >
+                        <Text style={styles.buttonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.delayButton}
+                        onPress={() => onDelay(item)}
+                      >
+                        <Text style={styles.buttonText}>Delay</Text>
+                      </TouchableOpacity>
+                    </View>
 
-  {/* زرار الإدارة الإضافية */}
-  <View style={styles.buttonRow}>
-  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-    <TouchableOpacity 
-      style={[styles.actionButton2, styles.updateBooking]}
-      onPress={() => onEditbookStatus(item)}
-    >
-      <Text style={styles.buttonText}>Update service status</Text>
-    </TouchableOpacity>
-
-    
-
-    <TouchableOpacity 
-      style={[styles.actionButton2, styles.addService]}
-      onPress={() => onAddService(item)}
-    >
-      <Text style={styles.buttonText}>Add Service</Text>
-    </TouchableOpacity>
-
-   <TouchableOpacity
-  style={[styles.actionButton2, styles.viewReport]}
-  onPress={() => navigation.navigate('GenerateReportScreen', { booking: item })}
->
-  <Text style={styles.buttonText}>Generate Report</Text>
-</TouchableOpacity>
-
-  </ScrollView>
-</View>
-
-</Animated.View>
+                    {/* زرار الإدارة الإضافية */}
+                    <View style={styles.buttonRow}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <TouchableOpacity 
+                          style={[styles.actionButton2, styles.updateBooking]}
+                          onPress={() => onEditbookStatus(item)}
+                        >
+                          <Text style={styles.buttonText}>Update service status</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.actionButton2, styles.addService]}
+                          onPress={() => onAddService(item)}
+                        >
+                          <Text style={styles.buttonText}>Add Service</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionButton2, styles.viewReport]}
+                          onPress={() => navigation.navigate('GenerateReportScreen', { booking: item })}
+                        >
+                          <Text style={styles.buttonText}>Generate Report</Text>
+                        </TouchableOpacity>
+                      </ScrollView>
+                    </View>
+                  </View>
+                )}
 
                 </View>
               </TouchableOpacity>
@@ -664,76 +650,64 @@ const onAddService = async (booking) => {
           }}
         />
 
-        <Text style={styles.sectionTitle}>Actions</Text>
-        <View style={styles.separator} />
-        {/* Actions Grid */}
-        <View>
-          {(() => {
-            const actions = [
-              {
-                icon: 'clock',
-                label: 'Pending Requests',
-                onPress: () => navigation.navigate('PindingRequests', { status: 'PENDING' })
-              },
-              {
-                icon: 'clipboard-list',
-                label: 'Appointments',
-                onPress: () => navigation.navigate('Appointments')
-              },
-              {
-                icon: 'calendar-alt',
-                label: "Today's Schedule",
-                onPress: () => navigation.navigate('TodaySchedule', { workshopId: workshopData?.workshop_id })
-              },
-              {
-                icon: 'plus',
-                label: 'Add Service',
-                onPress: () => navigation.push('Service', { workshopId: workshopData?.workshop_id })
-              },
-            ];
-            const rows = [];
-            for (let i = 0; i < actions.length; i += 3) {
-              rows.push(actions.slice(i, i + 3));
-            }
-            return rows.map((row, idx) => (
-              <View style={styles.actionsGridRow} key={idx}>
-                {row.length === 1 && (
-                  <>
-                    <View style={{ flex: 1 }} />
-                    <QuickActionButton
-                      key={row[0].label}
-                      icon={row[0].icon}
-                      label={row[0].label}
-                      onPress={row[0].onPress}
-                    />
-                    <View style={{ flex: 1 }} />
-                  </>
-                )}
-                {row.length === 2 && (
-                  <>
-                    {row.map((action) => (
-                      <QuickActionButton
-                        key={action.label}
-                        icon={action.icon}
-                        label={action.label}
-                        onPress={action.onPress}
-                      />
-                    ))}
-                    <View style={{ flex: 1 }} />
-                  </>
-                )}
-                {row.length === 3 &&
-                  row.map((action) => (
-                    <QuickActionButton
-                      key={action.label}
-                      icon={action.icon}
-                      label={action.label}
-                      onPress={action.onPress}
-                    />
-                  ))}
-              </View>
-            ));
-          })()}
+        {/* Requests & Appointments Section */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionSubtitle}>MANAGE</Text>
+          <Text style={styles.sectionTitle}>Requests & Appointments</Text>
+          <View style={styles.actionsRow}>
+            <CircleActionButton
+              icon="time-outline"
+              label="Pending"
+              onPress={() => navigation.navigate('PindingRequests', { status: 'PENDING' })}
+            />
+            <CircleActionButton
+              icon="clipboard-outline"
+              label="Appointments"
+              onPress={() => navigation.navigate('Appointments')}
+            />
+            <CircleActionButton
+              icon="calendar-outline"
+              label="Today's Schedule"
+              onPress={() => navigation.navigate('TodaySchedule', { workshopId: workshopData?.workshop_id })}
+            />
+          </View>
+        </View>
+
+        {/* Workshop Management Section */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionSubtitle}>WORKSHOP</Text>
+          <Text style={styles.sectionTitle}>Management</Text>
+          <View style={styles.actionsRow}>
+            <CircleActionButton
+              icon="construct-outline"
+              label="Services"
+              onPress={() => navigation.push('Service', { workshopId: workshopData?.workshop_id })}
+            />
+            <CircleActionButton
+              icon="star-outline"
+              label="Specialization"
+              onPress={() => navigation.navigate('WorkshopSpecializations', { userId: workshopData?.user_id || workshopData?.owner_id })}
+            />
+            <CircleActionButton
+              icon="medal-outline"
+              label="Certifications"
+              onPress={() => navigation.navigate('CertificationScreen')}
+            />
+          </View>
+        </View>
+
+        {/* Emergency Section */}
+        <View style={[styles.sectionCard, styles.emergencySectionCard]}>
+          <Text style={[styles.sectionSubtitle, styles.emergencySubtitle]}>ALERT</Text>
+          <Text style={[styles.sectionTitle, styles.emergencyTitle]}>Emergency</Text>
+          <View style={styles.actionsRow}>
+            <CircleActionButton
+              icon="alert"
+              iconColor="#ff1744"
+              label="Emergency"
+              onPress={() => {/* Add emergency action here */}}
+            />
+          </View>
         </View>
 
         <View style={styles.sectionSeparator}>
@@ -808,13 +782,12 @@ const onAddService = async (booking) => {
 
 };
 
-const QuickActionButton = ({ icon, label, onPress }) => (
-  <TouchableOpacity 
-    style={styles.actionButton}
-    onPress={onPress}
-  >
-    <FontAwesome5 name={icon} size={width * 0.06} color={PRIMARY_COLOR} />
-    <Text style={styles.actionLabel}>{label}</Text>
+const CircleActionButton = ({ icon, label, onPress, style, iconColor = '#086189', iconSize = 28, labelStyle }) => (
+  <TouchableOpacity style={[styles.circleButton, style]} onPress={onPress} activeOpacity={0.8}>
+    <View style={styles.circleIconWrapper}>
+      <Ionicons name={icon} size={iconSize} color={iconColor} />
+    </View>
+    <Text style={[styles.circleButtonLabel, labelStyle]}>{label}</Text>
   </TouchableOpacity>
 );
 
@@ -883,12 +856,104 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
   },
-  sectionTitle: {
-    fontSize: responsiveFontSize * 1.1,
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    marginHorizontal: 18,
+    marginTop: 18,
+    marginBottom: 0,
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#b0b8c1',
     fontWeight: 'bold',
-    color: Colors.black,
-    marginBottom: 10,
-    marginHorizontal: 20,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#086189',
+    marginBottom: 18,
+    letterSpacing: 0.5,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    gap: 24,
+    marginBottom: 4,
+  },
+  circleButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 90,
+    marginHorizontal: 0,
+  },
+  circleIconWrapper: {
+    backgroundColor: '#eaf3fa',
+    borderRadius: 50,
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    shadowColor: '#086189',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  circleButtonLabel: {
+    fontSize: 13,
+    color: '#222',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emergencySectionCard: {
+    backgroundColor: '#fff5f5',
+    borderColor: '#ffcccc',
+    borderWidth: 1,
+  },
+  emergencySubtitle: {
+    color: '#ff5252',
+  },
+  emergencyTitle: {
+    color: '#d32f2f',
+  },
+  emergencyGlow: {
+    borderRadius: 50,
+    padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#ff5252',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  emergencyButton: {
+    backgroundColor: '#fff',
+    borderWidth: 0,
+    shadowColor: '#ff1744',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emergencyButtonLabel: {
+    color: '#ff1744',
+    fontWeight: 'bold',
+    fontSize: 15,
+    marginTop: 2,
   },
   separator: {
     height: 1,
@@ -1196,6 +1261,16 @@ const styles = StyleSheet.create({
   },
   viewReport: {
     backgroundColor: '#F57C00', // برتقالي
+  },
+  sectionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: responsiveHorizontalPadding * 0.8,
+  },
+  scrollContentContainer: {
+    paddingTop: height * 0.15, // match header height so content starts below it
+    paddingBottom: 32,
   },
 });
 

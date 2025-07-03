@@ -14,6 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { FontAwesome5 } from '@expo/vector-icons';
+import Colors from '../../Components/Colors/Colors';
 
 const TodaySchedule = ({ navigation, route }) => {
   const [schedule, setSchedule] = useState([]);
@@ -23,8 +24,8 @@ const TodaySchedule = ({ navigation, route }) => {
 
   const today = new Date().toISOString().split('T')[0];
 
-    const { workshopId } = route.params;
-    
+  const { workshopId } = route.params;
+
 
   useEffect(() => {
     fetchSchedule();
@@ -58,7 +59,7 @@ const TodaySchedule = ({ navigation, route }) => {
     if (!selectedSlot) return;
     try {
       const token = await AsyncStorage.getItem('accessToken');
-   console.log('Fetched workshopId:', workshopId); // تحقق من صحة workshopId
+      console.log('Fetched workshopId:', workshopId); // تحقق من صحة workshopId
       // نستخدم نفس الوقت كبداية ونهاية بـ 30 دقيقة (مثلا)
       const date = today;
       const time_start = `${selectedSlot}:00`;
@@ -69,7 +70,7 @@ const TodaySchedule = ({ navigation, route }) => {
       const time_end = `${hours}:${minutes}:00`;
 
       const res = await axios.post(
-        `http://176.119.254.225:80/mechanic/availability-exception`, 
+        `http://176.119.254.225:80/mechanic/availability-exception`,
         {
           date,
           time_start,
@@ -79,13 +80,13 @@ const TodaySchedule = ({ navigation, route }) => {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-console.log('Sending availability exception:', {
-  date,
-  time_start,
-  time_end,
-  status: 'unavailable',
-  workshop_id: workshopId,
-});
+      console.log('Sending availability exception:', {
+        date,
+        time_start,
+        time_end,
+        status: 'unavailable',
+        workshop_id: workshopId,
+      });
 
       Alert.alert('Success', 'Time slot marked as busy!');
       setModalVisible(false);
@@ -107,18 +108,12 @@ console.log('Sending availability exception:', {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <FontAwesome5 name="arrow-left" size={20} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>Today's Schedule</Text>
-      </View>
+
 
       {/* Legend */}
       <View style={styles.legend}>
         <LegendItem color="#A4C8E1" label="Available" />
-        <LegendItem color="#A78BFA" label="Busy" />
+        <LegendItem color={Colors.mediumGray} label="Busy" />
       </View>
 
       {/* Slots */}
@@ -141,10 +136,10 @@ console.log('Sending availability exception:', {
                 }
               }}
             >
-              <Text style={status === 'available' ? styles.availableText : styles.busyText}>
+              <Text style={styles.availableText}>
                 {time}
               </Text>
-              {status === 'busy' && <FontAwesome5 name="lock" size={16} color="#5B21B6" />}
+              {status === 'busy' && <FontAwesome5 name="lock" size={16} color={Colors.darkGray} />}
               {isSelected && <FontAwesome5 name="check-circle" size={20} color="#086189" />}
             </TouchableOpacity>
           );
@@ -231,8 +226,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   busySlot: {
-    backgroundColor: '#D1C4E9',
-    borderColor: '#7E57C2',
+    backgroundColor: Colors.mediumGray,
+    borderColor: '#003B5C',
     borderWidth: 1.5,
   },
   selectedSlot: {

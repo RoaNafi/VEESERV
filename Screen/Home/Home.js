@@ -62,6 +62,17 @@ const Home = ({ navigation }) => {
   const searchAnim = useRef(new Animated.Value(0)).current;
   const [favoriteMechanics, setFavoriteMechanics] = useState([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
+  const animatedCircleValues = useRef({}).current;
+  const freezeTimeoutRef = useRef(null);
+
+  // Mock emergency service types (should come from backend in the future)
+  const EMERGENCY_TYPES = [
+    { key: 'mechanical', label: 'Mechanical Emergencies', icon: 'construct-outline' },
+    { key: 'electrical', label: 'Electrical Emergencies', icon: 'flash-outline' },
+    { key: 'repair', label: 'Repair Services', icon: 'build-outline' },
+    { key: 'tires', label: 'Tire Services', icon: 'aperture-outline' },
+    { key: 'other', label: 'Other Services', icon: 'help-circle-outline' },
+  ]; // TODO: Fetch from backend
 
   useFocusEffect(
     React.useCallback(() => {
@@ -380,6 +391,38 @@ const Home = ({ navigation }) => {
     return iconMap[categoryName] || iconMap['default'];
   };
 
+  const getCircleAnimatedValue = (id) => {
+    if (!animatedCircleValues[id]) {
+      animatedCircleValues[id] = new Animated.Value(0);
+    }
+    return animatedCircleValues[id];
+  };
+
+  const handleCardPressIn = (id) => {
+    if (freezeTimeoutRef.current) {
+      clearTimeout(freezeTimeoutRef.current);
+      freezeTimeoutRef.current = null;
+    }
+    Animated.timing(getCircleAnimatedValue(id), {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+    setPressedCard(id);
+  };
+
+  const handleCardPressOut = (id) => {
+    // Freeze the animation at full size for 120ms before animating out
+    freezeTimeoutRef.current = setTimeout(() => {
+      Animated.timing(getCircleAnimatedValue(id), {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      setPressedCard(null);
+    }, 120);
+  };
+
   return (
     <View style={styles.container}>
       {/* Search Bar with Filter/Sort */}
@@ -599,6 +642,53 @@ const Home = ({ navigation }) => {
                 style={styles.showMoreIcon}
               />
             </TouchableOpacity>
+
+            {/* Emergency Services Section */}
+            <Text style={styles.sectionTitle}>Emergency Services</Text>
+            <View style={styles.separator} />
+            <View style={styles.emergencyTypeGrid}>
+              {EMERGENCY_TYPES.map((item) => {
+                const circleAnim = getCircleAnimatedValue(item.key);
+                const scale = circleAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 4],
+                });
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={styles.emergencyTypeCard}
+                    activeOpacity={0.85}
+                    onPress={() => navigation.navigate('EmergencyServices', { type: item })}
+                    onPressIn={() => handleCardPressIn(item.key)}
+                    onPressOut={() => handleCardPressOut(item.key)}
+                  >
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                      {/* Animated grow-up circle */}
+                      <Animated.View
+                        pointerEvents="none"
+                        style={{
+                          position: 'absolute',
+                          width: 60,
+                          height: 60,
+                          borderRadius: 30,
+                          backgroundColor: 'rgba(243, 14, 14, 0.15)',
+                          alignSelf: 'center',
+                          top: '50%',
+                          left: '50%',
+                          transform: [
+                            { translateX: -30 },
+                            { translateY: -30 },
+                            { scale },
+                          ],
+                        }}
+                      />
+                      <Ionicons name={item.icon} size={32} color={pressedCard === item.key ? '#ff1744' : '#ff1744'} style={{ marginBottom: 8 }} />
+                      <Text style={styles.emergencyTypeLabel}>{item.label}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
           </ScrollView>
         ) : (

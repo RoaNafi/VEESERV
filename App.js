@@ -48,6 +48,9 @@ import GenerateReportScreen from "./Screen/WorkshopHome/GenerateReportScreen";
 import TodaySchedule from "./Screen/WorkshopHome/TodaySchedule";
 import FavoriteWorkshops from "./Screen/Profile/FavoriteWorkshops";
 import BookingDetails from "./Screen/Profile/BookingDetails";
+import EmergencyServices from './Screen/Emergency/EmergencyServices';
+import AvailableEmargencyMechanics from "./Screen/Emergency/AvailableEmargencyMechanics";
+import EmergencyReqSummary from "./Screen/Emergency/EmergencyReqSummary";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -225,13 +228,8 @@ function ProfileNavigator() {
         component={WorkingHours}
         options={{ title: "Working Hours" }}
       />
-      <Stack.Screen name="CertificationScreen" component={Certifications}  options={{ title: "Certifications" }}/>
       <Stack.Screen name="HistoryScreen" component={History}  options={{ title: "History" }} />
-      <Stack.Screen
-        name="WorkshopSpecializations"
-        component={WorkshopSpecializations}
-        options={{ title: "Specializations" }}
-      />
+      
       <Stack.Screen
         name="CompanyLegal"
         component={CompanyLegal}
@@ -357,6 +355,17 @@ export default function App() {
               component={TodaySchedule}
               options={{ headerShown: true, title: "Today's Schedule" }}
             />
+            <Stack.Screen 
+              name="CertificationScreen" 
+              component={Certifications}  
+              options={{ headerShown: true, title: "Certifications" }}/>
+
+<Stack.Screen
+        name="WorkshopSpecializations"
+        component={WorkshopSpecializations}
+        options={{ title: "Specializations" }}
+      />
+      
             <Stack.Screen
               name="GenerateReportScreen"
               component={GenerateReportScreen}
@@ -367,8 +376,22 @@ export default function App() {
               component={BookingDetails}
               options={{ headerShown: true, title: "Booking Details" }}
             />
-            
-                    </Stack.Navigator>
+            <Stack.Screen
+              name="EmergencyServices"
+              component={EmergencyServices}
+              options={{ headerShown: true, title: "Emergency Services" }}
+            />
+            <Stack.Screen
+              name="AvailableEmargencyMechanics"
+              component={AvailableEmargencyMechanics}
+              options={{ headerShown: true, title: "Available Workshops" }}
+            />
+            <Stack.Screen
+              name="EmergencyReqSummary"
+              component={EmergencyReqSummary}
+              options={{ headerShown: true, title: "Request Summary" }}
+            />
+          </Stack.Navigator>
 
         </NavigationContainer>
       </View>

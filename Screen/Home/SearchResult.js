@@ -184,7 +184,9 @@ const SearchResult = ({
                   />
                 ))
               ) : (
-                <Text style={styles.noResultText}>No services found.</Text>
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultText}>No services found</Text>
+                </View>
               )
             ) : (
               displayWorkshops.length > 0 ? (
@@ -196,7 +198,9 @@ const SearchResult = ({
                   />
                 ))
               ) : (
-                <Text style={styles.noResultText}>No workshops found.</Text>
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultText}>No workshops found</Text>
+                </View>
               )
             )}
           </ScrollView>
@@ -298,6 +302,12 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     zIndex: 2,
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
   },
 });
 

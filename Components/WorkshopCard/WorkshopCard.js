@@ -10,7 +10,7 @@ import { isDate } from "moment/moment";
 const WorkshopCard = ({ data = {}, date, timeSlots, onBookPress, onShopPress, route }) => {
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-const actualDate = selectedDate || date;
+  const actualDate = selectedDate || date;
   console.log('Selected Date:', selectedDate);
   const [modalVisible, setModalVisible] = useState(false);
   const [availableHours, setAvailableHours] = useState([]);

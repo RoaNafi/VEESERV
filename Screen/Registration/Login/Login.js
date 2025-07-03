@@ -55,7 +55,7 @@ const Login = ({ navigation }) => {
       });
   
       const data = await response.json();
-      console.log('Login response:', data);
+      //console.log('Login response:', data);
   
       if (!response.ok) {
         Alert.alert('Login Failed', data.message || 'Login failed');
