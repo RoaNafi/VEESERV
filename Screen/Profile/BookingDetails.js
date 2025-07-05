@@ -512,80 +512,108 @@ return (
   </View>
 </Modal>
 
-  <Modal visible={isPaymentModalVisible} transparent animationType="slide">
+<Modal visible={isPaymentModalVisible} transparent animationType="slide">
   <View style={styles.overlay}>
     <View style={styles.modal}>
-      <Text style={styles.title}>Payment Details</Text>
+      <Text style={styles.title}>Checkout</Text>
 
-      {/* اعرض كل الخدمات */}
+      {/* طرق الدفع */}
+      <View style={styles.paymentMethods}>
+        {['card', 'online'].map((method) => (
+          <TouchableOpacity
+            key={method}
+            style={[
+              styles.paymentOption,
+              selectedMethod === method && styles.paymentOptionSelected 
+            ]}
+            onPress={() => setSelectedMethod(method)}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={method === 'card' ? 'card-outline' : 'cloud-upload-outline'}
+              size={24}
+              color="#000"
+              style={styles.paymentIcon}
+            />
+            <Text style={styles.paymentLabel}>
+              {method === 'card' ? 'Credit/Debit Card' : 'Online Payment'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* إذا اختار كارد، أظهر له فورم إدخال البيانات */}
+    {selectedMethod === 'card' && (
+  <View style={styles.cardForm}>
+    <TextInput
+      style={styles.input}
+      placeholder="Card Number"
+      placeholderTextColor="#aaa"
+      keyboardType="number-pad"
+      maxLength={16}
+    />
+    <TextInput
+      style={styles.input}
+      placeholder="Card Holder Name"
+      placeholderTextColor="#aaa"
+    />
+    <View style={styles.cardRow}>
+      <TextInput
+        style={[styles.input, { flex: 1, marginRight: 10 }]}
+        placeholder="MM/YY"
+        placeholderTextColor="#aaa"
+        maxLength={5}
+      />
+      <TextInput
+        style={[styles.input, { flex: 1 }]}
+        placeholder="CVV"
+        placeholderTextColor="#aaa"
+        secureTextEntry
+        maxLength={4}
+      />
+    </View>
+  </View>
+)}
+
+
+      {/* عرض الخدمات + السعر الإجمالي */}
       <View style={styles.serviceInfo}>
         {booking.services.map((svc, i) => (
           <View key={i} style={styles.serviceLine}>
             <Text style={styles.serviceName}>{svc.service_name}</Text>
-            <Text style={styles.price}>Price: ₪{svc.price}</Text>
+            <Text style={styles.price}>₪{svc.price}</Text>
           </View>
         ))}
-
-        {/* احسب السعر الكلي */}
-        <Text style={{ marginTop: 10, fontWeight: 'bold' }}>
-          Total Price: ₪{booking.services.reduce((sum, svc) => sum + svc.price, 0)}
-        </Text>
-
-        {/* نسب الدفع الجزئي */}
-        <Text style={styles.partial}>
-          Partial Payment: ₪{partialAmount} ({partialPercent * 100}%)
+        <Text style={styles.totalPrice}>
+          Order value: ₪{booking.services.reduce((sum, svc) => sum + svc.price, 0)}
         </Text>
       </View>
 
-      {/* طرق الدفع */}
-      <View style={styles.paymentMethods}>
-  {['card',  'online'].map((method) => (
-    <TouchableOpacity
-      key={method}
-      style={[
-        styles.paymentOption,
-        selectedMethod === method && styles.paymentOptionSelected,
-      ]}
-     onPress={() => setSelectedMethod(method)}
-      activeOpacity={0.8}
-    >
-<Ionicons 
-  name={method === 'card' ? 'card-outline' : method === 'online' ? 'cloud-upload-outline' : 'cash-outline'} 
-  size={24} 
-  color="#000" 
-  style={styles.paymentIcon} 
-/>
-      <Text style={styles.paymentLabel}>
-        {method === 'card' ? 'Credit/Debit Card' : method === 'cash' ? 'Cash' : 'Online Payment'}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</View>
+      {/* زر الدفع */}
+      <TouchableOpacity
+        style={styles.payButton}
+        onPress={() => handlePayFull(booking.services.reduce((sum, svc) => sum + svc.price, 0))}
+      >
+        <Text style={styles.payButtonText}>
+          PAY NOW ₪{booking.services.reduce((sum, svc) => sum + svc.price, 0)}
+        </Text>
+      </TouchableOpacity>
+       <TouchableOpacity
+        style={styles.payButton}
+        onPress={() => handlePayFull(booking.services.reduce((sum, svc) => sum + svc.price, 0))}
+      >
+        <Text style={styles.payButtonText}>
+          PAY NOW ₪{booking.services.reduce((sum, svc) => sum + svc.price, 0)}
+        </Text>
+      </TouchableOpacity>
 
-
-      {/* أزرار الدفع */}
-      <View style={styles.buttonsRow}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.partialPay]}
-          onPress={() => handlePayPartial(partialAmount)}
-        >
-          <Text style={styles.actionText}>Pay Partial ₪{partialAmount}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.fullPay]}
-          onPress={() => handlePayFull(booking.services.reduce((sum, svc) => sum + svc.price, 0))}
-        >
-          <Text style={styles.actionText}>Pay Full ₪{booking.services.reduce((sum, svc) => sum + svc.price, 0)}</Text>
-        </TouchableOpacity>
-      </View>
-
-     <TouchableOpacity style={styles.cancelButton} onPress={() => setPaymentModalVisible(false)}>
-          <Text style={styles.cancelText}>Close</Text>
-        </TouchableOpacity>
+      <TouchableOpacity style={styles.cancelButton1} onPress={() => setPaymentModalVisible(false)}>
+        <Text style={styles.cancelText1}>Close</Text>
+      </TouchableOpacity>
     </View>
   </View>
 </Modal>
+
 
   </SafeAreaView>
 );
@@ -1113,156 +1141,99 @@ closeText: {
   color: '#888',
   fontSize: 14,
 },
-overlay: {
+ overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)', // خفيف عشان ما يضغط على العين
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
+    backgroundColor: '#00000088',
+    justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: '#e0f7fa', // نفس اللون اللي طلبتيه فاتح وهادي
-    borderRadius: 24,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#86cce8', // ظل أزرق فاتح وحيوي
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
+    backgroundColor: 'white',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#086189', // أزرق غامق يطلع حلو على الفاتح
-    marginBottom: 24,
-    textAlign: 'center',
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#086189',
+  },
+  paymentMethods: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  paymentOption: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 10,
+    width: '45%',
+    alignItems: 'center',
+    backgroundColor: '#f2f2f2',
+  },
+  paymentOptionSelected: {
+    backgroundColor: '#086189',
+  },
+  paymentOptionSelectedText: {
+    color: '#fff',  
+  },
+  paymentLabel: {
+    marginTop: 5,
+    color: '#000',
+    fontWeight: '600',
+  },
+  cardForm: {
+    marginBottom: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   serviceInfo: {
-    marginBottom: 20,
+    marginVertical: 15,
   },
   serviceLine: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomColor: '#b2ebf2', // خط فاصل أزرق فاتح
-    borderBottomWidth: 1,
+    marginBottom: 5,
   },
   serviceName: {
-    color: '#003B5C', // أزرق غامق جداً
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
   },
   price: {
-    color: '#A4C8EF', // وردي ناعم يعطي تباين حلو
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: 'bold',
   },
-  partial: {
-    marginTop: 15,
+  totalPrice: {
+    marginTop: 10,
+    fontWeight: 'bold',
     fontSize: 16,
-    color: '#A4C8EF', // أخضر نيون، مميز وجذاب
-    fontWeight: '700',
-    textAlign: 'right',
-    fontFamily: 'Poppins-Medium',
   },
-  
-  paymentButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    shadowColor: '#86cce8', // ظل أزرق فاتح ناعم
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  cardButton: {
-    backgroundColor: '#86cce8', // ازرق فاتح قريب للون المودال
-  },
-  cashButton: {
-    backgroundColor: '#50FA7B', // أخضر نيون
-  },
-  onlineButton: {
-    backgroundColor: '#6272A4', // أزرق بنفسجي هادي
-  },
-  paymentText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 24,
-    marginHorizontal: 8,
+  payButton: {
+    backgroundColor: '#086189',
+    padding: 15,
+    borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#86cce8',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
+    marginTop: 10,
   },
-  partialPay: {
-  backgroundColor: '#086189', // وردي هادي وناعم (أحمر فاتح)
-},
-fullPay: {
-  backgroundColor: '#086189', // أخضر مائي فاتح ومنعش
-},
-
-  actionText: {
-    color: '#fff',
-    fontWeight: '700',
+  payButtonText: {
+    color: 'white',
     fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontWeight: 'bold',
   },
-paymentMethods: {
-  flexDirection: 'row',
-  marginVertical: 18,
-},
-
-paymentOption: {
-  flex: 1,
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#fff',
-  borderRadius: 20,
-  paddingVertical: 14,
-  paddingHorizontal: 10,
-  marginHorizontal: 4,
-  shadowColor: '#000',
-  shadowOpacity: 0.05,
-  shadowRadius: 8,
-  elevation: 3,
-  borderWidth: 1,
-  borderColor: '#eee',
-  transitionDuration: '200ms', // مش في RN بس لو ويب
-  width: '80%', // خليها تأخذ 30% من العرض (ممكن تعدل النسبة حسب ما تحب)
-  justifyContent: 'center', // عشان المحتوى يكون بالمنتصف عرضياً
-},
-
-paymentOptionSelected: {
-  borderColor: '#6272A4', // لون مميز عند الاختيار
-  backgroundColor: '#e6e9f8',
-  shadowOpacity: 0.2,
-},
-
-paymentIcon: {
-  width: 28,
-  height: 28,
-  marginRight: 4,
-},
-
-paymentLabel: {
-  fontSize: 12,
-  fontWeight: '600',
-  color: '#333',
-},
-
+    cancelButton1: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  cancelText1: {
+    color: '#888',
+  },
 });

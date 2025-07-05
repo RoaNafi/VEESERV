@@ -51,6 +51,9 @@ import BookingDetails from "./Screen/Profile/BookingDetails";
 import EmergencyServices from './Screen/Emergency/EmergencyServices';
 import AvailableEmargencyMechanics from "./Screen/Emergency/AvailableEmargencyMechanics";
 import EmergencyReqSummary from "./Screen/Emergency/EmergencyReqSummary";
+import EmergencyService from "./Screen/WorkshopInfo/Service/emergency_service";
+import AddEmergencyService from "./Screen/WorkshopInfo/Service/AddemergencyService";
+import EBookingDetails from "./Screen/Profile/ُُEBookingDetailsScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -391,6 +394,22 @@ export default function App() {
               component={EmergencyReqSummary}
               options={{ headerShown: true, title: "Request Summary" }}
             />
+            <Stack.Screen
+              name="EmergencyService"
+              component={EmergencyService}
+              options={{ headerShown: true, title: "Emergency Services" }}
+            />
+            <Stack.Screen
+              name="AddEmergencyService"
+              component={AddEmergencyService}
+              options={{ headerShown: true, title: "Add Emergency Service" }}
+            />
+             <Stack.Screen
+              name="EBookingDetails"
+              component={EBookingDetails}
+              options={{ headerShown: true, title: " Emergency booking" }}
+            />
+            
           </Stack.Navigator>
 
         </NavigationContainer>

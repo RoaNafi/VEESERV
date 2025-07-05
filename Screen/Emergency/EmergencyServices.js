@@ -1,46 +1,52 @@
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, TextInput, ActivityIndicator } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState , useEffect} from 'react'
 import Colors from '../../Components/Colors/Colors';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import api from '../../api'; // Adjust the import based on your project structure
 
-// Mock services for each emergency type (should come from backend in the future)
-const SERVICES_BY_TYPE = {
-  mechanical: [
-    { name: 'Brake Repair', description: 'Immediate assistance for brake system issues.' },
-    { name: 'Clutch Replacement', description: 'On-site clutch replacement for breakdowns.' },
-    { name: 'Radiator Issues', description: 'Emergency help for overheating or coolant leaks.' },
-  ],
-  electrical: [
-    { name: 'Battery Replacement', description: 'Quick battery replacement wherever you are.' },
-    { name: 'Starter Motor Issues', description: 'Help with starter motor failures on the road.' },
-  ],
-  repair: [
-    { name: 'Water Pump Replacement', description: 'Emergency water pump replacement service.' },
-    { name: 'Power Steering Repair', description: 'Fix power steering issues immediately.' },
-    { name: 'Cylinder Head Issues', description: 'Assistance for cylinder head breakdowns.' },
-  ],
-  tires: [
-    { name: 'Flat Tire Repair', description: 'On-site flat tire repair or replacement.' },
-    { name: 'Tire Replacement', description: 'Emergency tire replacement service.' },
-  ],
-  other: [
-    { name: 'Vehicle Towing', description: 'Tow your vehicle to the nearest workshop.' },
-    { name: 'Jump Start', description: 'Get a jump start for a dead battery.' },
-    { name: 'Car Unlock (Key Inside)', description: 'Unlock your car if keys are locked inside.' },
-  ],
-}; // TODO: Fetch from backend
+
 
 const EmergencyServices = ({ route }) => {
-  const { type, userAddress } = route.params || {};
-  const services = SERVICES_BY_TYPE[type?.key] || [];
+  const { type  } = route.params || {};
   const navigation = useNavigation();
+const [servicesByType, setServicesByType] = useState({});
 
   // Address modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [address, setAddress] = useState(userAddress || '');
   const [loadingLocation, setLoadingLocation] = useState(false);
+const fetchEmergencyServices = async () => {
+  try {
+    const res = await api.get('/emergency/emergencyService');
+    const services = res.data.emergencyServices;
 
+    // تصنيف الخدمات حسب category
+    const grouped = services.reduce((acc, service) => {
+      const category = service.category?.toLowerCase() || 'other';
+      console.log(`Service: ${service.name}, Category: ${category}`); // 👈 اطبعي كل خدمة مع تصنيفها
+      if (!acc[category]) acc[category] = [];
+      acc[category].push({
+        name: service.name,
+        description: service.description,
+        emergency_service_id: service.emergency_service_id, 
+      });
+      return acc;
+    }, {});
+
+
+    setServicesByType(grouped);
+    console.log("Fetched Emergency Services:", grouped); // 👈 اطبعيهم هون
+  } catch (err) {
+    console.error('Error fetching emergency services:', err);
+    Alert.alert('Error', 'Failed to load emergency services');
+  }
+};
+
+// استدعِ الدالة عند التحميل الأول
+useEffect(() => {
+  fetchEmergencyServices();
+}, []);
   const handleGetLocation = async () => {
     setLoadingLocation(true);
     try {
@@ -62,7 +68,17 @@ const EmergencyServices = ({ route }) => {
           const data = await response.json();
           const road = data.address?.road || data.address?.street || data.address?.suburb || 'Unknown Street';
           const cityName = data.address?.city || data.address?.town || data.address?.village || 'Unknown City';
-          setAddress(`${road}, ${cityName}`);
+          const latitude = data.lat || latitude;
+          const longitude = data.lon || longitude;
+          console.log(`Location: ${road}, ${cityName} (Lat: ${latitude}, Lon: ${longitude})`);
+          setAddress(`${road}, ${cityName} (Lat: ${latitude}, Lon: ${longitude})`);
+          setUserAddress({
+            road: road,
+            city: cityName,
+            latitude: latitude,
+            longitude: longitude
+          });
+
         } else {
           setAddress('Address lookup failed');
         }
@@ -76,6 +92,7 @@ const EmergencyServices = ({ route }) => {
     }
   };
 
+const [userAddress, setUserAddress] = useState(null);
   const handleBook = (service) => {
     setModalVisible(true);
     setAddress(userAddress || '');
@@ -87,7 +104,7 @@ const EmergencyServices = ({ route }) => {
 
   const handleNext = () => {
     setModalVisible(false);
-    navigation.navigate('AvailableEmargencyMechanics', { service: selectedService, userAddress: address });
+    navigation.navigate('AvailableEmargencyMechanics', { service: selectedService, userAddress: userAddress });
   };
 
   const renderService = ({ item }) => (
@@ -155,11 +172,11 @@ const EmergencyServices = ({ route }) => {
           </View>
         </View>
       </Modal>
-      {services.length === 0 ? (
+      {servicesByType.length === 0 ? (
         <Text style={{ color: '#888' }}>[No services available]</Text>
       ) : (
         <FlatList
-          data={services}
+          data={servicesByType[type?.key] || []}
           keyExtractor={(item) => item.name}
           renderItem={renderService}
           contentContainerStyle={styles.listContainer}

@@ -58,7 +58,7 @@ const [selectedBooking, setSelectedBooking] = useState(null);
 const [token, setToken] = useState('');
 const [selectedServices, setSelectedServices] = useState([]); // خدمات مختارة في المودال
   const [reportText, setReportText] = useState('');
-
+  const [countdown, setCountdown] = useState(null);
   useFocusEffect(
     useCallback(() => {
       const fetchWorkshopDetails = async () => {
@@ -396,6 +396,147 @@ const onAddService = async (booking) => {
   }
 };
 
+  
+  const [emergencyBookings, setEmergencyBookings] = useState([]);
+
+const fetchEmergencyBookings = async () => {
+  setLoading(true);
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    const res = await axios.get('http://176.119.254.225:80/emergency/workshop/emergencyBookings', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setEmergencyBookings(res.data.bookings);
+    console.log('Fetched emergency bookings:', res.data.bookings);
+  } catch (error) {
+    console.error(error);
+    Alert.alert('Error', 'Failed to fetch bookings');
+  }
+  setLoading(false);
+};
+
+useEffect(() => {
+  fetchEmergencyBookings();
+}, []);
+
+const handleAccept = async (id) => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    await axios.post(`http://176.119.254.225:80/emergency/emergencyBooking/respond/${id}`, { action: 'accept' }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    Alert.alert('Success', 'Booking accepted');
+    fetchEmergencyBookings(); // تحدث القائمة
+  } catch (error) {
+  console.log('API error:', error.response ? error.response.data : error.message);
+  Alert.alert('Error', 'Failed to accept booking');
+}
+
+};
+
+const handleReject = async (id) => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    await axios.post(`http://176.119.254.225:80/emergency/emergencyBooking/respond/${id}`, { action: 'reject' }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    Alert.alert('Success', 'Booking rejected');
+    fetchEmergencyBookings(); // تحدث القائمة
+  } catch (error) {
+    Alert.alert('Error', 'Failed to reject booking');
+  }
+};
+
+
+
+const renderEmergencyBooking = ({ item }) => {
+  // 👇 فك الـ user_address مرة وحدة بأول الريندر
+  let parsedAddress = {};
+  try {
+    parsedAddress = JSON.parse(item.user_address);
+  } catch (err) {
+    parsedAddress = { road: 'Unknown', city: '' };
+  }
+
+  return (
+    <View style={{
+      backgroundColor: '#FBE9E7',
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: '#FFCCBC',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 4,
+    }}>
+      <Text style={{ fontSize: 17, fontWeight: '600', color: '#4E342E', marginBottom: 6 }}>
+        {item.customer_name} ({item.customer_phone})
+      </Text>
+
+      <Text style={{ fontSize: 15, color: '#5D4037', marginBottom: 6 }}>
+        Service: <Text style={{ fontWeight: 'bold', color: '#BF360C' }}>{item.service_name}</Text> —
+        <Text style={{ color: '#1B5E20' }}> ₪{item.price}</Text>
+      </Text>
+
+      <Text style={{ fontSize: 15, color: '#5D4037', marginBottom: 6 }}>
+        Car: {item.vehicle_make} {item.vehicle_model}
+      </Text>
+
+      {/* 🧭 العنوان بعد فك الـ JSON */}
+      <Text style={{ fontSize: 15.5, color: '#6A1B1A', marginBottom: 6 }}>
+        Address: {parsedAddress.road}, {parsedAddress.city}
+      </Text>
+
+     <Text>
+  Requested at: {item.requested_datetime}
+</Text>
+
+
+      <Text style={{
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 12,
+        color:
+          item.status === 'Waiting' ? '#FF6F00' :
+          item.status === 'Confirmed' ? '#388E3C' :
+          item.status === 'Cancelled' ? '#D32F2F' :
+          '#616161'
+      }}>
+        Status: {item.status}
+      </Text>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <TouchableOpacity
+          onPress={() => handleAccept(item.emergency_request_id)}
+          style={{
+            backgroundColor: '#388E3C',
+            paddingVertical: 10,
+            paddingHorizontal: 24,
+            borderRadius: 10,
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Accept</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => handleReject(item.emergency_request_id)}
+          style={{
+            backgroundColor: '#D32F2F',
+            paddingVertical: 10,
+            paddingHorizontal: 24,
+            borderRadius: 10,
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Reject</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -483,6 +624,7 @@ const onAddService = async (booking) => {
         >
           <Text style={{ color: 'white', textAlign: 'center' }}>Add Services</Text>
         </TouchableOpacity>
+        
       </View>
     </View>
   </View>
@@ -693,22 +835,50 @@ const onAddService = async (booking) => {
               label="Certifications"
               onPress={() => navigation.navigate('CertificationScreen')}
             />
+            <CircleActionButton
+              icon="alert"
+              label="Emergency"
+              onPress={() => navigation.navigate('EmergencyService')}
+            />
           </View>
         </View>
 
         {/* Emergency Section */}
-        <View style={[styles.sectionCard, styles.emergencySectionCard]}>
-          <Text style={[styles.sectionSubtitle, styles.emergencySubtitle]}>ALERT</Text>
-          <Text style={[styles.sectionTitle, styles.emergencyTitle]}>Emergency</Text>
-          <View style={styles.actionsRow}>
-            <CircleActionButton
-              icon="alert"
-              iconColor="#ff1744"
-              label="Emergency"
-              onPress={() => {/* Add emergency action here */}}
-            />
-          </View>
-        </View>
+  
+  
+<View style={[styles.sectionCard, styles.emergencySectionCard, {
+  backgroundColor: '#FBE9EB',
+  borderRadius: 20,
+  padding: 24
+}]}>
+  <Text style={[styles.sectionTitle, {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#8B0014',
+    marginBottom: 16,
+    textAlign: 'center'
+  }]}>
+    Emergency Requests 🚨
+  </Text>
+
+  {loading ? (
+    <ActivityIndicator size="large" color="#E57373" />
+  ) : emergencyBookings.length === 0 ? (
+    <Text style={{ color: '#999', fontStyle: 'italic', textAlign: 'center' }}>
+      No emergency bookings at the moment.
+    </Text>
+  ) : (
+    <FlatList
+      data={emergencyBookings}
+      keyExtractor={item => item.emergency_booking_id.toString()}
+      renderItem={renderEmergencyBooking}
+      contentContainerStyle={{ paddingBottom: 20 }}
+      ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+      showsVerticalScrollIndicator={false}
+    />
+  )}
+</View>
+
 
         <View style={styles.sectionSeparator}>
           <View style={styles.horizontalLine} />
@@ -886,12 +1056,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    gap: 24,
-    marginBottom: 4,
-  },
+  flexDirection: 'row',
+  flexWrap: 'wrap', // 🔥 يخلي الأزرار تنزل للسطر اللي بعده تلقائيًا
+  justifyContent: 'space-between', // توزيع حلو للأزرار
+  gap: 16, // مسافة بين الأزرار (React Native 0.71+)
+  marginTop: 20,
+},
+
   circleButton: {
     alignItems: 'center',
     justifyContent: 'center',

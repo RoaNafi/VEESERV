@@ -202,6 +202,7 @@ console.log("summary timeSlots:", timeSlots );
   };
 
   const handleOpenCarPicker = async () => {
+    
     if (allCars.length === 0) {
       await fetchAllCars();
     }

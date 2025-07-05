@@ -70,7 +70,7 @@ const Home = ({ navigation }) => {
     { key: 'mechanical', label: 'Mechanical Emergencies', icon: 'construct-outline' },
     { key: 'electrical', label: 'Electrical Emergencies', icon: 'flash-outline' },
     { key: 'repair', label: 'Repair Services', icon: 'build-outline' },
-    { key: 'tires', label: 'Tire Services', icon: 'aperture-outline' },
+    { key: 'tire services', label: 'Tire Services', icon: 'aperture-outline' },
     { key: 'other', label: 'Other Services', icon: 'help-circle-outline' },
   ]; // TODO: Fetch from backend
 

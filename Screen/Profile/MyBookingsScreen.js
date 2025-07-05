@@ -50,26 +50,19 @@ const [reviewModalVisible, setReviewModalVisible] = useState(false);
 const [detailsModalVisible, setDetailsModalVisible] = useState(false);
 const [serviceToReview, setServiceToReview] = useState(null); // الخدمة اللي براجعها
 const [modalView, setModalView] = useState('details'); // 'details' أو 'review' أو 'feedback'
+const [emergencyBooking, setEmergencyBooking] = useState([]); // تعريف صحيح
+const [allBookings, setAllBookings] = useState([]);
 
-  useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const token = await AsyncStorage.getItem('accessToken');
-        const res = await axios.get('http://176.119.254.225:80/booking/bookings', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setBookings(res.data);
-        console.log(res.data);
-      } catch (err) {
-        console.error('Error fetching bookings:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+// 📌 Format Date
+const formatDate = (isoDate) => {
+  const date = new Date(isoDate);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
-    fetchBookings();
-  }, []);
-  
+// 🟩 Group Regular Bookings
 const groupedBookings = bookings.reduce((acc, booking) => {
   const key = `${booking.vehicle_id}-${booking.scheduled_date}-${booking.workshop_name}`;
   if (!acc[key]) {
@@ -95,15 +88,69 @@ const groupedBookings = bookings.reduce((acc, booking) => {
   return acc;
 }, {});
 
-const formatDate = (isoDate) => {
-  const date = new Date(isoDate);
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth()+1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+// 🟥 Group Emergency Bookings
+const groupedEmergencyBookings = emergencyBooking.reduce((acc, booking) => {
+  const key = `${booking.vehicle_make} ${booking.vehicle_model}-${booking.requested_datetime}`;
+  if (!acc[key]) {
+    acc[key] = {
+      ...booking,
+      services: [{
+        service_name: booking.service_name,
+        price: booking.price,
+        status: booking.status,
+      }],
+    };
+  }
+  return acc;
+}, {});
 
-  const bookingsArray = Object.values(groupedBookings);
+// 🔁 Merge All Bookings
+useEffect(() => {
+  const merged = [
+    ...Object.values(groupedBookings).map(b => ({ ...b, isEmergency: false })),
+    ...Object.values(groupedEmergencyBookings).map(b => ({ ...b, isEmergency: true })),
+  ];
+  setAllBookings(merged);
+}, [bookings, emergencyBooking]);
+
+// 🔃 Fetch Regular Bookings
+useEffect(() => {
+  const fetchBookings = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const res = await axios.get('http://176.119.254.225:80/booking/bookings', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setBookings(res.data);
+      console.log('📘 Regular bookings:', res.data);
+    } catch (err) {
+      console.error('Error fetching regular bookings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchBookings();
+}, []);
+
+// 🚨 Fetch Emergency Bookings
+useEffect(() => {
+  const fetchEmergencyBookings = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const res = await axios.get('http://176.119.254.225:80/emergency/emergencyBookings', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setEmergencyBooking(res.data.bookings || []);
+      console.log('🚨 Emergency bookings:', res.data.bookings);
+    } catch (err) {
+      console.error('Error fetching emergency bookings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchEmergencyBookings();
+}, []);
+
 const renderBooking = ({ item }) => (
   <TouchableOpacity onPress={() => navigation.navigate('BookingDetails', { booking: item })}>
     <LinearGradient
@@ -153,20 +200,76 @@ const renderBooking = ({ item }) => (
 );
 
 
+const renderEmergencyBooking = ({ item }) => (
+  console.log(item),
+  <TouchableOpacity onPress={() => navigation.navigate('EBookingDetails', { booking: item })}>
+    <LinearGradient
+      colors={['#ffe5e5', '#ffcccc']}  // تدرج أحمر فاتح
+      style={styles.card}
+    >
+      <Image source={book} style={styles.image} />
+
+      <View style={styles.details}>
+
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>{item.workshop_name}</Text>
+
+         
+    <Text style={styles.cardService}>
+  {item.service_name} - {item.price ?? 0}₪
+</Text>
+
+           
+      
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Requested Time : </Text>
+          <Text style={styles.sectionValue}>
+            {formatDate(item.requested_datetime)}
+          </Text>
+        </View>
+
+        <View style={{
+          backgroundColor: '#f8d7da', // لون خلفية فاتح أحمر (مثلاً)
+          paddingVertical: 4,
+          paddingHorizontal: 10,
+          borderRadius: 10,
+          alignSelf: 'flex-start',
+          marginTop: 10
+        }}>
+          <Text style={{ fontSize: 13, color: '#721c24', fontWeight: '700' }}>
+            {item.status.toUpperCase()}
+          </Text>
+        </View>
+      </View>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
+
+
+// لو عندك نوع بالحجز
+const renderItem = ({ item }) => {
+  if (item.isEmergency) {
+    return renderEmergencyBooking({ item });
+  } else {
+    return renderBooking({ item });
+  }
+};
 
 return (
   <SafeAreaView style={styles.container}>
     <Text style={styles.headerTitle}>My Bookings</Text>
     <View style={styles.headerDivider} />
     <FlatList
-      data={bookingsArray}
-      keyExtractor={item => `${item.booking_id}-${item.scheduled_date}-${item.scheduled_time}`}
-      renderItem={renderBooking}
+      data={allBookings}  // خليها تجمع كل الحجوزات العادية والطوارئ هنا
+      keyExtractor={item => item.isEmergency ? `emergency-${item.emergency_booking_id}` : `normal-${item.booking_id}`}
+      renderItem={renderItem}
       contentContainerStyle={{ padding: 16 }}
     />
-
   </SafeAreaView>
 );
+
 }
 const styles = StyleSheet.create({
   container: {
