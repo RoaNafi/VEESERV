@@ -44,7 +44,7 @@ console.log("summary timeSlots:", timeSlots );
   const { service_name, workshop_name, price, service_id, workshop_id , is_mobile, mobile_fee } = data;
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  console.log("Workshop Data:", data);
+  //console.log("Workshop Data:", data);
   console.log("Date:", date);
   console.log("Time Slots:", timeSlots);
   console.log("Initial Car:", selectedCar);
@@ -61,7 +61,7 @@ console.log("summary timeSlots:", timeSlots );
     }))
   );
 
-  console.log("Selected Services:", selectedServices);
+  //console.log("Selected Services:", selectedServices);
 
 
   const { showActionSheetWithOptions } = useActionSheet();

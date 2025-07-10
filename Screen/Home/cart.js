@@ -33,20 +33,20 @@ const Cart = () => {
         });
         //console.log('=============== Cart Screen ============');
         //console.log('Cart API Response:', res.data);
-        console.log('Cart items:', res.data.cart);
+       // console.log('Cart items:', res.data.cart);
         setServices(res.data.cart);
       } else {
         console.error('No token found');
       }
     } catch (error) {
-      console.error('Failed to load cart items:', error.response?.data || error.message);
+      //console.error('Failed to load cart items:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('Cart component mounted, fetching items...');
+    //console.log('Cart component mounted, fetching items...');
     fetchCartItems();
   }, []);
 

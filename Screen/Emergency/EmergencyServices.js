@@ -24,7 +24,7 @@ const fetchEmergencyServices = async () => {
     // تصنيف الخدمات حسب category
     const grouped = services.reduce((acc, service) => {
       const category = service.category?.toLowerCase() || 'other';
-      console.log(`Service: ${service.name}, Category: ${category}`); // 👈 اطبعي كل خدمة مع تصنيفها
+      //console.log(`Service: ${service.name}, Category: ${category}`); // 👈 اطبعي كل خدمة مع تصنيفها
       if (!acc[category]) acc[category] = [];
       acc[category].push({
         name: service.name,
@@ -36,7 +36,7 @@ const fetchEmergencyServices = async () => {
 
 
     setServicesByType(grouped);
-    console.log("Fetched Emergency Services:", grouped); // 👈 اطبعيهم هون
+    //console.log("Fetched Emergency Services:", grouped); // 👈 اطبعيهم هون
   } catch (err) {
     console.error('Error fetching emergency services:', err);
     Alert.alert('Error', 'Failed to load emergency services');
@@ -70,7 +70,7 @@ useEffect(() => {
           const cityName = data.address?.city || data.address?.town || data.address?.village || 'Unknown City';
           const latitude = data.lat || latitude;
           const longitude = data.lon || longitude;
-          console.log(`Location: ${road}, ${cityName} (Lat: ${latitude}, Lon: ${longitude})`);
+          //console.log(`Location: ${road}, ${cityName} (Lat: ${latitude}, Lon: ${longitude})`);
           setAddress(`${road}, ${cityName} (Lat: ${latitude}, Lon: ${longitude})`);
           setUserAddress({
             road: road,

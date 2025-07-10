@@ -91,7 +91,7 @@ const Subcategory = ({ route }) => {
         }
       } else {
         // Add to cart
-        console.log('Adding to cart, subcategoryId:', subcategoryId);
+        //console.log('Adding to cart, subcategoryId:', subcategoryId);
         try {
           const response = await axios.post(
             `${config.apiUrl}/cart/add-to-cart`,

@@ -33,7 +33,7 @@ const Profile = ({ navigation }) => {
       if (!res.ok) throw new Error('Failed to fetch profile');
       const data = await res.json();
       //console.log('Profile data:', data);     
-      console.log('Fetched profile');
+      //console.log('Fetched profile');
       setProfile(data);
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -110,8 +110,8 @@ Alert.alert("Success", "Congratulations! Your account is now a company 🏢✨")
       ],
     },
     { icon: 'star', label: 'Favorite Workshops', action: () => navigation.navigate('FavoriteWorkshops') },
+    { icon: 'wallet', label: 'My Wallet', action: () => navigation.navigate('MyWallet') },
     { icon: 'time', label: 'History', action: () => navigation.navigate('HistoryScreen', { userId: user?.id }) },
-    { icon: 'globe', label: 'Language', action: () => navigation.navigate('Language') },
     { icon: 'business', label: 'Company & Legal', action: () => navigation.navigate('CompanyLegal') },
 
     // 👇 زر التحويل يظهر فقط لو المستخدم زبون مش شركة

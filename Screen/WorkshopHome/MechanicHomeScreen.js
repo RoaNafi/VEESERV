@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Modal, Pressable,
   Dimensions,
   Animated,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -59,9 +60,10 @@ const [token, setToken] = useState('');
 const [selectedServices, setSelectedServices] = useState([]); // خدمات مختارة في المودال
   const [reportText, setReportText] = useState('');
   const [countdown, setCountdown] = useState(null);
+  const [actionsModalVisible, setActionsModalVisible] = useState(false);
   useFocusEffect(
     useCallback(() => {
-      const fetchWorkshopDetails = async () => {
+      const fetchData = async () => {
         try {
           const token = await AsyncStorage.getItem('accessToken');
           const userId = await AsyncStorage.getItem('userId');
@@ -71,39 +73,43 @@ const [selectedServices, setSelectedServices] = useState([]); // خدمات مخ
             return;
           }
 
+          // Fetch workshop details
           const response = await axios.get('http://176.119.254.225:80/mechanic/home-me', {
             headers: { Authorization: `Bearer ${token}` },
           });
 
           setWorkshopData(response.data);
 
-          console.log('Workshop data:', response.data);
+          // Fetch today's bookings
+          await fetchTodayBookings();
+          
+          // Fetch emergency bookings
+          await fetchEmergencyBookings();
+
         } catch (error) {
-          console.error('Failed to fetch workshop details:', error.message);
+          console.error('Failed to fetch data:', error.message);
         } finally {
           setLoading(false);
         }
       };
 
-      fetchWorkshopDetails();
+      fetchData();
     }, [])
   );
-const fetchTodayBookings = async () => {
+
+// Move fetchTodayBookings outside useEffect
+const fetchTodayBookings = useCallback(async () => {
   try {
     const token = await AsyncStorage.getItem('accessToken');
-
     const res = await axios.get('http://176.119.254.225:80/booking/Mechanic/bookings/today', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-
     // جمع الخدمات لكل booking_id
     const grouped = {};
-
     res.data.bookings.forEach(item => {
       const id = item.booking_id.toString();
-
       if (!grouped[id]) {
         grouped[id] = {
           id,
@@ -122,24 +128,18 @@ const fetchTodayBookings = async () => {
           workshop_id : item.workshop_id,
         };
       }
-
       // نجمع الأسعار للخدمات كلها
       grouped[id].price += item.price;
-
       // نجمع أسماء الخدمات
-if (!grouped[id].services.some(s => s.name === item.service_name)) {
-  grouped[id].services.push({
-    name: item.service_name,
-    status: item.service_status,
-  });
-}
-
+      if (!grouped[id].services.some(s => s.name === item.service_name)) {
+        grouped[id].services.push({
+          name: item.service_name,
+          status: item.service_status,
+        });
+      }
     });
-    
-
     // نحول المجموع لكائنات مصفوفة 
     const formatted = Object.values(grouped);
-
     setAppointments(formatted);
     console.log('Fetched and grouped bookings:', formatted);
   } catch (error) {
@@ -147,7 +147,10 @@ if (!grouped[id].services.some(s => s.name === item.service_name)) {
   } finally {
     setLoading(false);
   }
-};
+}, []);
+
+// useEffect to fetch on mount - removed since it's now handled in useFocusEffect
+
 const onCancel = async (bookingId, cancellationReason = '') => {
   try {
     const token = await AsyncStorage.getItem('accessToken');
@@ -172,10 +175,6 @@ const onCancel = async (bookingId, cancellationReason = '') => {
     alert('An error occurred while cancelling the booking.');
   }
 };
-
-useEffect(() => {
-    fetchTodayBookings();
-  }, []);
 
    const fetchServices = async (id, token) => {
     try {
@@ -355,6 +354,7 @@ const addServiceToBooking =
     console.log('✅ Services added:', response.data);
     Alert.alert('Success', 'Services added to booking');
     setModalVisible(false);
+    fetchTodayBookings();
   } catch (error) {
     console.error('🚫 Error adding services:', error);
     Alert.alert('Error', 'Failed to add services');
@@ -399,8 +399,7 @@ const onAddService = async (booking) => {
   
   const [emergencyBookings, setEmergencyBookings] = useState([]);
 
-const fetchEmergencyBookings = async () => {
-  setLoading(true);
+const fetchEmergencyBookings = useCallback(async () => {
   try {
     const token = await AsyncStorage.getItem('accessToken');
     const res = await axios.get('http://176.119.254.225:80/emergency/workshop/emergencyBookings', {
@@ -412,12 +411,9 @@ const fetchEmergencyBookings = async () => {
     console.error(error);
     Alert.alert('Error', 'Failed to fetch bookings');
   }
-  setLoading(false);
-};
-
-useEffect(() => {
-  fetchEmergencyBookings();
 }, []);
+
+// useEffect for emergency bookings - removed since it's now handled in useFocusEffect
 
 const handleAccept = async (id) => {
   try {
@@ -631,7 +627,7 @@ const renderEmergencyBooking = ({ item }) => {
 </Modal>
 
       <ScrollView style={{ backgroundColor: '#f7fafd' }} contentContainerStyle={styles.scrollContentContainer}>
-        <Text style={styles.sectionTitle}>Today's Appointments</Text>
+        <Text style={[styles.sectionTitle, { marginHorizontal: 20 }]}>Today's Appointments</Text>
         <View style={styles.separator} />
         <FlatList
           data={appointments.length > 0 ? appointments : [{ id: 'no-appointments', isPlaceholder: true }]}
@@ -743,48 +739,37 @@ const renderEmergencyBooking = ({ item }) => {
                         </Text>
                       )}
                     </View>
-
-                    {/* زرّين أوليين */}
-                    <View style={styles.buttonContainer}>
-                      <TouchableOpacity 
-                        style={styles.cancelButton}
-                        onPress={() => onCancel(item.booking_id)}
-                      >
-                        <Text style={styles.buttonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.delayButton}
-                        onPress={() => onDelay(item)}
-                      >
-                        <Text style={styles.buttonText}>Delay</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* زرار الإدارة الإضافية */}
-                    <View style={styles.buttonRow}>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <TouchableOpacity 
-                          style={[styles.actionButton2, styles.updateBooking]}
-                          onPress={() => onEditbookStatus(item)}
-                        >
-                          <Text style={styles.buttonText}>Update service status</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.actionButton2, styles.addService]}
-                          onPress={() => onAddService(item)}
-                        >
-                          <Text style={styles.buttonText}>Add Service</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.actionButton2, styles.viewReport]}
-                          onPress={() => navigation.navigate('GenerateReportScreen', { booking: item })}
-                        >
-                          <Text style={styles.buttonText}>Generate Report</Text>
-                        </TouchableOpacity>
-                      </ScrollView>
-                    </View>
                   </View>
                 )}
+
+                {/* زر Actions مستطيل بعرض الكارد */}
+                <View style={{ marginTop: 10, marginHorizontal: 0 }}>
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#086189',
+                      borderRadius: 16,
+                      paddingVertical: 8,
+                      width: '100%',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    }}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedAppointment(item);
+                      setActionsModalVisible(true);
+                    }}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={22} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Actions</Text>
+                  </TouchableOpacity>
+                </View>
+
 
                 </View>
               </TouchableOpacity>
@@ -924,8 +909,13 @@ const renderEmergencyBooking = ({ item }) => {
               transform: [{ scale: scaleAnim }],
             }
           ]}>
-            <Text style={styles.modalTitle}>Select Delay Time</Text>
-
+            {/* Row: title left, X icon right */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, width: '100%' }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#086189' }}>Delay by...</Text>
+              <TouchableOpacity onPress={hideModal} style={{ padding: 4 }}>
+                <Ionicons name="close" size={22} color="#f44336" />
+              </TouchableOpacity>
+            </View>
             <View style={styles.delayOptionsContainer}>
               {delayOptions.map((minutes) => (
                 <Pressable
@@ -937,15 +927,101 @@ const renderEmergencyBooking = ({ item }) => {
                 </Pressable>
               ))}
             </View>
-
-            <Pressable
-              style={styles.cancelButton1}
-              onPress={hideModal}
-            >
-              <Text style={styles.cancelButtonText1}>Cancel</Text>
-            </Pressable>
+            <View style={{ alignItems: 'flex-end', marginTop: 12 }}>
+              <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', textAlign: 'right' }}>
+                You can delay just 2 times
+              </Text>
+            </View>
           </Animated.View>
         </Animated.View>
+      </Modal>
+
+      {/* Modal for actions */}
+      <Modal
+        visible={actionsModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActionsModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setActionsModalVisible(false)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+            <TouchableWithoutFeedback>
+              <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '80%', alignItems: 'stretch' }}>
+                {/* Row: X icon left, title right */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                  
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#086189', textAlign: 'left', flex: 1 }}>
+                    Choose Action
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setActionsModalVisible(false)}
+                    style={{ padding: 4 }}
+                  >
+                    <Ionicons name="close" size={26} color={Colors.red} />
+                  </TouchableOpacity>
+                  
+                </View>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#2196F3', padding: 12, borderRadius: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}
+                  onPress={() => {
+                    setActionsModalVisible(false);
+                    onDelay(selectedAppointment);
+                  }}
+                >
+                  <Ionicons name="time-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Delay</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#388E3C', padding: 12, borderRadius: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}
+                  onPress={() => {
+                    setActionsModalVisible(false);
+                    onAddService(selectedAppointment);
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Add Service</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#1976D2', padding: 12, borderRadius: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}
+                  onPress={() => {
+                    setActionsModalVisible(false);
+                    onEditbookStatus(selectedAppointment);
+                  }}
+                >
+                  <Ionicons name="sync-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>In Progress / Completed</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#F57C00', padding: 12, borderRadius: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}
+                  onPress={() => {
+                    setActionsModalVisible(false);
+                    navigation.navigate('GenerateReportScreen', { booking: selectedAppointment });
+                  }}
+                >
+                  <Ionicons name="document-text-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Generate Report</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#FF5252', padding: 12, borderRadius: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}
+                  onPress={() => {
+                    setActionsModalVisible(false);
+                    Alert.alert(
+                      'Cancel Booking',
+                      'Are you sure you want to cancel this booking?',
+                      [
+                        { text: 'No', style: 'cancel' },
+                        { text: 'Yes', style: 'destructive', onPress: () => onCancel(selectedAppointment.booking_id) },
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="close-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Cancel Booking</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
 );
@@ -1052,7 +1128,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#086189',
-    marginBottom: 18,
+    marginBottom: 10,
     letterSpacing: 0.5,
   },
   actionsRow: {
@@ -1150,39 +1226,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  actionsGridRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: responsiveVerticalPadding * 0.5,
-    gap: width * 0.02,
-  },
-  actionButton: {
-    flex: 1,
-    maxWidth: ACTION_BUTTON_SIZE,
-    aspectRatio: 1,
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: responsiveHorizontalPadding * 0.8,
-    borderRadius: 16,
-    justifyContent: 'center',
-    marginHorizontal: width * 0.01,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    position: 'relative',
-  },
-  actionLabel: {
-    fontSize: responsiveFontSize * 0.8,
-    marginTop: responsiveVerticalPadding * 0.5,
-    textAlign: 'center',
-    color: '#333',
-    fontWeight: '500',
-  },
+
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1208,54 +1252,9 @@ const styles = StyleSheet.create({
     color: Colors.mediumGray,
     fontWeight: '500',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: width * 0.02,
-    paddingHorizontal: width * 0.02,
-    marginTop: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#FF5252',
-    paddingVertical: responsiveVerticalPadding * 0.7,
-    paddingHorizontal: responsiveHorizontalPadding * 0.7,
-    borderRadius: 20,
-    flex: 0.48,
-    alignItems: 'center',
-  },
-  delayButton: {
-    backgroundColor: '#2196F3',
-    paddingVertical: responsiveVerticalPadding * 0.7,
-    paddingHorizontal: responsiveHorizontalPadding * 0.7,
-    borderRadius: 20,
-    flex: 0.48,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: responsiveFontSize * 0.9,
-  },
-  cardContent: {
-    flexDirection: 'column',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    width: 80, // fixed width for alignment
-  },
-  value: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    flexShrink: 1,
-  },
+ 
+
+
   errorText: {
     color: 'red',
   },

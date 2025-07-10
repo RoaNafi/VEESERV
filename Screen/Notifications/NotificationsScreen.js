@@ -114,16 +114,16 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: "700",
     color: "#086189",
     marginBottom: 8,
-    paddingLeft: 4,
+    paddingLeft:8,
   },
   headerDivider: {
     height: 1,
     backgroundColor: '#e0e0e0',
-    marginBottom: 12,
+    //marginBottom: 12,
     width: '100%',
   },
   notificationCard: {

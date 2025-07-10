@@ -35,8 +35,8 @@ const [subcategoryCheckResult, setSubcategoryCheckResult] = useState(null);
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [disabledSlots, setDisabledSlots] = useState([]); // Add this state for disabled slots
 const { selectedServices, subcategoryIds } = route.params || {};
-console.log("Selected Services:", selectedServices);
-  console.log("Subcategory IDs:", subcategoryIds);
+//console.log("Selected Services:", selectedServices);
+  //console.log("Subcategory IDs:", subcategoryIds);
   // Format date as YYYY-MM-DD
   const selectedDateOnly =
     selectedDate.getFullYear() +

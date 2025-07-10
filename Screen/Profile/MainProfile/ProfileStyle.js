@@ -23,7 +23,7 @@ export default StyleSheet.create({
   headerDivider: {
     height: 1,
     backgroundColor: '#e0e0e0',
-    marginBottom: 10,
+    //marginBottom: 10,
     width: '100%',
     
   },

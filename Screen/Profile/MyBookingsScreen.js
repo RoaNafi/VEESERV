@@ -122,7 +122,7 @@ useEffect(() => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBookings(res.data);
-      console.log('📘 Regular bookings:', res.data);
+      //console.log('📘 Regular bookings:', res.data);
     } catch (err) {
       console.error('Error fetching regular bookings:', err);
     } finally {
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
-    backgroundColor: '#f5f8fa', // خفيف وحلو للباكجراوند
+    //backgroundColor: '#f5f8fa', // خفيف وحلو للباكجراوند
   },
 
   headerTitle: {
@@ -291,15 +291,15 @@ const styles = StyleSheet.create({
   headerDivider: {
     height: 1,
     backgroundColor: '#d1d9e6', // فاتح شوي أكتر عشان نظيف
-    marginBottom: 20,
+   // marginBottom: 20,
     width: '100%',
   },
 
 card: {
   flexDirection: 'row',
-  backgroundColor: '#fdfdfd',
+  backgroundColor: '#fff',
   borderRadius: 20,
-  marginBottom: 18,
+  marginBottom: 10,
   padding: 20,
   shadowColor: '#000',
   shadowOpacity: 0.12,
@@ -309,7 +309,7 @@ card: {
   borderWidth: 1,
   borderColor: '#e2e8f0',
   // جديد:
-  backgroundColor: 'linear-gradient(135deg, #ffffff, #f0f4f8)', // إذا كنت تستخدم مكتبة دعم للتدرجات مثل react-native-linear-gradient
+  //backgroundColor: 'linear-gradient(135deg, #ffffff, #f0f4f8)', // إذا كنت تستخدم مكتبة دعم للتدرجات مثل react-native-linear-gradient
 },
 
   image: {

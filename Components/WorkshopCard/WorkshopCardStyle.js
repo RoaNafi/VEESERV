@@ -4,12 +4,12 @@ import Colors from '../Colors/Colors';
 export default StyleSheet.create({
   card: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     borderWidth: 1,
     borderColor: Colors.lightGray,
     borderRadius: 10,
     marginBottom: 10,
-    marginHorizontal:10,
+    //marginHorizontal:10,
     backgroundColor: "#fff",
     
     overflow: 'hidden',
@@ -26,6 +26,7 @@ export default StyleSheet.create({
     width: 90,
     height: "100%",
     marginRight: 0,
+    marginTop: 10,
   },
   info: {
     flex: 1,
@@ -95,7 +96,7 @@ export default StyleSheet.create({
     paddingVertical: 2,
   },
   serviceName: {
-    fontSize: 14,
+    fontSize: 12,
     color: Colors.darkGray,
     flex: 1,
     marginRight: 8,
@@ -104,12 +105,13 @@ export default StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 5,
   },
   totalPrice: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.darkGray,
+    marginTop: 5,
   },
   bookButton: {
     borderWidth: 1,
@@ -130,15 +132,7 @@ export default StyleSheet.create({
   
 },
 
-otherTimesText: {
-  color: Colors.shineBlue,
-  fontWeight: '500',
-  fontSize: 12,
-  letterSpacing: 0.5,
- // textAlign: 'center',
-//paddingHorizontal: 10, // padding horizontal for better touch area
-  textDecorationLine: 'underline',
-},
+
 
  modalOverlay: {
     flex: 1,
@@ -229,32 +223,24 @@ noDateText: {
   textAlign: 'center',
   marginBottom: 8,
 },
-otherTimesText: {
-  color: '#003B5C',   
-  fontSize: 14,
-  textAlign: 'center',
-  fontWeight: '500',
-  marginTop: 10,
-  marginBottom: 10,
-  paddingHorizontal: 10, // padding horizontal for better touch area
-  letterSpacing: 0.5,
-  backgroundColor: '#E0F2FE', // لون خلفية خفيف
-  borderRadius: 10, // زوايا دائرية 
-  borderWidth: 1,
-  borderColor: '#38BDF8', // لون الحدود
-  paddingVertical: 6, // padding vertical for better touch area
-},
-mobileFeeContainer: {
-  marginTop: 8,
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  backgroundColor: '#e0f7fa', // لون هادي يريح العين
-  borderRadius: 12,
-  alignSelf: 'flex-start',
-},
+
 
 mobileFeeLabel: {
-  color: '#007a9c', // لون أزرق فاتح كذا جذاب
+  color: '#007a9c', 
+  fontWeight: '400',
+  fontSize: 11.5,
+  fontStyle: 'italic',
+},
+selectDateButton: {
+  borderWidth: 1,
+  borderColor: Colors.shineBlue,
+  borderRadius: 15,
+  paddingVertical: 3,
+  paddingHorizontal: 10,
+  backgroundColor: 'transparent',
+},
+selectDateButtonText: {
+  color: Colors.shineBlue,
   fontWeight: '600',
   fontSize: 14,
 },

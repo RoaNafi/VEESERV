@@ -44,7 +44,7 @@ const fetchServices = async () => {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    console.log("Fetched Emergency Services:", response.data); // 👈 اطبعيهم هون
+    //console.log("Fetched Emergency Services:", response.data); // 👈 اطبعيهم هون
     setServices(response.data.emergencyServices || []); // ✅ تأكدي تحطي empty array في حال مافي بيانات
   } catch (error) {
     console.error("Error fetching emergency services:", error);

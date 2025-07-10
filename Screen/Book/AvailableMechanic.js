@@ -23,7 +23,7 @@ import Colors from "../../Components/Colors/Colors";
 
 const AvailableMechanic = ({ route, navigation }) => {
 const { date = null, timeSlots = [], subcategoryIds } = route.params || {};
-  console.log("date:", date, "time", timeSlots, "subcategoryIds:", subcategoryIds);
+  //.log("date:", date, "time", timeSlots, "subcategoryIds:", subcategoryIds);
 
   const [rawWorkshops, setRawWorkshops] = useState({
     perfectMatch: [],
@@ -45,6 +45,7 @@ const { date = null, timeSlots = [], subcategoryIds } = route.params || {};
   const [showAllResults, setShowAllResults] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredPerfectMatch, setFilteredPerfectMatch] = useState([]);
+  const [filteredFetchedWorkshops, setFilteredFetchedWorkshops] = useState([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchBarWidth = useRef(new Animated.Value(1)).current;
   const [selectedTab, setSelectedTab] = useState('available');
@@ -65,9 +66,9 @@ const safeTimeSlots = Array.isArray(timeSlots) ? timeSlots.map(normalizeTimeStri
 const formattedTimeSlots = safeTimeSlots.length > 0
   ? safeTimeSlots.join(", ")
   : "";
-  console.log("Safe time slots:", safeTimeSlots);
+  //console.log("Safe time slots:", safeTimeSlots);
 
-  console.log("Formatted time slots:", formattedTimeSlots);
+  //console.log("Formatted time slots:", formattedTimeSlots);
 
   const transform = (list) => {
     //console.log("\n=== TRANSFORM INPUT ===");
@@ -93,7 +94,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
           mobile_fee: s.mobile_fee || 0,
         })),
       };
-      console.log("services:", result.services);
+      //console.log("services:", result.services);
       //console.log("Transformed result:", JSON.stringify(result, null, 2));
       return result;
     });
@@ -113,7 +114,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
         preferred_date: date,
         preferred_time: formattedTimeSlots,
       };
-      console.log ("Filter parameters:", filterParams);
+     // console.log ("Filter parameters:", filterParams);
 
       // Add rating filter if selected
       if (selectedRating) {
@@ -203,11 +204,9 @@ const formattedTimeSlots = safeTimeSlots.length > 0
       );
 
       const workshops = response.data.workshops || [];
-      console.log("Fetched workshops without date:", workshops);
 
       const transformedWorkshops = transform(workshops);
       setFetchedWorkshops(transformedWorkshops);
-      console.log("Transformed workshops without date:", transformedWorkshops); // اطبع هنا بدل الحالة
 
 
       // تطبيق الفلترة إذا حابب
@@ -267,6 +266,24 @@ const formattedTimeSlots = safeTimeSlots.length > 0
   const applySort = () => {
     if (!selectedSortOption) return;
 
+    // If we have fetched workshops (user skipped), apply sort to them
+    if (fetchedWorkshops.length > 0 && (!rawWorkshops.perfectMatch || rawWorkshops.perfectMatch.length === 0)) {
+      // Get the current list to sort (either filtered or original)
+      let currentList;
+      if (searchQuery || selectedRating || selectedDistance) {
+        // If we have filters/search, use the filtered list
+        currentList = filteredFetchedWorkshops.length > 0 ? filteredFetchedWorkshops : fetchedWorkshops;
+      } else {
+        // If no filters, use original list
+        currentList = fetchedWorkshops;
+      }
+      
+      const sortedFetched = sortWorkshops(currentList, selectedSortOption);
+      setFilteredFetchedWorkshops(sortedFetched);
+      return;
+    }
+
+    // Apply sort to date-selected workshops
     const sortedWorkshops = {
       perfectMatch: sortWorkshops(workshops.perfectMatch, selectedSortOption),
       partialMatch: sortWorkshops(workshops.partialMatch, selectedSortOption),
@@ -288,7 +305,27 @@ const formattedTimeSlots = safeTimeSlots.length > 0
   const applyFilters = () => {
     setShowAllResults(false); // Reset to show only first 3 results
 
-    // Filter the workshops based on selected criteria
+    // If we have fetched workshops (user skipped), apply filters to them
+    if (fetchedWorkshops.length > 0 && (!rawWorkshops.perfectMatch || rawWorkshops.perfectMatch.length === 0)) {
+      const filteredFetched = fetchedWorkshops.filter(workshop => {
+        // Rating filter
+        if (selectedRating && workshop.rate < selectedRating) {
+          return false;
+        }
+
+        // Distance filter
+        if (selectedDistance && workshop.distance > selectedDistance) {
+          return false;
+        }
+
+        return true;
+      });
+      
+      setFilteredFetchedWorkshops(filteredFetched);
+      return;
+    }
+
+    // Filter the workshops based on selected criteria (for date-selected scenario)
     const filterWorkshops = (workshops) => {
       return workshops.filter(workshop => {
         // Rating filter
@@ -324,9 +361,16 @@ const formattedTimeSlots = safeTimeSlots.length > 0
   const resetFilters = () => {
     setSelectedRating(null);
     setSelectedDistance(null);
+    setSelectedSortOption(null); // Reset sort as well
     setShowAllResults(false);
 
-    // Reset to original data
+    // If we have fetched workshops (user skipped), reset them
+    if (fetchedWorkshops.length > 0 && (!rawWorkshops.perfectMatch || rawWorkshops.perfectMatch.length === 0)) {
+      setFilteredFetchedWorkshops(fetchedWorkshops);
+      return;
+    }
+
+    // Reset to original data (for date-selected scenario)
     setWorkshops({
       perfectMatch: transform(rawWorkshops.perfectMatch),
       partialMatch: transform(rawWorkshops.partialMatch),
@@ -390,6 +434,11 @@ const formattedTimeSlots = safeTimeSlots.length > 0
       fetchWorkshopsWithoutDate();
     }
   }, [selectedRating, selectedDistance, date, formattedTimeSlots]);
+
+  // Initialize filtered workshops when fetchedWorkshops changes
+  useEffect(() => {
+    setFilteredFetchedWorkshops(fetchedWorkshops);
+  }, [fetchedWorkshops]);
 
 
   const handleBookMultiple = (combo) => {
@@ -487,19 +536,52 @@ const formattedTimeSlots = safeTimeSlots.length > 0
   const filterWorkshopsBySearch = (query) => {
     if (!query.trim()) {
       setFilteredPerfectMatch(workshops.perfectMatch);
+      setFilteredFetchedWorkshops(fetchedWorkshops);
       return;
     }
 
-    const filtered = workshops.perfectMatch.filter(workshop =>
+    // Search in perfect match workshops
+    const filteredPerfect = workshops.perfectMatch.filter(workshop =>
       workshop.workshop_name.toLowerCase().includes(query.toLowerCase())
     );
-    setFilteredPerfectMatch(filtered);
+    
+    // Search in fetched workshops (when user skips date selection)
+    const filteredFetched = fetchedWorkshops.filter(workshop =>
+      workshop.workshop_name.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    setFilteredPerfectMatch(filteredPerfect);
+    setFilteredFetchedWorkshops(filteredFetched);
+  };
+
+  // Apply sort to search results
+  const applySortToSearchResults = () => {
+    if (!selectedSortOption) return;
+    
+    // Apply sort to perfect match search results
+    if (filteredPerfectMatch.length > 0) {
+      const sortedPerfect = sortWorkshops(filteredPerfectMatch, selectedSortOption);
+      setFilteredPerfectMatch(sortedPerfect);
+    }
+    
+    // Apply sort to fetched workshops search results
+    if (filteredFetchedWorkshops.length > 0) {
+      const sortedFetched = sortWorkshops(filteredFetchedWorkshops, selectedSortOption);
+      setFilteredFetchedWorkshops(sortedFetched);
+    }
   };
 
   // Update useEffect to handle search
   useEffect(() => {
     filterWorkshopsBySearch(searchQuery);
-  }, [searchQuery, workshops.perfectMatch]);
+  }, [searchQuery, workshops.perfectMatch, fetchedWorkshops]);
+
+  // Apply sort when sort option changes
+  useEffect(() => {
+    if (selectedSortOption) {
+      applySort();
+    }
+  }, [selectedSortOption]);
 
   const animateSearchFocus = (focused) => {
     Animated.spring(searchBarWidth, {
@@ -572,7 +654,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
           alignItems: "center",
         }}
       >
-        {workshops.perfectMatch?.length > 0 ? (
+        {(workshops.perfectMatch?.length > 0 || fetchedWorkshops.length > 0) ? (
           <Animated.View style={{
             flex: searchBarWidth,
             marginRight: isSearchFocused ? 0 : 10,
@@ -782,21 +864,19 @@ const formattedTimeSlots = safeTimeSlots.length > 0
       )}
       {/* التاب الخاص بالورش الجديدة */}
       {fetchedWorkshops.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-
-        <FlatList
-  data={fetchedWorkshops}
-  keyExtractor={item => item.workshop_id.toString()}
-  renderItem={({ item }) => (
-    <WorkshopCard 
-      data={item} 
-      onBookPress={(time, actualDate) => handleBookPress(item, time, actualDate)}  // اضفت التاريخ هنا
-      onShopPress={() => handleShopPress(item)} 
-    />
-  )}
-/>
-
-
+        <View style={{ marginBottom: 70 }}>
+          <FlatList
+            data={searchQuery || selectedRating || selectedDistance || selectedSortOption ? filteredFetchedWorkshops : fetchedWorkshops}
+            keyExtractor={item => item.workshop_id.toString()}
+            contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 20 }}
+            renderItem={({ item }) => (
+              <WorkshopCard 
+                data={item} 
+                onBookPress={(time, actualDate) => handleBookPress(item, time, actualDate)}  // اضفت التاريخ هنا
+                onShopPress={() => handleShopPress(item)} 
+              />
+            )}
+          />
         </View>
       )}
 
@@ -868,10 +948,7 @@ const formattedTimeSlots = safeTimeSlots.length > 0
                   mobile_fee: s.mobile_fee || 0
                 }))
               };
-              console.log('++++++++++++++++++++++++++++++++++++++++++++++++');
 
-              console.log('Perfect workshop services:', data.services);
-              console.log('++++++++++++++++++++++++++++++++++++++++++++++++');
 
               return (
                 <WorkshopCard

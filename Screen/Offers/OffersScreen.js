@@ -37,7 +37,7 @@ const OffersScreen = () => {
         });
 
         const data = await response.json();
-        console.log('Fetched offers:', data);
+        //console.log('Fetched offers:', data);
 
         if (!isMounted) return;
 

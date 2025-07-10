@@ -24,7 +24,7 @@ import Service from "./Screen/WorkshopInfo/Service/Service";
 import AddService from "./Screen/WorkshopInfo/Service/AddService";
 import AddCar from "./Screen/Profile/Garage/AddCar";
 import EditProfile from "./Screen/Profile/EditProfile/EditProfile";
-import Language from "./Screen/Profile/Language/Language";
+import MyWallet from "./Screen/Profile/MyWallet";
 import WorkingHours from "./Screen/WorkshopInfo/WorkingHours";
 import Certifications from "./Screen/WorkshopInfo/Certifications";
 import History from "./Screen/Profile/History/History";
@@ -210,6 +210,11 @@ function ProfileNavigator() {
         component={EditProfile}
         options={{ title: "Edit Profile" }}
       />
+      <Stack.Screen
+        name="MyWallet"
+        component={MyWallet}
+        options={{ title: "My Wallet" }}
+      />
       <Stack.Screen name="AddCar" component={AddCar} />
       <Stack.Screen
         name="Service"
@@ -220,11 +225,6 @@ function ProfileNavigator() {
         name="AddService"
         component={AddService}
         options={{ title: "Add Service" }}
-      />
-      <Stack.Screen
-        name="Language"
-        component={Language}
-        options={{ title: "Language" }}
       />
       <Stack.Screen
         name="WorkingHours"
